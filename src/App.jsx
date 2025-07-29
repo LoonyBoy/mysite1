@@ -8,17 +8,11 @@ import SpaceInvadersPage from './pages/SpaceInvadersPage'
 import LightLabCasePage from './pages/LightLabCasePage'
 import PerformanceOptimizer from './components/PerformanceOptimizer'
 import { ParticleProvider } from './components/GlobalParticleManager'
-import { StagewiseToolbar } from '@stagewise/toolbar-react'
 
 function App() {
   return (
     <>
       <GlobalStyles />
-      <StagewiseToolbar 
-        config={{
-          plugins: []
-        }}
-      />
       <Router
         future={{
           v7_startTransition: true,
@@ -40,4 +34,4 @@ function App() {
   )
 }
 
-export default App 
+export default App

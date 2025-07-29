@@ -1,0 +1,149 @@
+.projects-scroll-container {
+  height: 100vh;
+  overflow-y: auto;
+  position: relative;
+  scroll-behavior: smooth;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.projects-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.projects-scroll-content {
+  width: 100%;
+  position: relative;
+  padding: 0;
+  padding-top: 20vh;
+  padding-bottom: 100vh;
+}
+
+.projects-scroll-card {
+  position: relative;
+  margin: 0 auto;
+  width: 90%;
+  max-width: 800px;
+  margin-bottom: 30vh;
+  will-change: transform, filter;
+  transition: transform 0.1s ease-out;
+}
+
+.project-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.project-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.project-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.project-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.project-card-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.project-card-description {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.project-card-tech {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tech-tag {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.tech-tag:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.projects-scroll-end {
+  height: 1px;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .projects-scroll-card {
+    width: 95%;
+    margin-bottom: 20vh;
+  }
+  
+  .project-card {
+    padding: 0;
+    border-radius: 15px;
+  }
+  
+  .project-card-title {
+    font-size: 1.8rem;
+  }
+  
+  .project-card-description {
+    font-size: 1rem;
+  }
+  
+  .projects-scroll-content {
+    padding-top: 15vh;
+    padding-bottom: 80vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .projects-scroll-card {
+    width: 92%;
+    margin-bottom: 15vh;
+  }
+  
+  .project-card {
+    padding: 0;
+    border-radius: 12px;
+  }
+  
+  .project-card-title {
+    font-size: 1.6rem;
+  }
+  
+  .project-card-description {
+    font-size: 0.95rem;
+  }
+}

@@ -2,7 +2,7 @@
   position: relative;
   display: inline-block;
   color: var(--primary-red);
-  min-height: 1.2em;
+  min-height: 1em;
   min-width: 200px;
   overflow: hidden;
 }
@@ -60,4 +60,4 @@
     -webkit-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
   }
-} 
+}

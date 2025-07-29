@@ -19,7 +19,7 @@ function cn(...classes) {
 const RotatingText = forwardRef((props, ref) => {
   const {
     texts,
-    transition = { type: "spring", damping: 25, stiffness: 300 },
+    transition = { type: "spring", damping: 30, stiffness: 400 },
     initial = { y: "100%", opacity: 0 },
     animate = { y: 0, opacity: 1 },
     exit = { y: "-120%", opacity: 0 },
@@ -199,7 +199,7 @@ const RotatingText = forwardRef((props, ref) => {
                           (sum, word) => sum + word.characters.length,
                           0
                         )
-                      ),
+                      )
                     }}
                     className={cn("text-rotate-element", elementLevelClassName)}
                   >
@@ -219,4 +219,4 @@ const RotatingText = forwardRef((props, ref) => {
 });
 
 RotatingText.displayName = "RotatingText";
-export default RotatingText; 
+export default RotatingText;

@@ -34,7 +34,7 @@ const HeroSection = styled.section`
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
-  padding-left: 4rem;
+  padding-left: 64px;
   text-align: left;
   max-width: 1200px;
   margin: 0 auto;
@@ -42,16 +42,16 @@ const HeroSection = styled.section`
   z-index: 2;
 
   @media (max-width: 768px) {
-    padding: 2rem 1rem;
+    padding: 32px 16px;
     align-items: flex-start;
     text-align: left;
     height: 100svh;
     
     @supports (padding: max(0px)) {
-      padding-top: max(2rem, env(safe-area-inset-top) + 2rem);
-      padding-bottom: max(2rem, env(safe-area-inset-bottom) + 2rem);
-      padding-left: max(1rem, env(safe-area-inset-left) + 1rem);
-      padding-right: max(1rem, env(safe-area-inset-right) + 1rem);
+      padding-top: max(32px, env(safe-area-inset-top) + 32px);
+      padding-bottom: max(32px, env(safe-area-inset-bottom) + 32px);
+      padding-left: max(16px, env(safe-area-inset-left) + 16px);
+      padding-right: max(16px, env(safe-area-inset-right) + 16px);
     }
   }
 `
@@ -59,21 +59,21 @@ const HeroSection = styled.section`
 const MainHeading = styled.h1`
   font-size: clamp(3rem, 8vw, 8rem);
   font-weight: 400;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  margin-bottom: 2rem;
+  line-height: 0.8;
+  letter-spacing: -0.02em;
+  margin-bottom: 32px;
   opacity: 0;
   transform: translateY(100px);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0;
 
   .text-line {
     display: flex;
     align-items: baseline;
-    gap: 1rem;
-    min-height: 1.1em;
+    gap: 16px;
+    min-height: 1em;
   }
 
   .highlight {
@@ -83,10 +83,10 @@ const MainHeading = styled.h1`
     &::after {
       content: '';
       position: absolute;
-      bottom: -10px;
+      bottom: -8px;
       left: 0;
       width: 0;
-      height: 3px;
+      height: 4px;
       background: var(--primary-red);
       transition: width 1s ease;
     }
@@ -94,10 +94,10 @@ const MainHeading = styled.h1`
 `
 
 const Description = styled.p`
-  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
-  line-height: 1.4;
+  font-size: clamp(1rem, 2.5vw, 2rem);
+  line-height: 1.5;
   max-width: 600px;
-  margin-bottom: 3rem;
+  margin-bottom: 24px;
   opacity: 0;
   transform: translateY(50px);
 `
@@ -106,7 +106,7 @@ const NavigationEdge = styled.div`
   position: fixed;
   top: 0;
   right: 0;
-  width: 350px;
+  width: 352px;
   height: 100vh;
   z-index: 5;
   cursor: none;
@@ -125,10 +125,10 @@ const NavigationEdge = styled.div`
 const NavigationHint = styled.div`
   position: fixed;
   top: 50%;
-  right: 5rem;
+  right: 80px;
   transform: translateY(-50%);
   color: rgba(255, 255, 255, 0.8);
-  font-size: 1.1rem;
+  font-size: 16px;
   font-weight: 500;
   opacity: 0;
   transition: all 0.3s ease;
@@ -138,7 +138,7 @@ const NavigationHint = styled.div`
   
   &.visible {
     opacity: 1;
-    transform: translateY(-50%) translateX(-20px);
+    transform: translateY(-50%) translateX(-16px);
   }
   
   @media (max-width: 768px) {
@@ -150,7 +150,7 @@ const GameEdge = styled.div`
   position: fixed;
   bottom: 0;
   left: 0;
-  width: 350px;
+  width: 352px;
   height: 100vh;
   z-index: 5;
   cursor: none;
@@ -169,10 +169,10 @@ const GameEdge = styled.div`
 const GameHint = styled.div`
   position: fixed;
   bottom: 50%;
-  left: 5rem;
+  left: 80px;
   transform: translateY(50%);
   color: rgba(255, 255, 255, 0.8);
-  font-size: 1.1rem;
+  font-size: 16px;
   font-weight: 500;
   opacity: 0;
   transition: all 0.3s ease;
@@ -182,7 +182,7 @@ const GameHint = styled.div`
   
   &.visible {
     opacity: 1;
-    transform: translateY(50%) translateX(20px);
+    transform: translateY(50%) translateX(16px);
   }
   
   @media (max-width: 768px) {
@@ -489,4 +489,4 @@ const HomePage = () => {
   )
 }
 
-export default HomePage 
+export default HomePage

@@ -1,14 +1,12 @@
 import React, { useEffect, useRef, useMemo } from 'react'
 import styled from 'styled-components'
 import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useNavigate } from 'react-router-dom'
 import { useParticles } from '../components/GlobalParticleManager'
 import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
+import ProjectsScrollStack from '../components/ProjectsScrollStack'
 import useParticleControl from '../hooks/useParticleControl'
-
-gsap.registerPlugin(ScrollTrigger)
 
 const ProjectsContainer = styled.div`
   min-height: 100vh;
@@ -31,7 +29,7 @@ const Section = styled.section`
   margin: 0 auto;
   position: relative;
   z-index: 2;
-  background: transparent; /* Прозрачный фон чтобы не перекрывать частицы */
+  background: transparent;
 
   @media (max-width: 768px) {
     padding: 4rem 1rem;
@@ -50,100 +48,11 @@ const SectionTitle = styled.h2`
   text-align: center;
   opacity: 0;
   transform: translateY(50px);
+  color: #ffffff;
   
   @media (max-width: 768px) {
     margin-bottom: 2rem;
   }
-`
-
-const ProjectList = styled.ul`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
-`
-
-const ProjectTile = styled.li`
-  display: flex;
-  justify-content: center;
-`
-
-const EntityCard = styled.article`
-  background-color: rgba(255, 255, 255, 0.95);
-  -webkit-backdrop-filter: grayscale(100%);
-  backdrop-filter: grayscale(100%);
-  color: #000000;
-  border-radius: 8px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  }
-
-  // Текст и теги без смешения
-  > * {
-    mix-blend-mode: normal;
-  }
-`
-
-const CardLink = styled.div`
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  text-decoration: none;
-  color: inherit;
-`
-
-const CardHeader = styled.header`
-  padding: 1.5rem;
-  flex: 1;
-`
-
-const CardTitle = styled.h2`
-  margin: 0 0 0.5rem;
-  font-size: 1.5rem;
-  color: #000000;
-`
-
-const CardDescription = styled.p`
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.4;
-  color: #000000;
-  opacity: 0.8;
-`
-
-const CardCover = styled.img`
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-`
-
-const TagList = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 1rem 1.5rem 1.5rem;
-`
-
-const TagButton = styled.button`
-  background: rgba(0, 0, 0, 0.05);
-  border: none;
-  border-radius: 4px;
-  padding: 0.3rem 0.6rem;
-  font-size: 0.8rem;
-  color: #000000;
-  cursor: pointer;
 `
 
 const NavigationEdge = styled.div`
@@ -308,26 +217,27 @@ const ProjectsPage = () => {
         navigationEdge.removeEventListener('mouseenter', handleMouseEnter)
         navigationEdge.removeEventListener('mouseleave', handleMouseLeave)
         navigationEdge.removeEventListener('click', handleClick)
-        ScrollTrigger.getAll().forEach(trigger => trigger.kill())
       }
     }
 
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill())
+      // Cleanup if needed
     }
   }, [navigate])
 
   const projects = [
     {
+      id: "lightlab",
       title: "LightLab Studio",
       description: "Современный сайт для фотостудии с галереей работ, онлайн-бронированием и адаптивным дизайном. Реализован с акцентом на визуальную составляющую и пользовательский опыт.",
-      tech: ["React", "GSAP", "WebGL", "Node.js"],
+      techStack: ["React", "GSAP", "WebGL", "Node.js"],
       route: "/project/lightlab"
     },
     {
+      id: "raykhan",
       title: "Raykhan Telegram WebApp",
       description: "Telegram Web App для парфюмерного бренда с каталогом ароматов, системой заказов и интеграцией с Telegram Bot API. Оптимизирован для мобильных устройств.",
-      tech: ["Vue.js", "Telegram API", "Express", "MongoDB"]
+      techStack: ["Vue.js", "Telegram API", "Express", "MongoDB"]
     }
   ]
 
@@ -388,25 +298,16 @@ const ProjectsPage = () => {
       
       <Section ref={projectsRef}>
         <SectionTitle>Проекты</SectionTitle>
-        <ProjectList>
-          {projects.map(project => (
-            <ProjectTile key={project.title}>
-              <EntityCard>
-                <CardLink onClick={() => handleProjectClick(project)}>
-                  <CardHeader>
-                    <CardTitle>{project.title}</CardTitle>
-                    <CardDescription>{project.description}</CardDescription>
-                  </CardHeader>
-                  <TagList>
-                    {project.tech.map(tag => (
-                      <TagButton key={tag}>{tag}</TagButton>
-                    ))}
-                  </TagList>
-                </CardLink>
-              </EntityCard>
-            </ProjectTile>
-          ))}
-        </ProjectList>
+        <ProjectsScrollStack 
+          projects={projects}
+          itemScale={0.05}
+          itemStackDistance={40}
+          baseScale={0.8}
+          stackPosition="25%"
+          scaleEndPosition="15%"
+          rotationAmount={2}
+          blurAmount={1}
+        />
       </Section>
         
       <MobileNavigation />
@@ -414,4 +315,4 @@ const ProjectsPage = () => {
   )
 }
 
-export default ProjectsPage 
+export default ProjectsPage
