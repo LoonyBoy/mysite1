@@ -12,6 +12,7 @@ const CustomCursor = ({ color = '#D14836' }) => {
   const velocity = useRef({ x: 0, y: 0 })
   const animationId = useRef(null)
   const cursorState = useRef({ scaleX: 1, scaleY: 1, rotation: 0 })
+  const isSlowMode = useRef(false)
 
   useEffect(() => {
     const cursor = cursorRef.current
@@ -41,9 +42,10 @@ const CustomCursor = ({ color = '#D14836' }) => {
     const updateCursor = () => {
       const prevCursorPos = { ...cursorPos.current }
 
-      // Мгновенная синхронизация с мышью для отзывчивости
-      cursorPos.current.x = mousePos.current.x
-      cursorPos.current.y = mousePos.current.y
+      // Плавная синхронизация с небольшой инерцией для комфорта
+      const lerpSpeed = 0.85
+      cursorPos.current.x += (mousePos.current.x - cursorPos.current.x) * lerpSpeed
+      cursorPos.current.y += (mousePos.current.y - cursorPos.current.y) * lerpSpeed
       
       // Вычисляем скорость
       velocity.current = calculateVelocity(cursorPos.current, prevCursorPos)

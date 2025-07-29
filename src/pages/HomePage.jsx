@@ -7,7 +7,7 @@ import CustomCursor from '../components/CustomCursor'
 import MobileHints from '../components/MobileHints'
 import MobileNavigation from '../components/MobileNavigation'
 import { useParticles } from '../components/GlobalParticleManager'
-import GlitchText from '../components/GlitchText'
+import RotatingText from '../components/RotatingText'
 import useParticleControl from '../hooks/useParticleControl'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -435,20 +435,45 @@ const HomePage = () => {
             Создаю
           </div>
           <div className="text-line">
-            <GlitchText 
-              type="sync" 
-              syncId="adjective"
-              delay={1000} 
+            <RotatingText 
+              texts={[
+                'цифровые',
+                'крутые', 
+                'красивые', 
+                'быстрые', 
+                'смелые', 
+                'эффективные', 
+                'уникальные', 
+                'продуманные', 
+                'стильные', 
+                'креативные'
+              ]}
+              rotationInterval={3000}
+              splitBy="characters"
+              staggerDuration={0.03}
+              transition={{ type: "spring", damping: 20, stiffness: 200 }}
             />
           </div>
           <div className="text-line">
             решения
           </div>
           <div className="text-line">
-            <GlitchText 
-              type="sync" 
-              syncId="ending"
-              delay={1000} 
+            <RotatingText 
+              texts={[
+                'будущего',
+                'которые работают',
+                'без шаблонов',
+                'на заказ',
+                'без воды и лишних слов',
+                'не как у всех',
+                'которые продают',
+                'с душой, но по ТЗ',
+                'так, чтобы клиент сказал: "Вау!"'
+              ]}
+              rotationInterval={3000}
+              splitBy="characters"
+              staggerDuration={0.03}
+              transition={{ type: "spring", damping: 20, stiffness: 200 }}
             />
           </div>
         </MainHeading>
