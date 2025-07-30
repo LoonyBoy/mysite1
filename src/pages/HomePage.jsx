@@ -360,9 +360,9 @@ const HomePage = () => {
           duration: 0.3,
           ease: "power2.out",
           onComplete: () => {
-            // Устанавливаем флаг перехода на проекты
+            // Устанавливаем флаг перехода на меню
             sessionStorage.setItem('coming-from-home', 'true')
-            navigate('/projects')
+            navigate('/menu')
           }
         })
         
@@ -419,9 +419,9 @@ const HomePage = () => {
     <HomeContainer>
       <CustomCursor />
       
-      <NavigationEdge className="navigation-edge" role="button" aria-label="Перейти к проектам" />
+      <NavigationEdge className="navigation-edge" role="button" aria-label="Перейти к меню" />
       <NavigationHint className="navigation-hint">
-        Проекты →
+        Меню →
       </NavigationHint>
       
       <GameEdge className="game-edge" role="button" aria-label="Запустить игру Space Invaders" />

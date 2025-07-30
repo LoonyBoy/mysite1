@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { GlobalStyles } from './styles/GlobalStyles'
 import StartPage from './pages/StartPage'
 import HomePage from './pages/HomePage'
-import ProjectsPage from './pages/ProjectsPage'
+import MenuPage from './pages/MenuPage'
 import SpaceInvadersPage from './pages/SpaceInvadersPage'
 import LightLabCasePage from './pages/LightLabCasePage'
 import PerformanceOptimizer from './components/PerformanceOptimizer'
@@ -24,7 +24,7 @@ function App() {
           <Routes>
             <Route path="/" element={<StartPage />} />
             <Route path="/home" element={<HomePage />} />
-            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/menu" element={<MenuPage />} />
             <Route path="/project/lightlab" element={<LightLabCasePage />} />
             <Route path="/game" element={<SpaceInvadersPage />} />
           </Routes>

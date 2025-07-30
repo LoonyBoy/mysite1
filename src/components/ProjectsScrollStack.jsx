@@ -1,37 +1,35 @@
-import { useLayoutEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import Lenis from "lenis";
-import "./ProjectsScrollStack.css";
+import React, { useRef, useLayoutEffect, useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Lenis from 'lenis';
+import './ProjectsScrollStack.css';
 
-export const ProjectsScrollStack = ({
-  projects = [],
-  className = "",
-  itemDistance = 100,
-  itemScale = 0.03,
-  itemStackDistance = 30,
-  stackPosition = "20%",
-  scaleEndPosition = "10%",
-  baseScale = 0.85,
-  rotationAmount = 0,
-  blurAmount = 0,
+const ProjectsScrollStack = ({ 
+  projects = [], 
+  className = '',
+  itemStackDistance = 60,
+  itemScale = 0.05,
+  baseScale = 0.8,
+  stackPosition = '50%',
+  scaleEndPosition = '30%',
+  rotationAmount = 2,
+  blurAmount = 1,
 }) => {
   const scrollerRef = useRef(null);
   const cardsRef = useRef([]);
+  const lenisRef = useRef(null);
+  const animationFrameRef = useRef(null);
   const lastTransformsRef = useRef(new Map());
   const isUpdatingRef = useRef(false);
-  const lenisRef = useRef(null);
   const navigate = useNavigate();
-  const animationFrameRef = useRef(null);
 
-  const calculateProgress = useCallback((scrollTop, start, end) => {
-    if (scrollTop < start) return 0;
-    if (scrollTop > end) return 1;
-    return (scrollTop - start) / (end - start);
+  const calculateProgress = useCallback((scroll, start, end) => {
+    if (start >= end) return 1;
+    return Math.max(0, Math.min(1, (scroll - start) / (end - start)));
   }, []);
 
-  const parsePercentage = useCallback((value, containerHeight) => {
-    if (typeof value === 'string' && value.includes('%')) {
-      return (parseFloat(value) / 100) * containerHeight;
+  const parsePercentage = useCallback((value, container) => {
+    if (typeof value === 'string' && value.endsWith('%')) {
+      return (parseFloat(value) / 100) * container;
     }
     return parseFloat(value);
   }, []);
@@ -140,7 +138,6 @@ export const ProjectsScrollStack = ({
 
     scroller.addEventListener('scroll', handleScroll, { passive: true });
     
-    // Initialize Lenis for smooth scrolling
     lenisRef.current = new Lenis({
       wrapper: scroller,
       content: scroller.firstElementChild,
@@ -156,8 +153,6 @@ export const ProjectsScrollStack = ({
     }
 
     requestAnimationFrame(raf);
-
-    // Initial transform update
     updateCardTransforms();
 
     return () => {
@@ -200,6 +195,18 @@ export const ProjectsScrollStack = ({
     });
   }, [navigate]);
 
+  if (!projects || projects.length === 0) {
+    return (
+      <div className="projects-scroll-container">
+        <div className="projects-scroll-content">
+          <p style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+            No projects to display
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       ref={scrollerRef} 
@@ -219,7 +226,7 @@ export const ProjectsScrollStack = ({
                   <p className="project-card-description">{project.description}</p>
                 </header>
                 <div className="project-card-tech">
-                  {project.techStack.map((tech) => (
+                  {project.techStack && project.techStack.map((tech) => (
                     <span key={tech} className="tech-tag">
                       {tech}
                     </span>

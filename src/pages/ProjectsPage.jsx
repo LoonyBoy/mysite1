@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useMemo } from 'react'
 import styled from 'styled-components'
 import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useNavigate } from 'react-router-dom'
 import { useParticles } from '../components/GlobalParticleManager'
 import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
-import ProjectsScrollStack from '../components/ProjectsScrollStack'
 import useParticleControl from '../hooks/useParticleControl'
+import ScrollStack, { ScrollStackItem } from '../components/ScrollStack'
+
+gsap.registerPlugin(ScrollTrigger)
 
 const ProjectsContainer = styled.div`
   min-height: 100vh;
@@ -24,15 +27,18 @@ const ProjectsContainer = styled.div`
 `
 
 const Section = styled.section`
-  padding: 8rem 2rem;
+  padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
   position: relative;
   z-index: 2;
-  background: transparent;
+  background: transparent; /* Прозрачный фон чтобы не перекрывать частицы */
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 
   @media (max-width: 768px) {
-    padding: 4rem 1rem;
+    padding: 1rem;
     
     @supports (padding: max(0px)) {
       padding-left: max(1rem, env(safe-area-inset-left) + 1rem);
@@ -44,15 +50,94 @@ const Section = styled.section`
 const SectionTitle = styled.h2`
   font-size: clamp(2.5rem, 6vw, 4rem);
   font-weight: 400;
-  margin-bottom: 4rem;
+  margin-bottom: 2rem;
   text-align: center;
   opacity: 0;
   transform: translateY(50px);
-  color: #ffffff;
+  flex-shrink: 0;
   
   @media (max-width: 768px) {
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
   }
+`
+
+const ProjectList = styled.div`
+  width: 100%;
+  flex: 1;
+  overflow: hidden;
+`
+
+const ProjectTile = styled.div`
+  display: flex;
+  justify-content: center;
+`
+
+const EntityCard = styled.article`
+  background-color: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: grayscale(100%);
+  backdrop-filter: grayscale(100%);
+  color: #000000;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+  // Текст и теги без смешения
+  > * {
+    mix-blend-mode: normal;
+  }
+`
+
+const CardLink = styled.div`
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+`
+
+const CardHeader = styled.header`
+  padding: 1.5rem;
+  flex: 1;
+`
+
+const CardTitle = styled.h2`
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  color: #000000;
+`
+
+const CardDescription = styled.p`
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: #000000;
+  opacity: 0.8;
+`
+
+const CardCover = styled.img`
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+`
+
+const TagList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem 1.5rem;
+`
+
+const TagButton = styled.button`
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  color: #000000;
+  cursor: pointer;
 `
 
 const NavigationEdge = styled.div`
@@ -217,27 +302,26 @@ const ProjectsPage = () => {
         navigationEdge.removeEventListener('mouseenter', handleMouseEnter)
         navigationEdge.removeEventListener('mouseleave', handleMouseLeave)
         navigationEdge.removeEventListener('click', handleClick)
+        ScrollTrigger.getAll().forEach(trigger => trigger.kill())
       }
     }
 
     return () => {
-      // Cleanup if needed
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill())
     }
   }, [navigate])
 
   const projects = [
     {
-      id: "lightlab",
       title: "LightLab Studio",
       description: "Современный сайт для фотостудии с галереей работ, онлайн-бронированием и адаптивным дизайном. Реализован с акцентом на визуальную составляющую и пользовательский опыт.",
-      techStack: ["React", "GSAP", "WebGL", "Node.js"],
+      tech: ["React", "GSAP", "WebGL", "Node.js"],
       route: "/project/lightlab"
     },
     {
-      id: "raykhan",
       title: "Raykhan Telegram WebApp",
       description: "Telegram Web App для парфюмерного бренда с каталогом ароматов, системой заказов и интеграцией с Telegram Bot API. Оптимизирован для мобильных устройств.",
-      techStack: ["Vue.js", "Telegram API", "Express", "MongoDB"]
+      tech: ["Vue.js", "Telegram API", "Express", "MongoDB"]
     }
   ]
 
@@ -298,16 +382,39 @@ const ProjectsPage = () => {
       
       <Section ref={projectsRef}>
         <SectionTitle>Проекты</SectionTitle>
-        <ProjectsScrollStack 
-          projects={projects}
-          itemScale={0.05}
-          itemStackDistance={40}
-          baseScale={0.8}
-          stackPosition="25%"
-          scaleEndPosition="15%"
-          rotationAmount={2}
-          blurAmount={1}
-        />
+        <ProjectList>
+          <ScrollStack
+            itemDistance={120}
+            itemScale={0.05}
+            itemStackDistance={40}
+            stackPosition="25%"
+            scaleEndPosition="15%"
+            baseScale={0.9}
+            rotationAmount={2}
+            blurAmount={0.5}
+            onStackComplete={() => console.log('Stack animation completed')}
+          >
+            {projects.map(project => (
+              <ScrollStackItem key={project.title}>
+                <ProjectTile>
+                  <EntityCard>
+                    <CardLink onClick={() => handleProjectClick(project)}>
+                      <CardHeader>
+                        <CardTitle>{project.title}</CardTitle>
+                        <CardDescription>{project.description}</CardDescription>
+                      </CardHeader>
+                      <TagList>
+                        {project.tech.map(tag => (
+                          <TagButton key={tag}>{tag}</TagButton>
+                        ))}
+                      </TagList>
+                    </CardLink>
+                  </EntityCard>
+                </ProjectTile>
+              </ScrollStackItem>
+            ))}
+          </ScrollStack>
+        </ProjectList>
       </Section>
         
       <MobileNavigation />
@@ -315,4 +422,4 @@ const ProjectsPage = () => {
   )
 }
 
-export default ProjectsPage
+export default ProjectsPage 

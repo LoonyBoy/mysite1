@@ -35,7 +35,7 @@ const MobileNavigation = () => {
     const getContentElement = () => {
       if (location.pathname === '/home') {
         return document.querySelector('#hero')
-      } else if (location.pathname === '/projects') {
+      } else if (location.pathname === '/menu') {
         return document.querySelector('section')
       }
       return null
@@ -128,8 +128,8 @@ const MobileNavigation = () => {
         
         if (isDragging && (Math.abs(currentX) > threshold || velocity > 0.5)) {
           if (diffX > 0 && location.pathname === '/home') {
-            // Свайп влево на /home → переход на /projects
-            logger.touch('Swipe left: home->projects', { 
+            // Свайп влево на /home → переход на /menu
+            logger.touch('Swipe left: home->menu', { 
               velocity, 
               distance: Math.abs(currentX),
               swipeTime 
@@ -138,7 +138,7 @@ const MobileNavigation = () => {
             // Устанавливаем контекст перехода
             setTransitionContext({
               from: 'home',
-              to: 'projects',
+              to: 'menu',
               method: 'swipeLeft',
               velocity,
               timestamp: Date.now()
@@ -148,7 +148,7 @@ const MobileNavigation = () => {
             contentElement.style.transform = `translateX(-${window.innerWidth}px)`
             contentElement.style.opacity = '0'
             contentElement.style.filter = 'blur(1px)'
-            setTimeout(() => handleNavigateToProjects(), 150)
+            setTimeout(() => handleNavigateToMenu(), 150)
             
           } else if (diffX < 0 && location.pathname === '/home') {
             // Свайп вправо на /home → запуск игры
@@ -173,9 +173,9 @@ const MobileNavigation = () => {
             contentElement.style.filter = 'blur(1px)'
             setTimeout(() => handleNavigateToGame(), 150)
             
-          } else if (diffX < 0 && location.pathname === '/projects') {
-            // Свайп вправо на /projects → переход на /home
-            logger.touch('Swipe right: projects->home', { 
+          } else if (diffX < 0 && location.pathname === '/menu') {
+            // Свайп вправо на /menu → переход на /home
+            logger.touch('Swipe right: menu->home', { 
               velocity, 
               distance: Math.abs(currentX),
               swipeTime 
@@ -183,7 +183,7 @@ const MobileNavigation = () => {
             
             // Устанавливаем контекст перехода
             setTransitionContext({
-              from: 'projects',
+              from: 'menu',
               to: 'home',
               method: 'swipeRight',
               velocity,
@@ -253,16 +253,16 @@ const MobileNavigation = () => {
     }
   }, [location.pathname])
 
-  const handleNavigateToProjects = () => {
-    logger.navigation('Navigate to projects initiated', { trigger: 'mobile-swipe' })
+  const handleNavigateToMenu = () => {
+    logger.navigation('Navigate to menu initiated', { trigger: 'mobile-swipe' })
     
     // Контекстная анимация частиц вместо простого ускорения
     // setParticleSpeed будет вызван автоматически в GlobalParticleManager
     
     setTimeout(() => {
       sessionStorage.setItem('coming-from-home', 'true')
-      logger.navigation('Navigating to projects page')
-      navigate('/projects')
+      logger.navigation('Navigating to menu page')
+      navigate('/menu')
     }, 200)
   }
 
@@ -299,15 +299,15 @@ const MobileNavigation = () => {
 
   const getSwipeHintText = () => {
     if (location.pathname === '/home') {
-      return 'Проекты →'
-    } else if (location.pathname === '/projects') {
+      return 'Меню →'
+    } else if (location.pathname === '/menu') {
       return '← Главная'
     }
     return ''
   }
 
-  // Показываем только на /home и /projects (не показываем в игре)
-  if (location.pathname !== '/home' && location.pathname !== '/projects') {
+  // Показываем только на /home и /menu (не показываем в игре)
+  if (location.pathname !== '/home' && location.pathname !== '/menu') {
     return null
   }
 
@@ -318,4 +318,4 @@ const MobileNavigation = () => {
   )
 }
 
-export default MobileNavigation 
+export default MobileNavigation

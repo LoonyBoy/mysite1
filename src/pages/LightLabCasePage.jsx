@@ -344,7 +344,7 @@ const LightLabCasePage = () => {
   const handleBack = () => {
     // Устанавливаем контекст возврата
     setTransitionContext('lightlab-case->projects')
-    navigate('/projects')
+    navigate('/menu')
   }
 
   return (
@@ -401,4 +401,4 @@ const LightLabCasePage = () => {
   )
 }
 
-export default LightLabCasePage 
+export default LightLabCasePage

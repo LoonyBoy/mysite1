@@ -25,6 +25,7 @@ export const ParticleProvider = ({ children }) => {
   const [currentPage, setCurrentPage] = useState(getInitialPage())
   const [camera, setCamera] = useState(null)
   const [particlesVisible, setParticlesVisible] = useState(false) // Состояние видимости частиц
+  const [hoveredRect, setHoveredRect] = useState(null) // Состояние для области hover
   
   // Устанавливаем начальные свойства частиц в зависимости от страницы
   const getInitialParticleProps = () => {
@@ -71,9 +72,9 @@ export const ParticleProvider = ({ children }) => {
     })
     
     // СПЕЦИАЛЬНАЯ ОБРАБОТКА ВЫХОДА ИЗ LIGHTLAB
-    if (path === '/projects' && currentPage === 'lightlab-case' && !isAnimating) {
-      console.log('🚨 DIRECT lightlab->projects transition detected!')
-      logger.particles('DIRECT lightlab->projects transition', { path, currentPage })
+    if (path === '/menu' && currentPage === 'lightlab-case' && !isAnimating) {
+      console.log('🚨 DIRECT lightlab->menu transition detected!')
+      logger.particles('DIRECT lightlab->menu transition', { path, currentPage })
       setIsAnimating(true)
       setCurrentPage('projects')
       setParticlesVisible(true)
@@ -113,16 +114,16 @@ export const ParticleProvider = ({ children }) => {
       // Устанавливаем домашнюю страницу без анимации (первая загрузка или прямой переход)
       setCurrentPage('home')
       setParticlesVisible(true) // На домашней странице частицы видны сразу
-    } else if (path === '/projects' && currentPage === 'home' && !isAnimating) {
-      // Переход на проекты с домашней - контекстная анимация
-      logger.particles('Contextual transition: home->projects', { context: transitionContext })
-      setCurrentPage('projects')
+    } else if (path === '/menu' && currentPage === 'home' && !isAnimating) {
+      // Переход на меню с домашней - контекстная анимация
+      logger.particles('Contextual transition: home->menu', { context: transitionContext })
+      setCurrentPage('menu')
       setParticlesVisible(true)
-      animateParticlesProjectsEntry()
+      animateParticlesMenuEntry()
       return
-    } else if (path === '/projects' && currentPage !== 'projects' && !isAnimating) {
-      // Устанавливаем страницу проектов без анимации (прямой переход)
-      setCurrentPage('projects')
+    } else if (path === '/menu' && currentPage !== 'menu' && !isAnimating) {
+      // Устанавливаем страницу меню без анимации (прямой переход)
+      setCurrentPage('menu')
       setParticlesVisible(true)
       return
     } else if (path === '/game' && currentPage === 'home' && !isAnimating) {
@@ -157,10 +158,10 @@ export const ParticleProvider = ({ children }) => {
       setParticlesVisible(true)
       animateParticlesLightLabEntry()
       return
-    } else if (path === '/projects' && currentPage !== 'projects' && currentPage !== 'lightlab-case' && !isAnimating) {
-      // Переход на projects с любой другой страницы
-      logger.particles('Generic transition to projects', { from: currentPage, to: 'projects' })
-      setCurrentPage('projects')
+    } else if (path === '/menu' && currentPage !== 'menu' && currentPage !== 'lightlab-case' && !isAnimating) {
+      // Переход на menu с любой другой страницы
+      logger.particles('Generic transition to menu', { from: currentPage, to: 'menu' })
+      setCurrentPage('menu')
       setParticlesVisible(true)
       // Если пришли не с lightlab, то просто показываем обычные частицы
       if (currentPage !== 'lightlab-case') {
@@ -406,10 +407,10 @@ export const ParticleProvider = ({ children }) => {
   }
 
   // Контекстные анимации частиц
-  const animateParticlesProjectsEntry = () => {
+  const animateParticlesMenuEntry = () => {
     if (!camera) return
     
-    logger.particles('Starting projects entry animation', { 
+    logger.particles('Starting menu entry animation', { 
       direction: 'left',
       effect: 'gradual acceleration then deceleration',
       initialSpeed: { x: 1.0, y: 1.0 },
@@ -445,7 +446,7 @@ export const ParticleProvider = ({ children }) => {
                 
                 if (newSpeedX <= 1.05 && newSpeedY <= 1.05) {
                   clearInterval(decelerationInterval)
-                  logger.particles('Projects entry animation completed')
+                  logger.particles('Menu entry animation completed')
                   return {
                     rotationSpeed: { x: 1.0, y: 1.0 }, // Возвращаемся к базовой скорости
                     fastRotation: false
@@ -795,13 +796,13 @@ export const ParticleProvider = ({ children }) => {
   }
 
   // Устаревшие методы для совместимости
-  const animateToProjects = () => {
-    logger.particles('Legacy animateToProjects called - redirecting to contextual animation')
-    animateParticlesProjectsEntry()
+  const animateToMenu = () => {
+    logger.particles('Legacy animateToMenu called - redirecting to contextual animation')
+    animateParticlesMenuEntry()
   }
 
-  const animateFromProjects = () => {
-    logger.particles('Legacy animateFromProjects called - redirecting to contextual animation')
+  const animateFromMenu = () => {
+    logger.particles('Legacy animateFromMenu called - redirecting to contextual animation')
     animateParticlesHomeReturn()
   }
 
@@ -826,8 +827,8 @@ export const ParticleProvider = ({ children }) => {
     setCurrentPage,
     animateToHome,
     animateToStart,
-    animateToProjects,
-    animateFromProjects,
+    animateToMenu,
+    animateFromMenu,
     setParticleSpeed,
     camera,
     particlesVisible,
@@ -837,7 +838,9 @@ export const ParticleProvider = ({ children }) => {
     transitionContext,
     animateParticlesGameExit,
     animateParticlesLightLabEntry,
-    animateParticlesLightLabExit
+    animateParticlesLightLabExit,
+    hoveredRect,
+    setHoveredRect
   }
 
   return (
@@ -859,4 +862,4 @@ export const ParticleProvider = ({ children }) => {
   )
 }
 
-export default ParticleProvider 
+export default ParticleProvider

@@ -55,6 +55,49 @@ function Particles(props) {
 }
 
 // Компонент для отрисовки серых частиц внутри области карточки проекта
+const HoveredParticles = ({ hoveredRect, size, opacity, rotationSpeed, fastRotation }) => {
+  const { gl, size: canvasSize } = useThree()
+  const maskRect = useRef(null)
+
+  useEffect(() => {
+    if (hoveredRect) {
+      maskRect.current = {
+        x: hoveredRect.left,
+        y: canvasSize.height - hoveredRect.bottom,
+        width: hoveredRect.width,
+        height: hoveredRect.height
+      }
+    } else {
+      maskRect.current = null
+    }
+  }, [hoveredRect, canvasSize])
+
+  if (!maskRect.current) return null
+
+  return (
+    <group renderOrder={1}
+      onBeforeRender={(renderer) => {
+        const { x, y, width, height } = maskRect.current
+        const ctx = renderer.getContext()
+        ctx.enable(ctx.SCISSOR_TEST)
+        ctx.scissor(x, y, width, height)
+      }}
+      onAfterRender={(renderer) => {
+        const ctx = renderer.getContext()
+        ctx.disable(ctx.SCISSOR_TEST)
+      }}
+    >
+      <Particles
+        color="#000000"
+        size={size}
+        opacity={opacity}
+        rotationSpeed={rotationSpeed}
+        fastRotation={fastRotation}
+      />
+    </group>
+  )
+}
+
 const MaskedParticles = ({ size, opacity, rotationSpeed, fastRotation }) => {
   const { gl, size: canvasSize } = useThree()
   const maskRect = useRef(null)
@@ -87,7 +130,7 @@ const MaskedParticles = ({ size, opacity, rotationSpeed, fastRotation }) => {
       }}
     >
       <Particles
-        color="#888888"
+        color="#808080" // Gray color for masked particles
         size={size}
         opacity={opacity}
         rotationSpeed={rotationSpeed}
@@ -96,7 +139,6 @@ const MaskedParticles = ({ size, opacity, rotationSpeed, fastRotation }) => {
     </group>
   )
 }
-
 const UniversalParticles = ({ 
   isStartPage = false, 
   onCameraReady,
@@ -106,7 +148,8 @@ const UniversalParticles = ({
   rotationSpeed = { x: 1, y: 1 },
   fastRotation = false,
   particlesVisible = true,
-  isLightLabCase = false
+  isLightLabCase = false,
+  hoveredRect
 }) => {
   const containerRef = useRef(null)
   const initialCameraPosition = isStartPage ? [0, 0, 0.2] : [0, 0, 1]
@@ -171,6 +214,14 @@ const UniversalParticles = ({
             rotationSpeed={rotationSpeed}
             fastRotation={fastRotation}
           />
+          {/* Черные частицы в hovered области */}
+          <HoveredParticles
+            hoveredRect={hoveredRect}
+            size={particleSize}
+            opacity={particleOpacity}
+            rotationSpeed={rotationSpeed}
+            fastRotation={fastRotation}
+          />
           {/* Второй проход: серые частицы внутри карточки */}
           <MaskedParticles
             size={particleSize}
@@ -184,4 +235,4 @@ const UniversalParticles = ({
   )
 }
 
-export default UniversalParticles 
+export default UniversalParticles
