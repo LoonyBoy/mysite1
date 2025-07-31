@@ -9,14 +9,19 @@ import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
 import useParticleControl from '../hooks/useParticleControl'
 
+
 const MenuContainer = styled.div`
   min-height: 100vh;
   min-height: 100dvh;
   background: transparent;
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   overflow-x: hidden;
   z-index: 1;
+  margin: 0;
+  padding: 0;
   
   @media (max-width: 768px) {
     overflow-y: auto;
@@ -34,7 +39,7 @@ const Section = styled.section`
   height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   width: 100%;
 
@@ -62,7 +67,7 @@ const NavigationEdge = styled.div`
   position: fixed;
   top: 0;
   left: 0;
-  width: 350px;
+  width: 175px;
   height: 100vh;
   z-index: 5;
   cursor: none;
@@ -129,6 +134,11 @@ const WhiteBackground = styled.div`
   background: white;
   z-index: 1;
   transition: width 0.3s ease;
+  pointer-events: none;
+  
+  ${Card}:hover & {
+    width: 100%;
+  }
 `
 
 const CardContent = styled.div`
@@ -284,15 +294,31 @@ const menuItems = [
 const MenuPage = () => {
   const menuRef = useRef(null)
   const navigate = useNavigate()
-  const { camera } = useParticles()
+  const { camera, setParticleProps, setHoveredRect } = useParticles()
   const isTransitioningRef = useRef(false)
   const [hoveredIndex, setHoveredIndex] = useState(null)
   const cardRefs = useRef([])
   const cards = [
-    { title: 'Brand', shortDesc: 'Design', hiddenDesc: 'Комплексный брендинг и визуальная идентичность.' },
-    { title: 'Product', shortDesc: 'Development', hiddenDesc: 'Разработка цифровых продуктов с фокусом на UX.' },
-    { title: 'Motion', shortDesc: 'Animation', hiddenDesc: 'Динамичные анимации для вовлечения пользователей.' },
-    { title: 'Strategy', shortDesc: 'Planning', hiddenDesc: 'Стратегическое планирование для роста бизнеса.' }
+    { 
+      title: 'О себе', 
+      shortDesc: 'Кто я, чем живу, что ценю', 
+      hiddenDesc: 'Кратко обо мне: подход к работе, ключевые принципы, и почему со мной комфортно делать проекты, которые не стыдно показывать.' 
+    },
+    { 
+      title: 'Проекты', 
+      shortDesc: 'Реальные задачи — реальные решения', 
+      hiddenDesc: 'Подборка завершённых работ: сайты, Telegram-боты, автоматизации. Всё, что уже принесло пользу клиентам и бизнесу.' 
+    },
+    { 
+      title: 'Услуги', 
+      shortDesc: 'Что могу сделать для тебя', 
+      hiddenDesc: 'Разработка сайтов и ботов, настройка автоматизаций, UI-дизайн, техподдержка. Гибко под задачи, без шаблонов и лишнего шума.' 
+    },
+    { 
+      title: 'Контакты', 
+      shortDesc: 'Всегда на связи', 
+      hiddenDesc: 'Telegram, почта, соцсети. Открыт к проектам, предложениям, сотрудничеству. Пиши — отвечаю быстро и по делу.' 
+    }
   ]
 
   const handleHover = (index, isHovering) => {
@@ -303,6 +329,30 @@ const MenuPage = () => {
     const shortElement = cardElement.querySelector('p')
     const hiddenElement = cardElement.querySelector(`.hidden-desc-${index}`)
     const whiteBackground = cardElement.querySelector('.white-bg')
+    
+
+    setHoveredIndex(isHovering ? index : null);
+
+    const colors = ['#0000FF', '#800080', '#00FF00', '#FFFFFF'];
+    const defaultColor = '#D14836';
+
+    if (isHovering) {
+      setParticleProps(prev => ({ ...prev, color: colors[index] }));
+    } else {
+      setParticleProps(prev => ({ ...prev, color: defaultColor }));
+    }
+
+    if (index === 1) { // Projects card
+      if (isHovering) {
+        setHoveredRect(cardElement.getBoundingClientRect());
+        gsap.to(titleElement, { y: -50, duration: 0.3, ease: "power2.out" });
+        gsap.to(shortElement, { y: 50, duration: 0.3, ease: "power2.out" });
+      } else {
+        setHoveredRect(null);
+        gsap.to(titleElement, { y: 0, duration: 0.3, ease: "power2.out" });
+        gsap.to(shortElement, { y: 0, duration: 0.3, ease: "power2.out" });
+      }
+    }
 
     if (isHovering) {
       // Анимируем белый фон
@@ -347,25 +397,21 @@ const MenuPage = () => {
   const { resetRotation } = useParticleControl(camera, !isMobile, sensitivity)
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
 
-    // Анимация fade-in карточек на скролл
+    // Немедленная анимация fade-in при загрузке
     cards.forEach((_, index) => {
       gsap.fromTo(`.card-${index}`, 
-        { opacity: 0, y: 100 },
+        { opacity: 0, y: 0 }, // Начинаем с y: 0, чтобы карточки не были смещены вниз
         {
           opacity: 1,
           y: 0,
           duration: 0.8,
-          scrollTrigger: {
-            trigger: `.card-${index}`,
-            start: 'top bottom',
-            end: 'bottom top',
-            scrub: true
-          }
+          delay: index * 0.1 // Лёгкая задержка для последовательности
         }
       )
-    })
+    });
 
     // Обработка наведения на левый край
     const navigationEdge = document.querySelector('.navigation-edge-left')
@@ -482,7 +528,22 @@ const MenuPage = () => {
               </CardContent>
               <HiddenDescription className={`hidden-desc-${index}`}>
                 <p>{card.hiddenDesc}</p>
+                {index === 0 && <img src="/images/rudakovrz7.png?v=1" alt="Rudakovrz" style={{width: '100%', marginTop: '10px', display: 'block'}} />}
               </HiddenDescription>
+              {index === 1 && hoveredIndex === 1 && (
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 3, color: 'black', textAlign: 'center' }}>
+                  <h4>Завершенные проекты</h4>
+                  <ul>
+                    <li>Light Lab Case</li>
+                    <li>Space Invaders</li>
+                  </ul>
+                  <h4>В разработке</h4>
+                  <ul>
+                    <li>Project A</li>
+                    <li>Project B</li>
+                  </ul>
+                </div>
+              )}
             </Card>
           ))}
         </CardRow>

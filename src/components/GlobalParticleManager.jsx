@@ -840,7 +840,8 @@ export const ParticleProvider = ({ children }) => {
     animateParticlesLightLabEntry,
     animateParticlesLightLabExit,
     hoveredRect,
-    setHoveredRect
+    setHoveredRect,
+    setParticleProps // Added to expose the setter
   }
 
   return (
