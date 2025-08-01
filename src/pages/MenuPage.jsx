@@ -333,7 +333,7 @@ const MenuPage = () => {
 
     setHoveredIndex(isHovering ? index : null);
 
-    const colors = ['#0000FF', '#800080', '#00FF00', '#FFFFFF'];
+    const colors = ['#0000FF', '#800080', '#008000', '#FFFFFF'];
     const defaultColor = '#D14836';
 
     if (isHovering) {
