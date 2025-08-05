@@ -8,7 +8,7 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   html, body {
-    font-family: 'Space Grotesk', monospace;
+    font-family: 'Unbounded', sans-serif;
     font-weight: 400;
     line-height: 1.2;
     overflow-x: hidden;

@@ -8,6 +8,7 @@ import { useParticles } from '../components/GlobalParticleManager'
 import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
 import useParticleControl from '../hooks/useParticleControl'
+import Dither from '../../dither.jsx'; // Adjusted to new file extension
 
 
 const MenuContainer = styled.div`
@@ -108,6 +109,11 @@ const Card = styled.div`
   justify-content: space-between;
   padding: 0 20px;
   
+  &:hover {
+    align-items: flex-start;
+    padding-top: 40px;
+  }
+  
   &:last-child {
     border-right: none;
   }
@@ -123,23 +129,30 @@ const Card = styled.div`
       border-bottom: none;
     }
   }
+
+  .profile-img {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    display: block;
+    z-index: 1;
+    opacity: 0;
+    transform: translateY(20px);
+  }
 `
 
-const WhiteBackground = styled.div`
+const DitherBackground = styled.div`
   position: absolute;
   top: 0;
   left: 0;
   width: 0%;
   height: 100%;
-  background: white;
+  overflow: hidden;
   z-index: 1;
-  transition: width 0.3s ease;
-  pointer-events: none;
-  
-  ${Card}:hover & {
-    width: 100%;
-  }
-`
+`;
 
 const CardContent = styled.div`
   position: relative;
@@ -154,21 +167,23 @@ const TitleSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+  position: relative;
 `
 
 const CardTitle = styled.h3`
-  font-size: 32px;
+  font-size: 80px;
   font-weight: 300;
   color: white;
   margin: 0;
   transition: all 0.3s ease;
   
   ${Card}:hover & {
-    color: black;
+    color: white;
+    /* убираем изменение размера на hover */
   }
   
   @media (max-width: 768px) {
-    font-size: 48px;
+    font-size: 40px;
   }
 `
 
@@ -179,30 +194,24 @@ const ShortDescription = styled.p`
   transition: all 0.3s ease;
   
   ${Card}:hover & {
-    color: rgba(0, 0, 0, 0.7);
+    color: white;
   }
 `
 
 const HiddenDescription = styled.div`
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
-  z-index: 2;
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateY(20px);
   transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
   
   p {
     font-size: 14px;
-    color: rgba(0, 0, 0, 0.8);
-    margin: 0;
+    color: white;
+    margin: 0 0 20px 0;
   }
   
   @media (max-width: 768px) {
-    left: 40px;
-    right: 40px;
-    
     p {
       font-size: 16px;
     }
@@ -215,8 +224,8 @@ const Arrow = styled.div`
   transition: all 0.3s ease;
   
   ${Card}:hover & {
-    color: black;
-    transform: translateX(10px) translateY(-15px) rotate(45deg);
+    color: white;
+    /* убираем CSS transform, оставляем только GSAP анимации */
   }
 `
 
@@ -246,6 +255,7 @@ const NavigationHint = styled.div`
 
 
 
+const waveColors = [[0,0,1], [0.5,0,0.5], [0,0.5,0], [1,1,1]];
 const menuItems = [
   {
     label: "Home",
@@ -325,11 +335,26 @@ const MenuPage = () => {
     const cardElement = cardRefs.current[index]
     if (!cardElement) return
 
-    const titleElement = cardElement.querySelector('h3')
-    const shortElement = cardElement.querySelector('p')
     const hiddenElement = cardElement.querySelector(`.hidden-desc-${index}`)
-    const whiteBackground = cardElement.querySelector('.white-bg')
+    const ditherBackground = cardElement.querySelector(`.dither-bg-${index}`)
+    const arrow = cardElement.querySelector(`.arrow-${index}`)
+    const projectList = index === 1 ? cardElement.querySelector('.project-list') : null;
     
+    // Получаем элементы для нормального и hover состояния
+    const normalTitle = cardElement.querySelector(`.normal-title-${index}`)
+    const hoverTitle = cardElement.querySelector(`.hover-title-${index}`)
+    const normalDesc = cardElement.querySelector(`.normal-desc-${index}`)
+    const hoverDesc = cardElement.querySelector(`.hover-desc-${index}`)
+
+    // Прерываем все текущие анимации и возвращаем элементы в исходное состояние, чтобы избежать залипания
+    gsap.killTweensOf([ditherBackground, arrow, hiddenElement, normalTitle, hoverTitle, normalDesc, hoverDesc]);
+    if (projectList) {
+      gsap.killTweensOf(projectList);
+      gsap.set(projectList, { x: '-100%', opacity: 0 });
+    }
+    gsap.set([normalTitle, hoverTitle, normalDesc, hoverDesc], { x: 0, clearProps: "transform" })
+    // Принудительно сбрасываем стрелочку в исходное состояние
+    gsap.set(arrow, { x: 0, y: 0, rotation: 0, opacity: 1, clearProps: "transform" })
 
     setHoveredIndex(isHovering ? index : null);
 
@@ -342,52 +367,160 @@ const MenuPage = () => {
       setParticleProps(prev => ({ ...prev, color: defaultColor }));
     }
 
-    if (index === 1) { // Projects card
-      if (isHovering) {
-        setHoveredRect(cardElement.getBoundingClientRect());
-        gsap.to(titleElement, { y: -50, duration: 0.3, ease: "power2.out" });
-        gsap.to(shortElement, { y: 50, duration: 0.3, ease: "power2.out" });
-      } else {
-        setHoveredRect(null);
-        gsap.to(titleElement, { y: 0, duration: 0.3, ease: "power2.out" });
-        gsap.to(shortElement, { y: 0, duration: 0.3, ease: "power2.out" });
-      }
+    if (index === 1 && isHovering) {
+      setHoveredRect(cardElement.getBoundingClientRect());
+    } else if (index === 1 && !isHovering) {
+      setHoveredRect(null);
     }
 
     if (isHovering) {
       // Анимируем белый фон
-      if (whiteBackground) {
-        gsap.to(whiteBackground, {
+      if (ditherBackground) {
+        gsap.to(ditherBackground, {
           width: '100%',
           duration: 0.3,
           ease: "power2.out"
         })
       }
 
+      // Анимация стрелки
+      if (arrow) {
+        gsap.to(arrow, {
+          x: 10,
+          rotation: 45,
+          opacity: 0.8,
+          duration: 0.3,
+          ease: "power2.out"
+        });
+      }
+
+      // Скрываем нормальные элементы резко (без движения влево)
+      gsap.to([normalTitle, normalDesc], {
+        opacity: 0,
+        duration: 0.05, // Очень быстрое исчезновение
+        ease: "power2.out"
+      });
+
+      // Показываем hover элементы (они начинают слева и выезжают вправо)
+      gsap.fromTo([hoverTitle, hoverDesc], 
+        { x: -100, opacity: 0 },
+        {
+          x: 0,
+          opacity: 1,
+          duration: 0.3,
+          delay: 0.1,
+          ease: "power2.out"
+        }
+      );
+
       // Показываем описание с анимацией снизу вверх
       gsap.to(hiddenElement, {
         opacity: 1,
         y: 0,
         duration: 0.3,
+        delay: 0.2,
         ease: "power2.out"
-      })
+      });
+
+      // Анимируем изображение для index 0
+      if (index === 0) {
+        const profileImg = cardElement.querySelector('.profile-img');
+        if (profileImg) {
+          gsap.to(profileImg, {
+            opacity: 1,
+            y: 0,
+            scale: 1.05,
+            duration: 0.3,
+            ease: "power2.out"
+          });
+        }
+      }
+
+      // Для Projects: анимируем список
+      if (index === 1) {
+        const projectList = cardElement.querySelector('.project-list');
+        if (projectList) {
+          gsap.to(projectList, {
+            x: 0,
+            opacity: 1,
+            duration: 0.4,
+            delay: 0.2,
+            ease: "power2.out"
+          });
+        }
+      }
     } else {
       // Скрываем белый фон
-      if (whiteBackground) {
-        gsap.to(whiteBackground, {
+      if (ditherBackground) {
+        gsap.to(ditherBackground, {
           width: '0%',
           duration: 0.3,
           ease: "power2.out"
-        })
+        });
       }
 
-      // Скрываем описание с анимацией вниз
+      // Анимация стрелки обратно
+      if (arrow) {
+        gsap.to(arrow, {
+          x: 0,
+          rotation: 0,
+          opacity: 1,
+          duration: 0.3,
+          ease: "power2.out"
+        });
+      }
+
+      // Скрываем hover элементы
+      gsap.to([hoverTitle, hoverDesc], {
+        x: -100,
+        opacity: 0,
+        duration: 0.15,
+        ease: "power2.out",
+        onComplete: () => {
+          // Показываем нормальные элементы только после полного исчезновения hover элементов
+          gsap.to([normalTitle, normalDesc], {
+            x: 0,
+            opacity: 1,
+            duration: 0.3,
+            ease: "power2.out"
+          })
+        }
+      });
+
+      // Скрываем описание
       gsap.to(hiddenElement, {
         opacity: 0,
-        y: 24,
-        duration: 0.3,
+        y: 20,
+        duration: 0.2,
         ease: "power2.out"
-      })
+      });
+
+      // Скрываем изображение для index 0
+      if (index === 0) {
+        const profileImg = cardElement.querySelector('.profile-img');
+        if (profileImg) {
+          gsap.to(profileImg, {
+            opacity: 0,
+            y: 20,
+            scale: 1,
+            duration: 0.3,
+            ease: "power2.out"
+          });
+        }
+      }
+
+      // Для Projects: скрываем список
+      if (index === 1) {
+        const projectList = cardElement.querySelector('.project-list');
+        if (projectList) {
+          gsap.to(projectList, {
+            x: '-100%',
+            opacity: 0,
+            duration: 0.3,
+            ease: "power2.out"
+          });
+        }
+      }
     }
   }
 
@@ -411,6 +544,34 @@ const MenuPage = () => {
           delay: index * 0.1 // Лёгкая задержка для последовательности
         }
       )
+      
+      // Установка начального состояния текста без анимации
+      const cardElement = cardRefs.current[index];
+      if (cardElement) {
+        const normalTitle = cardElement.querySelector(`.normal-title-${index}`);
+        const normalDesc = cardElement.querySelector(`.normal-desc-${index}`);
+        
+        if (normalTitle) {
+          gsap.set(normalTitle, { x: 0, opacity: 1 });
+        }
+        
+        if (normalDesc) {
+          gsap.set(normalDesc, { x: 0, opacity: 1 });
+        }
+      }
+    });
+
+    // Preload dither effects
+    cardRefs.current.forEach((card, index) => {
+      if (card) {
+        const dither = card.querySelector(`.dither-bg-${index}`);
+        if (dither) {
+          gsap.set(dither, { width: '100%', opacity: 0 });
+          setTimeout(() => {
+            gsap.set(dither, { width: '0%', opacity: 1 });
+          }, 100);
+        }
+      }
     });
 
     // Обработка наведения на левый край
@@ -518,31 +679,35 @@ const MenuPage = () => {
               onMouseEnter={() => handleHover(index, true)}
               onMouseLeave={() => handleHover(index, false)}
             >
-              <WhiteBackground className="white-bg" />
+              <DitherBackground className={`dither-bg-${index}`}>
+                <Dither style={{position: 'absolute', top:0, left:0, width:'100%', height:'100%'}} waveColor={waveColors[index]} />
+              </DitherBackground>
               <CardContent>
                 <TitleSection>
-                  <CardTitle>{card.title}</CardTitle>
-                  <ShortDescription>{card.shortDesc}</ShortDescription>
+                  <CardTitle className={`normal-title-${index}`}>{card.title}</CardTitle>
+                  <CardTitle className={`hover-title-${index}`} style={{position: 'absolute', top: 0, left: 0, opacity: 0, transform: 'translateX(-100px)'}}>{card.title}</CardTitle>
+                  
+                  
+                  <HiddenDescription className={`hidden-desc-${index}`}>
+                    <p>{card.hiddenDesc}</p>
+                  </HiddenDescription>
                 </TitleSection>
                 <Arrow className={`arrow-${index}`}>→</Arrow>
               </CardContent>
-              <HiddenDescription className={`hidden-desc-${index}`}>
-                <p>{card.hiddenDesc}</p>
-                {index === 0 && <img src="/images/rudakovrz7.png?v=1" alt="Rudakovrz" style={{width: '100%', marginTop: '10px', display: 'block'}} />}
-              </HiddenDescription>
-              {index === 1 && hoveredIndex === 1 && (
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 3, color: 'black', textAlign: 'center' }}>
+              {index === 0 && <img src="/images/rudakovrz7.png?v=1" alt="Rudakovrz" className="profile-img" />}
+              {index === 1 && (
+                <ProjectList className="project-list">
                   <h4>Завершенные проекты</h4>
                   <ul>
-                    <li>Light Lab Case</li>
-                    <li>Space Invaders</li>
+                    <li><button onClick={() => navigate('/project/light-lab')}>Light Lab Case</button></li>
+                    <li><button onClick={() => navigate('/project/space-invaders')}>Space Invaders</button></li>
                   </ul>
                   <h4>В разработке</h4>
                   <ul>
-                    <li>Project A</li>
-                    <li>Project B</li>
+                    <li><button>Project A</button></li>
+                    <li><button>Project B</button></li>
                   </ul>
-                </div>
+                </ProjectList>
               )}
             </Card>
           ))}
@@ -555,3 +720,56 @@ const MenuPage = () => {
 }
 
 export default MenuPage
+
+const ProjectList = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  transform: translateY(-50%) translateX(-100%);
+  opacity: 0;
+  z-index: 3;
+  transition: all 0.3s ease;
+  text-align: center;
+
+  h4 {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: white;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 20px;
+  }
+
+  li {
+    margin: 5px 0;
+    font-size: 18px; // Увеличенный шрифт
+  }
+
+  button {
+    background: rgba(0,0,0,0.1);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 5px;
+    transition: background 0.3s;
+    color: white;
+    font-weight: 500;
+    width: 80%;
+
+    &:hover {
+      background: rgba(0,0,0,0.2);
+    }
+  }
+`;
+
+// Preload dither effects
+const preloadImage = new Image();
+preloadImage.src = '/images/rudakovrz7.png?v=1';
+
+// Обработка наведения на левый край
