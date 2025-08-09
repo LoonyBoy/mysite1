@@ -43,12 +43,12 @@ const StartPageContainer = styled.div`
 `
 
 const MainTitle = styled.h1`
-  font-size: clamp(4rem, 12vw, 12rem);
+  font-size: clamp(3rem, 8vw, 8rem);
   font-weight: 400;
   line-height: 0.8;
   letter-spacing: -0.05em;
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   position: relative;
   z-index: 10; /* Значительно поверх частиц */
   color: var(--white);
@@ -135,7 +135,7 @@ const Subtitle = styled.p`
   font-weight: 300;
   color: var(--primary-red);
   text-align: center;
-  margin-bottom: 4rem;
+  margin-bottom: 2rem;
   opacity: 0;
   transform: translateY(30px);
   position: relative;
@@ -541,4 +541,4 @@ const StartPage = () => {
   )
 }
 
-export default StartPage 
+export default StartPage

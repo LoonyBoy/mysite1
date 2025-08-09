@@ -857,6 +857,7 @@ export const ParticleProvider = ({ children }) => {
         fastRotation={particleAnimation.fastRotation}
         particlesVisible={particlesVisible}
         isLightLabCase={currentPage === 'lightlab-case'}
+        hoveredRect={hoveredRect}
       />
       {children}
     </ParticleContext.Provider>

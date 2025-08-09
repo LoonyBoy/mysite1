@@ -379,6 +379,13 @@ const HomePage = () => {
       navigationEdge.addEventListener('mouseenter', handleMouseEnter)
       navigationEdge.addEventListener('mouseleave', handleMouseLeave)
       navigationEdge.addEventListener('click', handleClick)
+
+      // cleanup для этих конкретных колбэков
+      return () => {
+        navigationEdge.removeEventListener('mouseenter', handleMouseEnter)
+        navigationEdge.removeEventListener('mouseleave', handleMouseLeave)
+        navigationEdge.removeEventListener('click', handleClick)
+      }
     }
     
     if (gameEdge && gameHint && !isMobile) {
@@ -395,21 +402,15 @@ const HomePage = () => {
       gameEdge.addEventListener('mouseenter', handleGameMouseEnter)
       gameEdge.addEventListener('mouseleave', handleGameMouseLeave)
       gameEdge.addEventListener('click', handleGameClick)
-    }
-    
-    return () => {
-      if (navigationEdge && navigationHint && !isMobile) {
-        navigationEdge.removeEventListener('mouseenter', () => {})
-        navigationEdge.removeEventListener('mouseleave', () => {})
-        navigationEdge.removeEventListener('click', () => {})
-      }
-      if (gameEdge && gameHint && !isMobile) {
-        gameEdge.removeEventListener('mouseenter', () => {})
-        gameEdge.removeEventListener('mouseleave', () => {})
+
+      // cleanup для этих конкретных колбэков
+      return () => {
+        gameEdge.removeEventListener('mouseenter', handleGameMouseEnter)
+        gameEdge.removeEventListener('mouseleave', handleGameMouseLeave)
         gameEdge.removeEventListener('click', handleGameClick)
       }
     }
-
+    
     return () => {
       ScrollTrigger.getAll().forEach(trigger => trigger.kill())
     }

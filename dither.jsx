@@ -165,7 +165,7 @@ const RetroEffect = forwardRef((props, ref) => {
 });
 RetroEffect.displayName = "RetroEffect";
 
-function DitheredWaves({
+  function DitheredWaves({
   waveSpeed,
   waveFrequency,
   waveAmplitude,
@@ -174,7 +174,8 @@ function DitheredWaves({
   pixelSize,
   disableAnimation,
   enableMouseInteraction,
-  mouseRadius,
+    mouseRadius,
+    trackWindowMouse,
 }) {
   const mesh = useRef(null);
   const mouseRef = useRef(new THREE.Vector2());
@@ -203,6 +204,31 @@ function DitheredWaves({
   }, [size, gl]);
 
   const prevColor = useRef([...waveColor]);
+    const targetMouseRef = useRef(new THREE.Vector2());
+
+    useEffect(() => {
+      if (!enableMouseInteraction || !trackWindowMouse) return;
+      let rafId = null;
+      const onMove = (e) => {
+        const rect = gl.domElement.getBoundingClientRect();
+        const dpr = gl.getPixelRatio();
+        targetMouseRef.current.set(
+          (e.clientX - rect.left) * dpr,
+          (e.clientY - rect.top) * dpr
+        );
+        if (!rafId) {
+          rafId = requestAnimationFrame(() => {
+            mouseRef.current.lerp(targetMouseRef.current, 0.25);
+            rafId = null;
+          });
+        }
+      };
+      window.addEventListener('mousemove', onMove, { passive: true });
+      return () => {
+        window.removeEventListener('mousemove', onMove);
+        if (rafId) cancelAnimationFrame(rafId);
+      };
+    }, [enableMouseInteraction, trackWindowMouse, gl]);
   useFrame(({ clock }) => {
     const u = waveUniformsRef.current;
 
@@ -225,19 +251,21 @@ function DitheredWaves({
     u.mouseRadius.value = mouseRadius;
 
     if (enableMouseInteraction) {
+      // Плавное следование за указателем
+      mouseRef.current.lerp(targetMouseRef.current, 0.2);
       u.mousePos.value.copy(mouseRef.current);
     }
   });
 
-  const handlePointerMove = (e) => {
-    if (!enableMouseInteraction) return;
-    const rect = gl.domElement.getBoundingClientRect();
-    const dpr = gl.getPixelRatio();
-    mouseRef.current.set(
-      (e.clientX - rect.left) * dpr,
-      (e.clientY - rect.top) * dpr
-    );
-  };
+    const handlePointerMove = (e) => {
+      if (!enableMouseInteraction || trackWindowMouse) return;
+      const rect = gl.domElement.getBoundingClientRect();
+      const dpr = gl.getPixelRatio();
+      targetMouseRef.current.set(
+        (e.clientX - rect.left) * dpr,
+        (e.clientY - rect.top) * dpr
+      );
+    };
 
   return (
     <>
@@ -267,7 +295,7 @@ function DitheredWaves({
   );
 }
 
-export default function Dither({
+  export default function Dither({
   waveSpeed = 0.05,
   waveFrequency = 3,
   waveAmplitude = 0.3,
@@ -276,7 +304,8 @@ export default function Dither({
   pixelSize = 2,
   disableAnimation = false,
   enableMouseInteraction = true,
-  mouseRadius = 1,
+    mouseRadius = 1,
+    trackWindowMouse = true,
 }) {
   return (
     <Canvas
@@ -295,6 +324,7 @@ export default function Dither({
         disableAnimation={disableAnimation}
         enableMouseInteraction={enableMouseInteraction}
         mouseRadius={mouseRadius}
+          trackWindowMouse={trackWindowMouse}
       />
     </Canvas>
   );
