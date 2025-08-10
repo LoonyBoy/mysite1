@@ -103,7 +103,7 @@ export const ParticleProvider = ({ children }) => {
       if (camera) {
         animateToHome()
       }
-    } else if (path === '/home' && currentPage === 'projects' && !isAnimating) {
+    } else if (path === '/home' && (currentPage === 'projects' || currentPage === 'menu') && !isAnimating) {
       // Возвращение с проектов на домашнюю - контекстная анимация
       logger.particles('Contextual transition: projects->home', { context: transitionContext })
       setCurrentPage('home')
@@ -115,11 +115,13 @@ export const ParticleProvider = ({ children }) => {
       setCurrentPage('home')
       setParticlesVisible(true) // На домашней странице частицы видны сразу
     } else if (path === '/menu' && currentPage === 'home' && !isAnimating) {
-      // Переход на меню с домашней - контекстная анимация
-      logger.particles('Contextual transition: home->menu', { context: transitionContext })
+      // Переход на меню с домашней — без анимации вращения
+      logger.particles('Transition: home->menu (no rotation animation)', { context: transitionContext })
       setCurrentPage('menu')
       setParticlesVisible(true)
-      animateParticlesMenuEntry()
+      // Фиксируем базовую скорость без ускорения/замедления
+      setParticleAnimation({ rotationSpeed: { x: 1.0, y: 1.0 }, fastRotation: false })
+      // Цвет частиц оставляем как есть, чтобы не было анимации перехода
       return
     } else if (path === '/menu' && currentPage !== 'menu' && !isAnimating) {
       // Устанавливаем страницу меню без анимации (прямой переход)
@@ -492,8 +494,8 @@ export const ParticleProvider = ({ children }) => {
       fastRotation: false
     })
     
-    // Плавный переход цвета: синий → красный
-    animateParticleColor('#2196F3', '#D14836', 1600)
+    // Плавный переход цвета: текущий → красный
+    animateParticleColor(particleProps.color || '#2196F3', '#D14836', 1600)
     
     // Фаза 1: Медленное ускорение в обратном направлении
     const accelerationInterval = setInterval(() => {

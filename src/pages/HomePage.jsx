@@ -192,6 +192,7 @@ const GameHint = styled.div`
 
 const HomePage = () => {
   const heroRef = useRef(null)
+  const isTransitioningRef = useRef(false)
   const navigate = useNavigate()
   const { camera, setTransitionContext } = useParticles()
   
@@ -249,6 +250,7 @@ const HomePage = () => {
 
   useEffect(() => {
     const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
+    // (перенесено в отдельный эффект ниже)
 
     // Проверяем, возвращаемся ли мы с другой страницы
     const isReturning = sessionStorage.getItem('returning-to-home')
@@ -416,14 +418,39 @@ const HomePage = () => {
     }
   }, [navigate])
 
+  // Отдельный эффект: переход на /menu при скролле вниз (только десктоп)
+  useEffect(() => {
+    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
+    if (isMobile) return
+
+    const onWheelNavigateToMenu = (e) => {
+      if (isTransitioningRef.current) return
+      const deltaY = e.deltaY || 0
+      if (deltaY <= 12) return
+      isTransitioningRef.current = true
+      if (typeof e.preventDefault === 'function') e.preventDefault()
+
+      const heroSection = heroRef.current
+      gsap.to(heroSection, {
+        opacity: 0,
+        duration: 0.3,
+        ease: 'power2.out',
+        onComplete: () => {
+          sessionStorage.setItem('coming-from-home', 'true')
+          navigate('/menu')
+        }
+      })
+    }
+
+    window.addEventListener('wheel', onWheelNavigateToMenu, { passive: false })
+    return () => window.removeEventListener('wheel', onWheelNavigateToMenu)
+  }, [navigate])
+
   return (
     <HomeContainer>
       <CustomCursor />
       
-      <NavigationEdge className="navigation-edge" role="button" aria-label="Перейти к меню" />
-      <NavigationHint className="navigation-hint">
-        Меню →
-      </NavigationHint>
+      {/* Удалён правый edge перехода в меню */}
       
       <GameEdge className="game-edge" role="button" aria-label="Запустить игру Space Invaders" />
       <GameHint className="game-hint">

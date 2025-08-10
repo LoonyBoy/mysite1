@@ -10,6 +10,7 @@ import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
 import useParticleControl from '../hooks/useParticleControl'
 import Dither from '../../dither.jsx'; // Adjusted to new file extension
+// ProjectsScrollStack не используем в новой версии модалки
 
 
 const MenuContainer = styled.div`
@@ -251,7 +252,254 @@ const CardContent = styled.div`
 
   ${Card}.is-open & {
     padding: 40px 24px; /* во фуллскрине отступы только на контенте */
+    align-items: flex-start;
+    justify-content: flex-start;
   }
+`
+
+// Контент модалки для "О себе"
+const AboutModalContent = styled.div`
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  grid-gap: 24px;
+  width: 100%;
+  height: calc(100vh - 80px);
+  padding: 24px;
+  box-sizing: border-box;
+  align-items: start;
+  text-align: left;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    height: auto;
+  }
+`
+
+const AboutLeft = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  width: 100%;
+  padding-left: 18px;
+  border-left: 2px solid rgba(136, 78, 255, 0.6);
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, rgba(136,78,255,0.0), rgba(136,78,255,0.9), rgba(136,78,255,0.0));
+    filter: blur(0.3px);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+`
+
+const AboutTitle = styled.h2`
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 500;
+  color: #fff;
+  margin: 0 0 6px 0;
+  text-align: left;
+`
+
+const AboutTitleUnderline = styled.span`
+  display: block;
+  height: 3px;
+  width: 120px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, rgba(136,78,255,0.0), rgba(136,78,255,1), rgba(136,78,255,0.0));
+  transform-origin: left center;
+  transform: scaleX(0);
+`
+
+const AboutSubheading = styled.h3`
+  font-size: clamp(18px, 2.6vw, 24px);
+  font-weight: 500;
+  color: #fff;
+  margin: 18px 0 6px 0;
+  text-align: left;
+`
+
+const AboutCaption = styled.div`
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+  margin: 10px 0 4px 0;
+`
+
+const AboutText = styled.div`
+  color: rgba(255,255,255,0.92);
+  font-size: clamp(14px, 1.6vw, 18px);
+  line-height: 1.75;
+  max-width: 70ch;
+  text-align: left;
+
+  p { margin: 0 0 12px 0; }
+
+  ul {
+    margin: 0 0 12px 18px;
+    padding: 0;
+  }
+
+  li { margin: 6px 0; }
+`
+
+const AboutRight = styled.div`
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100%;
+`
+
+const AboutPhotoWrap = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+`
+
+const AboutPhoto = styled.img`
+  max-width: min(520px, 40vw);
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 30px 80px rgba(35, 0, 70, 0.65)) drop-shadow(0 12px 28px rgba(0,0,0,0.55));
+  user-select: none;
+  pointer-events: none;
+
+  @media (max-width: 1024px) {
+    max-width: 70vw;
+    margin: 12px auto 0;
+  }
+`
+
+const FilmGrainOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.12;
+  background-image: radial-gradient(rgba(255,255,255,0.06) 0.8px, transparent 0.8px);
+  background-size: 3px 3px;
+  filter: contrast(120%);
+  border-radius: 4px;
+`
+
+// Модалка проектов
+const ProjectsModalWrap = styled.div`
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden; /* не даём вертикально скроллить страницу */
+`
+
+const ProjectsHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px;
+`
+
+const ProjectsTitle = styled.h2`
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 500;
+  color: #fff;
+  margin: 0;
+`
+
+const ProjectsSubtitle = styled.div`
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+`
+
+const ProjectsRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+`
+
+const RowHeader = styled.div`
+  font-size: 14px;
+  color: rgba(255,255,255,0.9);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 12px;
+`
+
+const RowScroller = styled.div`
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr; /* без стрелок */
+  align-items: center;
+  gap: 8px;
+`
+
+/* Стрелки удалены по требованию */
+
+const CardsStrip = styled.div`
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 320px);
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 2px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar { display: none; }
+`
+
+const ProjectCard = styled.button`
+  position: relative;
+  height: 200px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  scroll-snap-align: center;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  &:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.24); box-shadow: 0 10px 32px rgba(0,0,0,0.25); }
+`
+
+const CardImage = styled.div`
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1) brightness(0.9);
+  transform: scale(1.02);
+  transition: transform 0.4s ease;
+  ${ProjectCard}:hover & { transform: scale(1.06); }
+`
+
+const CardOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8,8,12,0.0) 0%, rgba(8,8,12,0.55) 55%, rgba(8,8,12,0.85) 100%);
+`
+
+const CardText = styled.div`
+  position: absolute;
+  left: 12px; right: 12px; bottom: 10px;
+  display: flex; flex-direction: column; gap: 4px;
+  color: #fff;
+  h4 { margin: 0; font-size: 16px; font-weight: 600; }
+  p { margin: 0; font-size: 13px; color: rgba(255,255,255,0.85); }
 `
 
 const TitleSection = styled.div`
@@ -429,12 +677,32 @@ const MenuPage = () => {
   const hoverLockRef = useRef({}) // индекс → timestamp до которого игнорируем mouseleave
   const lastHoveredBeforeOpenRef = useRef(null)
   const isModalOpenRef = useRef(false)
+  const aboutContainerRef = useRef(null)
+  const ditherBreatheTlRef = useRef(null)
   const cards = [
     { title: 'О себе' },
     { title: 'Проекты' },
     { title: 'Услуги' },
     { title: 'Контакты' }
   ]
+
+  const projectsRows = {
+    web: [
+      { id: 'lightlab', title: 'Light Lab Case', description: 'Сайт-история с анимациями и кастомной типографикой', href: '/project/lightlab', image: '/images/rudakovrz9.png' },
+      { id: 'portfolio', title: 'Портфолио', description: 'Анимации, 3D-пыль, интерактивы', href: '/menu', image: '/images/rudakovrz8.png' },
+      { id: 'landing', title: 'Маркетинг лендинг', description: 'Чистая типографика, высокая конверсия', href: '#', image: '/images/rudakovrz7.png' },
+    ],
+    bots: [
+      { id: 'tg-shop', title: 'Telegram Shop Bot', description: 'Каталог, корзина, оплаты', href: '#', image: '/images/rudakovrz7.png' },
+      { id: 'wa-support', title: 'WhatsApp Support', description: 'Ответы, triage, интеграции', href: '#', image: '/images/rudakovrz8.png' },
+      { id: 'crm-bridge', title: 'CRM Connector', description: 'Интеграции с Bitrix/AMO', href: '#', image: '/images/rudakovrz9.png' },
+    ],
+    tools: [
+      { id: 'parser', title: 'Data Parser', description: 'Парсер и нормализация данных', href: '#', image: '/images/rudakovrz8.png' },
+      { id: 'reports', title: 'Auto Reports', description: 'Автособор отчетов и рассылка', href: '#', image: '/images/rudakovrz7.png' },
+      { id: 'sync', title: 'Sync Service', description: 'Синхронизация каталогов/остатков', href: '#', image: '/images/rudakovrz9.png' },
+    ],
+  }
 
   // Утилита: мгновенно останавливает анимации dither и возвращает слой к базовому состоянию
   const resetGlobalDither = (props = null) => {
@@ -588,7 +856,14 @@ const MenuPage = () => {
       const ditherState = Flip.getState(gd)
       // Состояние «fullscreen»
       gsap.set(gd, { top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', borderRadius: 0 })
-      Flip.from(ditherState, { duration: ditherDuration, ease: 'power2.inOut', absolute: true, onComplete: () => gd.classList.remove('front') })
+      Flip.from(ditherState, { duration: ditherDuration, ease: 'power2.inOut', absolute: true, onComplete: () => {
+        gd.classList.remove('front')
+        // Дышащая анимация dither в модалке
+        ditherBreatheTlRef.current?.kill()
+        ditherBreatheTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
+          .to(gd, { opacity: 0.32, duration: 2.8, ease: 'sine.inOut' })
+          .to(gd, { opacity: 0.25, duration: 2.8, ease: 'sine.inOut' })
+      } })
     }
 
     // Прячем соседние карточки с лёгкой задержкой, чтобы dither начал закрывать их первым
@@ -639,6 +914,8 @@ const MenuPage = () => {
           gsap.set(titleEl, { opacity: 1 })
         }
         if (gd) {
+          // Останавливаем дыхание dither
+          ditherBreatheTlRef.current?.kill()
           // Плавно сжимаем dither обратно в область карточки
           const endClip = computeClipFromElement(el)
           // На момент завершения решаем: оставить dither для hover или скрыть полностью
@@ -740,6 +1017,27 @@ const MenuPage = () => {
       }
     });
 
+    // Анимации появления контента модалки "О себе"
+    if (aboutContainerRef.current) {
+      const root = aboutContainerRef.current
+      const title = root.querySelector('.about-title')
+      const underline = root.querySelector('.about-title-underline')
+      const paragraphs = root.querySelectorAll('.about-text p')
+      const listItems = root.querySelectorAll('.about-list li')
+      const photo = root.querySelector('.about-photo')
+
+      // Стартовые состояния
+      gsap.set(underline, { scaleX: 0 })
+      gsap.set([ ...paragraphs, ...listItems ], { opacity: 0, y: 12 })
+      gsap.set(photo, { opacity: 0, scale: 0.96, rotateZ: -1 })
+
+      const tl = gsap.timeline({ defaults: { ease: 'power2.out' } })
+      tl.to(underline, { scaleX: 1, duration: 0.5 }, 0.05)
+        .to(paragraphs, { opacity: 1, y: 0, duration: 0.5, stagger: 0.06 }, 0.08)
+        .to(listItems, { opacity: 1, y: 0, duration: 0.45, stagger: 0.05 }, 0.25)
+        .to(photo, { opacity: 1, scale: 1, rotateZ: 0, duration: 0.6, ease: 'power3.out' }, 0.15)
+    }
+
     // Preload dither effects: только opacity, без изменения width
     cardRefs.current.forEach((card, index) => {
       if (!card) return;
@@ -748,52 +1046,41 @@ const MenuPage = () => {
       gsap.set(dither, { opacity: 0 });
     });
 
-    // Обработка наведения на левый край
-    const navigationEdge = document.querySelector('.navigation-edge-left')
-    const navigationHint = document.querySelector('.navigation-hint-left')
-    
-    if (navigationEdge && navigationHint && !isMobile) {
-      const handleMouseEnter = () => {
-        navigationHint.classList.add('visible')
-        document.body.style.cursor = 'none'
-      }
-      
-      const handleMouseLeave = () => {
-        navigationHint.classList.remove('visible')
-        document.body.style.cursor = 'none'
-      }
-      
-      const handleClick = () => {
-        if (isTransitioningRef.current) return
-        isTransitioningRef.current = true
-        
-        // Анимация затухания
-        gsap.to(menuRef.current, {
-          opacity: 0,
-          duration: 0.3,
-          ease: "power2.out",
-          onComplete: () => {
-            sessionStorage.setItem('returning-to-home', 'true')
-            navigate('/home')
-          }
-        })
-      }
-      
-      navigationEdge.addEventListener('mouseenter', handleMouseEnter)
-      navigationEdge.addEventListener('mouseleave', handleMouseLeave)
-      navigationEdge.addEventListener('click', handleClick)
-      
-      return () => {
-        navigationEdge.removeEventListener('mouseenter', handleMouseEnter)
-        navigationEdge.removeEventListener('mouseleave', handleMouseLeave)
-        navigationEdge.removeEventListener('click', handleClick)
-      }
-    }
+    // Удалён обработчик левего edge, чтобы не блокировать hover первой карточки
 
     return () => {
       // Очистка анимаций
       window.removeEventListener('mousemove', onMove)
     }
+  }, [navigate])
+
+  // Переход на /home при скролле вверх (только десктоп)
+  useEffect(() => {
+    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
+    if (isMobile) return
+
+    const onWheelToHome = (e) => {
+      if (isTransitioningRef.current) return
+      if (isModalOpenRef.current) return
+      const deltaY = e.deltaY || 0
+      // Навигация только при заметной прокрутке вверх
+      if (deltaY >= -12) return
+      isTransitioningRef.current = true
+      if (typeof e.preventDefault === 'function') e.preventDefault()
+
+      gsap.to(menuRef.current, {
+        opacity: 0,
+        duration: 0.3,
+        ease: 'power2.out',
+        onComplete: () => {
+          sessionStorage.setItem('returning-to-home', 'true')
+          navigate('/home')
+        }
+      })
+    }
+
+    window.addEventListener('wheel', onWheelToHome, { passive: false })
+    return () => window.removeEventListener('wheel', onWheelToHome)
   }, [navigate])
 
   const handleMenuClick = (item) => {
@@ -839,10 +1126,7 @@ const MenuPage = () => {
     <MenuContainer>
       <CustomCursor />
       
-      <NavigationEdge className="navigation-edge-left" />
-      <NavigationHint className="navigation-hint-left">
-        ← Домой
-      </NavigationHint>
+      {/* Удалён левый edge для возврата домой, чтобы не перекрывать первую карточку */}
       
       <Section ref={menuRef}>
         <GlobalDither ref={globalDitherRef} aria-hidden="true">
@@ -860,10 +1144,107 @@ const MenuPage = () => {
             >
               {/* per-card dither удален, используем глобальный */}
               <CardContent>
-                <TitleSection>
-                  <CardTitle className={`title-${index}`}>{card.title}</CardTitle>
-                </TitleSection>
-                <Arrow className={`arrow-${index}`}>→</Arrow>
+                {openedIndex !== index && (
+                  <>
+                    <TitleSection>
+                      <CardTitle className={`title-${index}`}>{card.title}</CardTitle>
+                    </TitleSection>
+                    <Arrow className={`arrow-${index}`}>→</Arrow>
+                  </>
+                )}
+
+                {openedIndex === index && index === 0 && (
+                  <AboutModalContent ref={aboutContainerRef} className="about-modal">
+                    <AboutLeft>
+                      <AboutTitle className="about-title">О себе<AboutTitleUnderline className="about-title-underline" /></AboutTitle>
+                      <AboutText className="about-text">
+                        <p>Привет, меня зовут Михаил.</p>
+                        <p>
+                          Я разрабатываю сайты, Telegram- и WhatsApp-ботов, а также автоматизирую всё,
+                          что может сэкономить твоё время и упростить жизнь.
+                        </p>
+                        <p>
+                          Клиенты ценят меня за то, что я быстро понимаю задачи, предлагаю адекватные и
+                          нестандартные решения и чётко соблюдаю сроки. Со мной легко общаться: я не люблю
+                          формальностей, зато люблю, когда сделано красиво, продуманно и качественно.
+                        </p>
+                        <AboutCaption className="about-caption">Как я работаю</AboutCaption>
+                        <ul className="about-list">
+                          <li>Общаемся, обсуждаем задачу, утверждаем концепцию.</li>
+                          <li>Я готовлю чёткий план, где прописаны сроки и этапы.</li>
+                          <li>Реализую проект, держа тебя в курсе и уточняя моменты, если нужно.</li>
+                        </ul>
+                        <p>
+                          Сделать «как у всех» — это не ко мне. Сделать продуманно и стильно — это ко мне.
+                        </p>
+                      </AboutText>
+                    </AboutLeft>
+                    <AboutRight>
+                      <AboutPhotoWrap className="about-photo-wrap">
+                        <AboutPhoto className="about-photo" src="/images/rudakovrz7.png" alt="" />
+                        <FilmGrainOverlay className="film-grain" aria-hidden="true" />
+                      </AboutPhotoWrap>
+                    </AboutRight>
+                  </AboutModalContent>
+                )}
+
+                {openedIndex === index && index === 1 && (
+                  <ProjectsModalWrap>
+                    <ProjectsRow>
+                      <RowHeader>Веб‑приложения / сайты</RowHeader>
+                      <RowScroller>
+                        <CardsStrip>
+                          {projectsRows.web.map(p => (
+                            <ProjectCard key={p.id} onClick={(e)=>{e.stopPropagation(); if(p.href) navigate(p.href)}}>
+                              <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                              <CardOverlay />
+                              <CardText>
+                                <h4>{p.title}</h4>
+                                <p>{p.description}</p>
+                              </CardText>
+                            </ProjectCard>
+                          ))}
+                        </CardsStrip>
+                      </RowScroller>
+                    </ProjectsRow>
+
+                    <ProjectsRow>
+                      <RowHeader>Боты</RowHeader>
+                      <RowScroller>
+                        <CardsStrip>
+                          {projectsRows.bots.map(p => (
+                            <ProjectCard key={p.id} onClick={(e)=>{e.stopPropagation(); if(p.href) navigate(p.href)}}>
+                              <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                              <CardOverlay />
+                              <CardText>
+                                <h4>{p.title}</h4>
+                                <p>{p.description}</p>
+                              </CardText>
+                            </ProjectCard>
+                          ))}
+                        </CardsStrip>
+                      </RowScroller>
+                    </ProjectsRow>
+
+                    <ProjectsRow>
+                      <RowHeader>Программы / автоматизации</RowHeader>
+                      <RowScroller>
+                        <CardsStrip>
+                          {projectsRows.tools.map(p => (
+                            <ProjectCard key={p.id} onClick={(e)=>{e.stopPropagation(); if(p.href) navigate(p.href)}}>
+                              <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                              <CardOverlay />
+                              <CardText>
+                                <h4>{p.title}</h4>
+                                <p>{p.description}</p>
+                              </CardText>
+                            </ProjectCard>
+                          ))}
+                        </CardsStrip>
+                      </RowScroller>
+                    </ProjectsRow>
+                  </ProjectsModalWrap>
+                )}
               </CardContent>
               {openedIndex === index && (
                 <CloseButton
