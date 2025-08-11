@@ -403,6 +403,7 @@ const ProjectsModalWrap = styled.div`
   flex-direction: column;
   gap: 16px;
   overflow: hidden; /* не даём вертикально скроллить страницу */
+  padding: 72px 16px 12px; /* опускаем блок ниже: увеличили верхний отступ */
 `
 
 const ProjectsHeader = styled.div`
@@ -434,9 +435,9 @@ const ProjectsRow = styled.div`
 `
 
 const RowHeader = styled.div`
-  font-size: 14px;
+  font-size: 15px;
   color: rgba(255,255,255,0.9);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 0 12px;
 `
@@ -452,28 +453,106 @@ const RowScroller = styled.div`
 /* Стрелки удалены по требованию */
 
 const CardsStrip = styled.div`
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(260px, 320px);
-  gap: 12px;
-  overflow-x: auto;
-  padding: 4px 2px;
-  scroll-snap-type: x proximity;
-  -webkit-overflow-scrolling: touch;
-  &::-webkit-scrollbar { display: none; }
+  /* Desktop: центрируем без горизонтального скролла */
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  padding: 6px 4px;
+  overflow: visible;
+
+  /* Mobile/Tablet: горизонтальная лента со скроллом */
+  @media (max-width: 1024px) {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(240px, 300px);
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    &::-webkit-scrollbar { display: none; }
+  }
 `
 
 const ProjectCard = styled.button`
   position: relative;
   height: 200px;
+  width: 320px;
+  max-width: 340px;
+  min-width: 280px;
+  @media (min-width: 1280px) { height: 220px; }
   border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04);
+  perspective: 600px; /* глубже перспектива */
+  perspective-origin: 50% 50%;
+  overflow: visible;
+  border: none;
+  background: transparent;
   cursor: pointer;
   scroll-snap-align: center;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-  &:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.24); box-shadow: 0 10px 32px rgba(0,0,0,0.25); }
+`
+
+const CardInner = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  transform-style: preserve-3d; /* важно для 3D на дочерних слоях */
+  /* Больше не вращаем контейнер; стороны крутятся сами */
+  transition: none;
+  transform-origin: center;
+  box-shadow: none;
+  border: none;
+  background: transparent;
+  overflow: hidden;
+`
+
+const CardFace = styled.div`
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 14px;
+  overflow: hidden;
+`
+
+const CardFront = styled(CardFace)`
+  transform: rotateY(0deg) rotateX(0deg) translateZ(1px);
+  transform-origin: 50% 50%;
+  transition: transform 0.6s ease, box-shadow 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  ${ProjectCard}:hover & { transform: rotateY(180deg) rotateX(1deg) translateZ(1px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+`
+
+const CardBack = styled(CardFace)`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 14px;
+  gap: 8px;
+  background: linear-gradient(180deg, rgba(16,16,20,0.6), rgba(8,8,12,0.9));
+  transform: rotateY(-180deg) rotateX(0deg) translateZ(1px);
+  transform-origin: 50% 50%;
+  transition: transform 0.6s ease, box-shadow 0.3s ease;
+  ${ProjectCard}:hover & { transform: rotateY(0deg) rotateX(1deg) translateZ(1px); box-shadow: 0 12px 36px rgba(0,0,0,0.35); }
+  color: #fff;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  text-align: left;
+`
+
+const TechChips = styled.div`
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+  .chip {
+    font-size: 12px; padding: 4px 8px; border-radius: 999px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  }
+  .chip.more { font-size: 11px; opacity: 0.8; }
+`
+
+const MetaRow = styled.div`
+  display: flex; gap: 10px; align-items: center;
+  font-size: 12px; opacity: 0.9;
+  .dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.5); }
 `
 
 const CardImage = styled.div`
@@ -485,12 +564,16 @@ const CardImage = styled.div`
   transform: scale(1.02);
   transition: transform 0.4s ease;
   ${ProjectCard}:hover & { transform: scale(1.06); }
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 `
 
 const CardOverlay = styled.div`
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, rgba(8,8,12,0.0) 0%, rgba(8,8,12,0.55) 55%, rgba(8,8,12,0.85) 100%);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 `
 
 const CardText = styled.div`
@@ -500,6 +583,19 @@ const CardText = styled.div`
   color: #fff;
   h4 { margin: 0; font-size: 16px; font-weight: 600; }
   p { margin: 0; font-size: 13px; color: rgba(255,255,255,0.85); }
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  text-align: left;
+`
+
+const ProjectsTopTitle = styled.h2`
+  position: absolute;
+  top: 24px; /* заголовок тоже чуть ниже */
+  left: 16px;
+  margin: 0;
+  font-size: clamp(28px, 3.5vw, 40px);
+  font-weight: 500;
+  color: #fff;
 `
 
 const TitleSection = styled.div`
@@ -671,12 +767,15 @@ const MenuPage = () => {
   const [globalDitherColorIndex, setGlobalDitherColorIndex] = useState(0)
   const globalDitherRef = useRef(null)
   const hoverTimelinesRef = useRef([])
+  // убрали таймеры дебаунса — из‑за них терялись hover‑события
   const [openedIndex, setOpenedIndex] = useState(null)
   const cardRefs = useRef([])
   const mousePosRef = useRef({ x: 0, y: 0 })
   const hoverLockRef = useRef({}) // индекс → timestamp до которого игнорируем mouseleave
   const lastHoveredBeforeOpenRef = useRef(null)
   const isModalOpenRef = useRef(false)
+  const lastOpenModalIndexRef = useRef(null)
+  const stripsRef = useRef([])
   const aboutContainerRef = useRef(null)
   const ditherBreatheTlRef = useRef(null)
   const cards = [
@@ -688,19 +787,15 @@ const MenuPage = () => {
 
   const projectsRows = {
     web: [
-      { id: 'lightlab', title: 'Light Lab Case', description: 'Сайт-история с анимациями и кастомной типографикой', href: '/project/lightlab', image: '/images/rudakovrz9.png' },
-      { id: 'portfolio', title: 'Портфолио', description: 'Анимации, 3D-пыль, интерактивы', href: '/menu', image: '/images/rudakovrz8.png' },
-      { id: 'landing', title: 'Маркетинг лендинг', description: 'Чистая типографика, высокая конверсия', href: '#', image: '/images/rudakovrz7.png' },
+      { id: 'lightlab', title: 'Light Lab', description: 'Онлайн‑бронирование слотов в фотостудии (витрина залов, корзина, ЛК, админка)', href: '/project/lightlab', image: '/images/lightlab.png', tech: ['React 19', 'Router 7', 'MUI', 'Framer Motion', 'Node/Express', 'Socket.IO', 'MySQL'], year: '2025', role: 'Full‑stack', features: ['Часы‑слоты с проверкой конфликтов', 'Динамическое ценообразование и промокоды', 'Live‑обновления через Socket.IO', 'Админ‑панель: клиенты/цены/услуги/брони', 'Загрузка и оптимизация фото (sharp/multer)', 'REST API + события bookingChange'] },
+      { id: 'raykhan', title: 'Raykhan', description: 'SPA интернет‑магазин премиальных духов с 3D‑фоном и анимациями', href: '#', image: '/images/raykhan.png', tech: ['React 18', 'Framer Motion', 'GSAP', 'Three.js'], year: '2025', role: 'Front‑end', features: ['WebGL Silk‑фон', 'Каталог/карточки товаров'] },
     ],
     bots: [
-      { id: 'tg-shop', title: 'Telegram Shop Bot', description: 'Каталог, корзина, оплаты', href: '#', image: '/images/rudakovrz7.png' },
-      { id: 'wa-support', title: 'WhatsApp Support', description: 'Ответы, triage, интеграции', href: '#', image: '/images/rudakovrz8.png' },
-      { id: 'crm-bridge', title: 'CRM Connector', description: 'Интеграции с Bitrix/AMO', href: '#', image: '/images/rudakovrz9.png' },
+      { id: 'tg-shop', title: 'Бот "Худеем с Войтенко!"', description: 'Продажа подписок и консультаций с автопродлением (CloudPayments)', href: '#', image: '/images/botdieta.png', tech: ['Python', 'aiogram 3', 'MySQL', 'CloudPayments'], year: '2025', role: 'Back‑end', features: ['Подписки и автопродление', 'Webhooks CloudPayments'] },
+      { id: 'wa-support', title: 'KLAMbot', description: 'Документооборот и статусы по объектам/альбомам. Google Sheets + уведомления.', href: '#', image: '/images/klambot.png', tech: ['Python', 'PTB v20+', 'Google Sheets API', 'aiosmtplib'], year: '2025', role: 'Automation', features: ['Интеграция с Google Sheets', 'Раскраска статусов и уведомления'] },
     ],
     tools: [
-      { id: 'parser', title: 'Data Parser', description: 'Парсер и нормализация данных', href: '#', image: '/images/rudakovrz8.png' },
-      { id: 'reports', title: 'Auto Reports', description: 'Автособор отчетов и рассылка', href: '#', image: '/images/rudakovrz7.png' },
-      { id: 'sync', title: 'Sync Service', description: 'Синхронизация каталогов/остатков', href: '#', image: '/images/rudakovrz9.png' },
+      { id: 'wb-integrator', title: 'WB Integrator', description: 'Интеграция с Wildberries + Google Sheets: акции, маржа, выгрузки', href: '#', image: '/images/rudakovrz8.png', tech: ['Python', 'Requests', 'Pandas', 'Google Sheets API'], year: '2025', role: 'Automation', features: ['Расчёт маржи и отбор в акции', 'Выгрузки в Google Sheets'] },
     ],
   }
 
@@ -718,6 +813,18 @@ const MenuPage = () => {
     if (isModalOpenRef.current) return
     const cardElement = cardRefs.current[index]
     if (!cardElement) return
+
+    // Узкая dead-zone 3px на границе между "О себе" (0) и "Проекты" (1)
+    if (index === 1 && isHovering) {
+      const leftCard = cardRefs.current[0]
+      if (leftCard) {
+        const r0 = leftCard.getBoundingClientRect()
+        const { x } = mousePosRef.current
+        if (Math.abs(x - r0.right) <= 3) {
+          return
+        }
+      }
+    }
 
     // Защита от ложного mouseleave сразу после закрытия модалки
     if (!isHovering) {
@@ -737,7 +844,8 @@ const MenuPage = () => {
     if (tlPrev) tlPrev.kill()
     gsap.killTweensOf([arrow, title])
     if (title) gsap.set(title, { x: 0, clearProps: 'transform' })
-    gsap.set(arrow, { x: 0, y: 0, rotation: 0, opacity: 1, clearProps: 'transform' })
+    // Сохраняем вертикальное центрирование стрелки через yPercent, не очищая transform
+    if (arrow) gsap.set(arrow, { x: 0, rotation: 0, opacity: 1, yPercent: -50 })
 
     setHoveredIndex(isHovering ? index : null);
     // Dim siblings for focus
@@ -791,7 +899,7 @@ const MenuPage = () => {
         const clip = buildClipFromRect(cardElement.getBoundingClientRect())
         tl.to(gd, { opacity: 1, clipPath: clip, duration: 0.22 }, 0)
       }
-      if (arrow) tl.to(arrow, { x: 10, rotation: 45, opacity: 0.8, duration: 0.25 }, 0)
+      if (arrow) tl.to(arrow, { x: 10, rotation: 45, opacity: 0.8, yPercent: -50, duration: 0.25 }, 0)
       // Текст не трогаем — только стрелка и dither
       if (index === 0) {
         const profileImg = cardElement.querySelector('.profile-img')
@@ -804,7 +912,7 @@ const MenuPage = () => {
         gsap.killTweensOf(gd)
         tl.to(gd, { opacity: 0, clipPath: 'inset(0 100% 100% 0 round 16px)', duration: 0.18, ease: 'power2.in' }, 0)
       }
-      if (arrow) tl.to(arrow, { x: 0, rotation: 0, opacity: 1, duration: 0.25 }, 0)
+      if (arrow) tl.to(arrow, { x: 0, rotation: 0, opacity: 1, yPercent: -50, duration: 0.25 }, 0)
       if (index === 0) {
         const profileImg = cardElement.querySelector('.profile-img')
         if (profileImg) tl.to(profileImg, { opacity: 0, y: 20, scale: 1, duration: 0.25 }, 0)
@@ -831,6 +939,7 @@ const MenuPage = () => {
     const el = cardRefs.current[index]
     if (!el) return
     lastHoveredBeforeOpenRef.current = index
+    lastOpenModalIndexRef.current = index
     isModalOpenRef.current = true
     // Отключаем hover-анимации только на других карточках, текущую оставляем как есть
     try {
@@ -903,6 +1012,7 @@ const MenuPage = () => {
     }
     el.classList.remove('is-open')
     setOpenedIndex(null)
+    lastOpenModalIndexRef.current = null
     Flip.from(state, {
       duration: 0.5,
       ease: 'power2.inOut',
@@ -986,6 +1096,19 @@ const MenuPage = () => {
     const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
     const onMove = (e) => {
       mousePosRef.current = { x: e.clientX, y: e.clientY }
+      // если модалки нет — проверяем, не находимся ли мы над текущей карточкой и не потерян ли hover
+      if (!isModalOpenRef.current) {
+        for (let i = 0; i < cardRefs.current.length; i++) {
+          const c = cardRefs.current[i]
+          if (!c) continue
+          const r = c.getBoundingClientRect()
+          const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom
+          if (inside && hoveredIndex !== i) {
+            handleHover(i, true)
+            break
+          }
+        }
+      }
     }
     window.addEventListener('mousemove', onMove, { passive: true })
 
@@ -1054,31 +1177,132 @@ const MenuPage = () => {
     }
   }, [navigate])
 
+  // Центрирование горизонтальных рядов в модалке «Проекты» и блокировка вертикального скролла
+  useEffect(() => {
+    if (openedIndex === 1) {
+      try { document.body.style.overflow = 'hidden' } catch {}
+      // Центрируем каждый ряд по ширине контейнера
+      requestAnimationFrame(() => {
+        stripsRef.current.forEach((el) => {
+          if (!el) return
+          const center = Math.max(0, (el.scrollWidth - el.clientWidth) / 2)
+          el.scrollLeft = center
+        })
+      })
+    } else {
+      try { document.body.style.overflow = '' } catch {}
+    }
+
+    return () => { try { document.body.style.overflow = '' } catch {} }
+  }, [openedIndex])
+
+  // Защита от layout-съезда после alt-tab/visibilitychange/resize
+  useEffect(() => {
+    const hardResetLayout = () => {
+      if (document.hidden) return
+      // Обновляем GSAP/ScrollTrigger измерения
+      try { ScrollTrigger.refresh(true) } catch {}
+
+      // Сбрасываем глобальный dither и зависшие твины
+      try {
+        resetGlobalDither({ opacity: 0, clipPath: 'inset(0 100% 100% 0 round 16px)' })
+        gsap.killTweensOf(globalDitherRef.current)
+      } catch {}
+
+      // Восстанавливаем ВСЁ в зависимости от того, была ли открыта модалка
+      try {
+        hoverTimelinesRef.current.forEach((tl) => { try { tl?.kill() } catch {} })
+        const openIdx = lastOpenModalIndexRef.current
+        if (isModalOpenRef.current && openIdx !== null && openIdx !== undefined) {
+          // Режим модалки: удерживаем открытую карточку и скрываем остальные
+          cardRefs.current.forEach((el, i) => {
+            if (!el) return
+            gsap.killTweensOf(el)
+            el.classList.remove('force-hover')
+            if (i === openIdx) {
+              el.classList.add('is-open')
+              gsap.set(el, { opacity: 1, pointerEvents: 'auto' })
+            } else {
+              el.classList.remove('is-open')
+              gsap.set(el, { opacity: 0, pointerEvents: 'none' })
+            }
+          })
+          setOpenedIndex(openIdx)
+          // Восстанавливаем dither как фон модалки
+          const gd = globalDitherRef.current
+          if (gd) {
+            resetGlobalDither()
+            gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', borderRadius: 0, clipPath: 'none', opacity: 0.28 })
+          }
+          try { setParticleSpeed?.(0.4) } catch {}
+        } else {
+          // Обычный режим: всё видимо, модалка закрыта
+          isModalOpenRef.current = false
+          lastOpenModalIndexRef.current = null
+          setOpenedIndex(null)
+          setHoveredRect?.(null)
+          cardRefs.current.forEach((el) => {
+            if (!el) return
+            gsap.killTweensOf(el)
+            el.classList.remove('force-hover')
+            el.classList.remove('is-open')
+            el.classList.remove('dimmed')
+            gsap.set(el, { opacity: 1, pointerEvents: 'auto' })
+          })
+          try { setParticleSpeed?.(1.0) } catch {}
+          requestAnimationFrame(() => {
+            stripsRef.current.forEach((el) => {
+              if (!el) return
+              const center = Math.max(0, (el.scrollWidth - el.clientWidth) / 2)
+              el.scrollLeft = center
+            })
+          })
+        }
+      } catch {}
+    }
+
+    let lastHiddenAt = 0
+    const onHidden = () => { lastHiddenAt = performance.now() }
+    const onVisible = () => {
+      // только если таб был в фоне заметное время
+      if (performance.now() - lastHiddenAt > 500) hardResetLayout()
+    }
+
+    window.addEventListener('visibilitychange', () => document.hidden ? onHidden() : onVisible())
+    window.addEventListener('focus', onVisible)
+    window.addEventListener('resize', hardResetLayout)
+    return () => {
+      window.removeEventListener('visibilitychange', () => document.hidden ? onHidden() : onVisible())
+      window.removeEventListener('focus', onVisible)
+      window.removeEventListener('resize', hardResetLayout)
+    }
+  }, [])
+
   // Переход на /home при скролле вверх (только десктоп)
   useEffect(() => {
     const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
     if (isMobile) return
 
     const onWheelToHome = (e) => {
-      if (isTransitioningRef.current) return
+        if (isTransitioningRef.current) return
       if (isModalOpenRef.current) return
       const deltaY = e.deltaY || 0
       // Навигация только при заметной прокрутке вверх
       if (deltaY >= -12) return
-      isTransitioningRef.current = true
+        isTransitioningRef.current = true
       if (typeof e.preventDefault === 'function') e.preventDefault()
-
-      gsap.to(menuRef.current, {
-        opacity: 0,
-        duration: 0.3,
+        
+        gsap.to(menuRef.current, {
+          opacity: 0,
+          duration: 0.3,
         ease: 'power2.out',
-        onComplete: () => {
-          sessionStorage.setItem('returning-to-home', 'true')
-          navigate('/home')
-        }
-      })
-    }
-
+          onComplete: () => {
+            sessionStorage.setItem('returning-to-home', 'true')
+            navigate('/home')
+          }
+        })
+      }
+      
     window.addEventListener('wheel', onWheelToHome, { passive: false })
     return () => window.removeEventListener('wheel', onWheelToHome)
   }, [navigate])
@@ -1146,10 +1370,10 @@ const MenuPage = () => {
               <CardContent>
                 {openedIndex !== index && (
                   <>
-                    <TitleSection>
-                      <CardTitle className={`title-${index}`}>{card.title}</CardTitle>
-                    </TitleSection>
-                    <Arrow className={`arrow-${index}`}>→</Arrow>
+                <TitleSection>
+                  <CardTitle className={`title-${index}`}>{card.title}</CardTitle>
+                </TitleSection>
+                <Arrow className={`arrow-${index}`}>→</Arrow>
                   </>
                 )}
 
@@ -1190,18 +1414,50 @@ const MenuPage = () => {
 
                 {openedIndex === index && index === 1 && (
                   <ProjectsModalWrap>
+                    <ProjectsTopTitle>Проекты</ProjectsTopTitle>
                     <ProjectsRow>
                       <RowHeader>Веб‑приложения / сайты</RowHeader>
                       <RowScroller>
-                        <CardsStrip>
+                        <CardsStrip ref={el => stripsRef.current[0] = el}>
                           {projectsRows.web.map(p => (
                             <ProjectCard key={p.id} onClick={(e)=>{e.stopPropagation(); if(p.href) navigate(p.href)}}>
-                              <CardImage style={{ backgroundImage: `url(${p.image})` }} />
-                              <CardOverlay />
-                              <CardText>
-                                <h4>{p.title}</h4>
-                                <p>{p.description}</p>
-                              </CardText>
+                              <CardInner>
+                                <CardFront>
+                                  <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                                  <CardOverlay />
+                                  <CardText>
+                                    <h4>{p.title}</h4>
+                                    <p>{p.description}</p>
+                                  </CardText>
+                                </CardFront>
+                                <CardBack>
+                                  <h4 style={{margin:0, fontSize:16, fontWeight:600}}>{p.title}</h4>
+                                  <MetaRow>
+                                    <span>{p.role || 'Role'}</span>
+                                    <span className="dot" />
+                                    <span>{p.year || ''}</span>
+                                  </MetaRow>
+                                  <TechChips>
+                                    {(p.tech||[]).slice(0,2).map(t => (<span key={t} className="chip">{t}</span>))}
+                                    {((p.tech||[]).length > 2) && (
+                                      <span className="chip">+{(p.tech||[]).length - 2}</span>
+                                    )}
+                                  </TechChips>
+                                  <div style={{marginTop:6, display:'flex', flexDirection:'column', gap:4}}>
+                                    {(p.features||[]).slice(0,2).map((f, i) => (
+                                      <div key={i} style={{display:'flex', alignItems:'center', gap:6, fontSize:12, opacity:0.95}}>
+                                        <span style={{width:10, height:10, borderRadius:3, background:'rgba(255,165,0,0.25)', display:'inline-block'}} />
+                                        <span style={{whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'250px'}}>{f}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {p.href && (
+                                    <button onClick={(e)=>{ e.stopPropagation(); navigate(p.href) }} style={{marginTop:10, fontSize:12, color:'#fff', background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:8, padding:'6px 10px', cursor:'pointer'}}>
+                                      Подробнее
+                                    </button>
+                                  )}
+                                </CardBack>
+                              </CardInner>
                             </ProjectCard>
                           ))}
                         </CardsStrip>
@@ -1211,15 +1467,26 @@ const MenuPage = () => {
                     <ProjectsRow>
                       <RowHeader>Боты</RowHeader>
                       <RowScroller>
-                        <CardsStrip>
+                        <CardsStrip ref={el => stripsRef.current[1] = el}>
                           {projectsRows.bots.map(p => (
                             <ProjectCard key={p.id} onClick={(e)=>{e.stopPropagation(); if(p.href) navigate(p.href)}}>
-                              <CardImage style={{ backgroundImage: `url(${p.image})` }} />
-                              <CardOverlay />
-                              <CardText>
-                                <h4>{p.title}</h4>
-                                <p>{p.description}</p>
-                              </CardText>
+                              <CardInner>
+                                <CardFront>
+                                  <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                                  <CardOverlay />
+                                  <CardText>
+                                    <h4>{p.title}</h4>
+                                    <p>{p.description}</p>
+                                  </CardText>
+                                </CardFront>
+                                <CardBack>
+                                  <h4 style={{margin:0, fontSize:16, fontWeight:600}}>{p.title}</h4>
+                                  <div style={{fontSize:13, opacity:0.9}}>{p.description}</div>
+                                  <TechChips>
+                                    {(p.tech||[]).map(t => (<span key={t} className="chip">{t}</span>))}
+                                  </TechChips>
+                                </CardBack>
+                              </CardInner>
                             </ProjectCard>
                           ))}
                         </CardsStrip>
@@ -1229,15 +1496,26 @@ const MenuPage = () => {
                     <ProjectsRow>
                       <RowHeader>Программы / автоматизации</RowHeader>
                       <RowScroller>
-                        <CardsStrip>
+                        <CardsStrip ref={el => stripsRef.current[2] = el}>
                           {projectsRows.tools.map(p => (
                             <ProjectCard key={p.id} onClick={(e)=>{e.stopPropagation(); if(p.href) navigate(p.href)}}>
-                              <CardImage style={{ backgroundImage: `url(${p.image})` }} />
-                              <CardOverlay />
-                              <CardText>
-                                <h4>{p.title}</h4>
-                                <p>{p.description}</p>
-                              </CardText>
+                              <CardInner>
+                                <CardFront>
+                                  <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                                  <CardOverlay />
+                                  <CardText>
+                                    <h4>{p.title}</h4>
+                                    <p>{p.description}</p>
+                                  </CardText>
+                                </CardFront>
+                                <CardBack>
+                                  <h4 style={{margin:0, fontSize:16, fontWeight:600}}>{p.title}</h4>
+                                  <div style={{fontSize:13, opacity:0.9}}>{p.description}</div>
+                                  <TechChips>
+                                    {(p.tech||[]).map(t => (<span key={t} className="chip">{t}</span>))}
+                                  </TechChips>
+                                </CardBack>
+                              </CardInner>
                             </ProjectCard>
                           ))}
                         </CardsStrip>
