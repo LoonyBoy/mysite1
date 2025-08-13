@@ -48,7 +48,8 @@ const Section = styled.section`
 
   @media (max-width: 768px) {
     padding: 0;
-    height: 100vh;
+    height: auto;
+    min-height: 100dvh;
   }
 `
 
@@ -88,7 +89,7 @@ const NavigationEdge = styled.div`
 
 const CloseButton = styled.button`
   position: fixed;
-  top: 16px;
+  top: calc(16px + env(safe-area-inset-top, 0px));
   right: 16px;
   z-index: 1102; /* поверх модалки и dither */
   color: #fff;
@@ -129,10 +130,10 @@ const CardRow = styled.div`
   }
   
   @media (max-width: 768px) {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
+    flex-wrap: nowrap;
     height: auto;
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 `
 
@@ -158,6 +159,9 @@ const Card = styled.div`
   
   &:last-child {
     border-right: none;
+    @media (max-width: 768px) {
+      border-bottom: none;
+    }
   }
   
   @media (max-width: 1280px) and (min-width: 1025px) {
@@ -166,11 +170,11 @@ const Card = styled.div`
   }
   
   @media (max-width: 768px) {
-    width: 50%;
-    height: 50vh;
+    width: 100%;
+    height: 22vh;
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 0 20px;
+    padding: 0 8px;
   }
 
   .profile-img {
@@ -219,8 +223,8 @@ const CardPlaceholder = styled.div`
   }
 
   @media (max-width: 768px) {
-    width: 50%;
-    height: 50vh;
+    width: 100%;
+    height: 22vh;
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
@@ -255,6 +259,14 @@ const CardContent = styled.div`
     align-items: flex-start;
     justify-content: flex-start;
   }
+
+  @media (max-width: 768px) {
+    gap: 8px;
+    padding: 0 8px;
+    ${Card}.is-open & {
+      padding: 24px 12px;
+    }
+  }
 `
 
 // Контент модалки для "О себе"
@@ -273,6 +285,7 @@ const AboutModalContent = styled.div`
     grid-template-columns: 1fr;
     grid-template-rows: auto auto;
     height: auto;
+    padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px));
   }
 `
 
@@ -377,7 +390,7 @@ const AboutPhoto = styled.img`
   pointer-events: none;
 
   @media (max-width: 1024px) {
-    max-width: 70vw;
+    max-width: 82vw;
     margin: 12px auto 0;
   }
 `
@@ -404,6 +417,14 @@ const ProjectsModalWrap = styled.div`
   gap: 16px;
   overflow: hidden; /* не даём вертикально скроллить страницу */
   padding: 72px 16px 12px; /* опускаем блок ниже: увеличили верхний отступ */
+  
+  @media (max-width: 1024px) {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto; /* на мобильных даём скроллить вертикально */
+    -webkit-overflow-scrolling: touch;
+    padding: 56px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
 `
 
 const ProjectsHeader = styled.div`
@@ -427,11 +448,187 @@ const ProjectsSubtitle = styled.div`
   color: rgba(255,255,255,0.6);
 `
 
+// Услуги: стили модалки и карточек прайсинга
+const ServicesModalWrap = styled.div`
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 16px 16px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+
+  @media (max-width: 768px) {
+    height: auto;
+    min-height: 100dvh;
+    padding: 12px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+    gap: 12px;
+  }
+`
+
+const PricingHeader = styled.div`
+  display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 48px 0 8px;
+  h3 { margin: 0; font-size: clamp(22px, 3.2vw, 32px); font-weight: 500; color: #fff; text-align: center; }
+`
+
+const SwitchRow = styled.div`
+  display: inline-flex; align-items: center; gap: 12px; user-select: none;
+  .arrow { width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer; color: #fff; opacity: 0.8; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; background: rgba(255,255,255,0.06); }
+  .arrow:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+  .label { margin: 0; font-size: clamp(22px, 3.2vw, 32px); font-weight: 500; color: #fff; text-align: center; }
+`
+
+const TabsRow = styled.div`
+  display: inline-flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap;
+`
+
+const TabButton = styled.button`
+  padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06); color: #fff; cursor: pointer; font-size: 14px;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  &[aria-selected="true"] { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.28); }
+  &:hover { background: rgba(255,255,255,0.1); }
+`
+
+const HeadingsRow = styled.div`
+  display: inline-flex; gap: 16px; align-items: baseline; justify-content: center; flex-wrap: wrap;
+  position: relative; padding-bottom: 8px;
+`
+
+const HeadingTab = styled.h3`
+  position: relative;
+  margin: 0; font-size: clamp(20px, 4vw, 24px); font-weight: 500; color: #fff; opacity: 0.7; cursor: pointer;
+  padding-bottom: 8px; user-select: none; border: none; text-decoration: none;
+  white-space: nowrap;
+  &::after { content: ''; position: absolute; left: 0; right: auto; bottom: 0; height: 2px; width: 0; background: rgba(255,255,255,0.85); transition: width 0.25s ease; }
+  &[data-active="true"] { opacity: 1; }
+  &[data-active="true"]::after { width: 100%; }
+`
+
+const TabIndicator = styled.div`
+  display: none;
+`
+
+const BadgePill = styled.div`
+  font-size: 11px; padding: 4px 8px; border-radius: 999px; color: #fff;
+  background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28);
+`
+
+const Muted = styled.p`
+  margin: 0; font-size: 13px; opacity: 0.8; text-align: center; color: #fff;
+`
+
+const PricingGrid = styled.div`
+  display: grid; grid-template-columns: 1fr; gap: 0; width: 100%;
+  justify-items: ${props => props.$center ? 'center' : 'stretch'};
+  @media (min-width: 1024px) { grid-template-columns: ${props => props.$center ? '1fr' : 'repeat(3, 1fr)'}; }
+  /* убрать сплошную верхнюю линию из границ карточек */
+  & > div:first-child { border-top: none; }
+  @media (min-width: 1024px) { & > div:nth-child(-n+3) { border-top: none; } }
+`
+
+const PricingCard = styled.div`
+  text-align: left; border-radius: 0; padding: 16px; cursor: pointer; color: #fff;
+  background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(2px);
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  /* прижатые карточки: убираем двойную линию между соседями */
+  & + & { border-left: none; }
+  &:hover { border-color: rgba(255,255,255,0.2); background: rgba(0,0,0,0.36); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+  &.featured { background: rgba(0,0,0,0.34); border-color: rgba(255,255,255,0.22); box-shadow: 0 10px 28px rgba(0,0,0,0.28); }
+  display: flex; flex-direction: column; gap: 8px; height: 100%;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+    gap: 6px;
+  }
+`
+
+const CardSectionTitle = styled.div`
+  margin-top: 8px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.75);
+`
+
+const SectionBlock = styled.div`
+  min-height: ${props => props.$minHeight ? `${props.$minHeight}px` : 'auto'};
+`
+const PricingHead = styled.div`
+  display: flex; flex-direction: column; gap: 8px;
+  h4 { margin: 0; font-size: 18px; font-weight: 600; }
+  p { margin: 0; font-size: 13px; opacity: 0.9; }
+
+  @media (max-width: 768px) {
+    h4 { font-size: 16px; }
+    p { font-size: 12px; }
+  }
+`
+
+const PricingTop = styled.div`
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+`
+
+const TopPrice = styled.div`
+  display: flex; align-items: baseline; gap: 8px; white-space: nowrap;
+  align-self: flex-start; margin-top: -8px;
+  .amount { font-size: 28px; font-weight: 600; line-height: 1; }
+  .period { font-size: 12px; opacity: 0.8; line-height: 1; position: relative; top: 0; }
+
+  @media (max-width: 768px) {
+    margin-top: -6px;
+    .amount { font-size: 24px; }
+    .period { font-size: 11px; }
+  }
+`
+
+const PriceRow = styled.div`
+  display: flex; align-items: baseline; gap: 6px;
+  .amount { font-size: 24px; font-weight: 500; }
+  .period { font-size: 12px; opacity: 0.8; }
+`
+
+const Bullets = styled.ul`
+  list-style: none; padding: 0; margin: 8px 0 0 0; display: grid; gap: 8px;
+  li { font-size: 13px; opacity: 0.95; position: relative; padding-left: 16px; }
+  li::before { content: '✓'; position: absolute; left: 0; top: 0; color: rgba(255,255,255,0.9); font-size: 14px; line-height: 1; }
+  /* термины с подсказками */
+  .term { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; position: relative; }
+  .term::after {
+    content: attr(data-hint);
+    position: absolute; left: 0; bottom: 100%;
+    transform: translateY(6px);
+    background: rgba(0,0,0,0.9);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: #fff; padding: 8px 16px; border-radius: 8px;
+    white-space: normal; width: max-content; max-width: 320px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 5;
+  }
+  .term:hover::after { opacity: 1; transform: translateY(0); }
+`
+
+const ServiceActions = styled.div`
+  margin-top: 8px; display: flex; gap: 10px;
+  button { font-size: 12px; padding: 6px 10px; border-radius: 10px; cursor: pointer; }
+  .primary { color: #fff; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); }
+  .secondary { color: #fff; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); }
+`
+
+const Divider = styled.hr`
+  border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 10px 0;
+`
+
 const ProjectsRow = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-top: 8px;
+
+  @media (max-width: 768px) {
+    gap: 8px;
+    margin-top: 6px;
+  }
 `
 
 const RowHeader = styled.div`
@@ -440,6 +637,11 @@ const RowHeader = styled.div`
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 0 12px;
+
+  @media (max-width: 768px) {
+    font-size: 13px;
+    padding: 0 8px;
+  }
 `
 
 const RowScroller = styled.div`
@@ -470,10 +672,11 @@ const CardsStrip = styled.div`
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
     &::-webkit-scrollbar { display: none; }
+    padding: 4px 8px 12px;
   }
 `
 
-const ProjectCard = styled.button`
+const ProjectCard = styled.div`
   position: relative;
   height: 200px;
   width: 320px;
@@ -488,6 +691,12 @@ const ProjectCard = styled.button`
   background: transparent;
   cursor: pointer;
   scroll-snap-align: center;
+
+  @media (max-width: 768px) {
+    width: 260px;
+    min-width: 240px;
+    height: 180px;
+  }
 `
 
 const CardInner = styled.div`
@@ -586,6 +795,11 @@ const CardText = styled.div`
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   text-align: left;
+
+  @media (max-width: 768px) {
+    h4 { font-size: 15px; }
+    p { font-size: 12px; }
+  }
 `
 
 const ProjectsTopTitle = styled.h2`
@@ -593,9 +807,14 @@ const ProjectsTopTitle = styled.h2`
   top: 24px; /* заголовок тоже чуть ниже */
   left: 16px;
   margin: 0;
-  font-size: clamp(28px, 3.5vw, 40px);
+  font-size: clamp(24px, 5vw, 36px);
   font-weight: 500;
   color: #fff;
+
+  @media (max-width: 768px) {
+    top: 16px;
+    left: 12px;
+  }
 `
 
 const TitleSection = styled.div`
@@ -642,7 +861,7 @@ const CardTitle = styled.h3`
   }
   
   @media (max-width: 768px) {
-    font-size: 40px;
+    font-size: 24px;
   }
 `
 
@@ -778,11 +997,273 @@ const MenuPage = () => {
   const stripsRef = useRef([])
   const aboutContainerRef = useRef(null)
   const ditherBreatheTlRef = useRef(null)
+  const [servicesCategory, setServicesCategory] = useState('web')
+  const serviceCategories = ['web','bots','automation']
+  const isTouchRef = useRef((() => {
+    try {
+      return (typeof window !== 'undefined' && (('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)))
+    } catch { return false }
+  })())
+  const getNextCategory = (dir) => {
+    const idx = serviceCategories.indexOf(servicesCategory)
+    const nextIdx = (idx + (dir === 'next' ? 1 : -1) + serviceCategories.length) % serviceCategories.length
+    return serviceCategories[nextIdx]
+  }
+  const servicesGridRef = useRef(null)
+  const tabsRowRef = useRef(null)
+  const tabWebRef = useRef(null)
+  const tabBotsRef = useRef(null)
+  const tabAutoRef = useRef(null)
+  const indicatorRef = useRef(null)
+  const isServicesSwitchingRef = useRef(false)
+
+  const positionServicesIndicator = () => {
+    const ind = indicatorRef.current
+    const tabs = {
+      web: tabWebRef.current,
+      bots: tabBotsRef.current,
+      automation: tabAutoRef.current,
+    }
+    const active = tabs[servicesCategory]
+    if (!(ind && active && tabsRowRef.current)) return
+    requestAnimationFrame(() => {
+      const left = active.offsetLeft
+      const width = active.offsetWidth
+      gsap.set(ind, { left, width })
+    })
+  }
+
+  const switchCategory = (nextCat) => {
+    if (nextCat === servicesCategory) return
+    if (isServicesSwitchingRef.current) return
+    isServicesSwitchingRef.current = true
+    const grid = servicesGridRef.current
+    try { gsap.killTweensOf(grid) } catch {}
+    if (grid) {
+      gsap.to(grid, { opacity: 0, y: 8, duration: 0.18, ease: 'power2.in', onComplete: () => {
+        setServicesCategory(nextCat)
+      }})
+    } else {
+      setServicesCategory(nextCat)
+    }
+  }
+
+  useEffect(() => {
+    const grid = servicesGridRef.current
+    if (!grid) return
+    // slide/fade анимация появления карточек
+    const children = Array.from(grid.children)
+    gsap.set(children, { opacity: 0, y: 8 })
+    gsap.to(grid, { opacity: 1, duration: 0.01 })
+    gsap.to(children, { opacity: 1, y: 0, duration: 0.24, ease: 'power2.out', stagger: 0.06, onComplete: () => { isServicesSwitchingRef.current = false } })
+    // анимация индикатора под активным заголовком
+  // Индикатор больше не используется — подчёркивание рисуем через ::after у активного заголовка
+  }, [servicesCategory])
+
+  // Позиционируем индикатор и анимируем карточки при первом открытии модалки "Услуги"
+  useEffect(() => {
+    if (openedIndex !== 2) return
+    // Всегда сбрасываем категорию на "web" при каждом открытии модалки
+    if (servicesCategory !== 'web') {
+      setServicesCategory('web')
+      isServicesSwitchingRef.current = false
+      // подождём, пока сменится категория, затем выставим индикатор
+      const t0 = setTimeout(() => positionServicesIndicator(), 0)
+      return () => clearTimeout(t0)
+    }
+    positionServicesIndicator()
+    // повторная установка через небольшой таймер, чтобы учесть завершающуюся FLIP‑анимацию модалки
+    const t = setTimeout(positionServicesIndicator, 80)
+    const grid = servicesGridRef.current
+    if (grid) {
+      const children = Array.from(grid.children)
+      gsap.set(children, { opacity: 0, y: 8 })
+      gsap.to(children, { opacity: 1, y: 0, duration: 0.24, ease: 'power2.out', stagger: 0.06 })
+    }
+    return () => clearTimeout(t)
+  }, [openedIndex])
+
+  // Перепозиционирование индикатора при ресайзе/изменении шрифтов
+  useEffect(() => {
+    if (openedIndex !== 2) return
+    const onResize = () => positionServicesIndicator()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [openedIndex, servicesCategory])
   const cards = [
     { title: 'О себе' },
     { title: 'Проекты' },
     { title: 'Услуги' },
     { title: 'Контакты' }
+  ]
+
+  // Прайс‑планы для модалки "Услуги" — веб/приложения
+  const servicesWeb = [
+    {
+      id: 'basic',  title: 'Базовый',
+      desc: 'Лендинг/одностраничник для презентации услуг/продуктов',
+      price: 'от 70 000 ₽',
+      features: [
+        'Дизайн по готовому шаблону',
+        'До 5 блоков/секций',
+        'Адаптивная верстка',
+        'Базовое SEO (мета‑теги, скорость)',
+        'Форма обратной связи',
+        'Кросс‑браузерное тестирование',
+        'Безопасность: SSL, GDPR/ФЗ‑152',
+        'Развертывание на сервере',
+        '1 месяц техподдержки',
+      ],
+      extras: [
+        'Кастомный дизайн: +15 000 ₽',
+        'Свыше 5 блоков: +5 000 ₽ за блок',
+        'Хостинг/домен: +10 000 ₽ за год',
+      ],
+      notes: [
+
+      ],
+      timeline: 'Сроки: 1–2 недели',
+      tech: 'Технологии: HTML, CSS, JavaScript, React'
+    },
+    {
+      id: 'optimal', title: 'Оптимальный',
+      desc: 'Многостраничный сайт с интеграциями и анимациями',
+      price: 'от 130 000 ₽',
+      features: [
+        'Всё из "Базовый"',
+        'Кастомный дизайн',
+        'До 10 страниц',
+        'Анимации и интерактив',
+        'База данных/CRM, админ‑панель',
+        'Калькуляторы и формы',
+        'Платежная система',
+        'Личный кабинет клиента/администратора',
+        'Email/мессенджер-уведомления',
+        '2 месяца техподдержки',
+      ],
+      extras: [
+        'Доп. страница: 10 000 ₽ за страницу',
+        'Расширенная аналитика: +10 000 ₽',
+        'Мультиязычность: +15 000 ₽ за язык',
+      ],
+      notes: [
+        'Хостинг на 3 месяца включён',
+      ],
+      timeline: 'Сроки: 3–6 недель',
+      tech: 'Технологии: HTML, Tailwind CSS, JavaScript, React, Framer Motion / GSAP, MySQL/PostgreSQL'
+    },
+    {
+      id: 'premium', title: 'Премиум',
+      desc: 'Сложное веб‑приложение с продвинутой логикой',
+      price: 'от 250 000 ₽',
+      features: [
+        'Всё из «Оптимальный»',
+        'Сложная логика: WebSockets/AI',
+        'Полная SEO‑оптимизация',
+        'Мультиязычность (2+ языка)',
+        'Сложные интеграции: CRM/ERP/облако',
+        'Авто‑тесты (unit/нагрузочные)',
+        '6 месяцев техподдержки',
+        'Документация и инструкции',
+      ],
+      extras: [
+        'Миграции/перенос: от 20 000 ₽',
+        'Обучение персонала: от 15 000 ₽',
+      ],
+      notes: [
+        'Хостинг/домен по договоренности',
+      ],
+      timeline: 'Сроки: 5–12 недель',
+      tech: 'Технологии: Next.js, TypeScript, Nest.js, MongoDB, Docker, WebSockets'
+    },
+  ]
+
+  // Прайс‑планы для модалки "Услуги" — боты/автоматизации
+  const servicesBots = [
+    {
+      id: 'bot-basic', title: 'Базовый',
+      desc: 'FAQ/поддержка, сбор заявок, простые сценарии',
+      price: 'от 40 000 ₽',
+      features: [
+        'Telegram/WhatsApp бот',
+        'Сценарии вопросов‑ответов',
+        'Формы заявок с уведомлениями',
+        'Интеграция с Google Sheets/CRM',
+        'Базовая аналитика',
+        'Развертывание и настройка',
+        '1 месяц техподдержки',
+      ],
+      extras: [
+        'Подключение оплат: от 10 000 ₽',
+        'Импорт/экспорт базы: от 5 000 ₽',
+      ],
+      notes: [],
+      timeline: 'Сроки: 1–2 недели',
+      tech: 'Технологии: Python/Node.js, aiogram/grammY, Google Sheets/CRM'
+    },
+    {
+      id: 'bot-optimal', title: 'Оптимальный',
+      desc: 'Продажи/записи, оплаты, админ‑панель',
+      price: 'от 90 000 ₽',
+      features: [
+        'Всё из "Базовый"',
+        'Оплаты (СБП/карты)',
+        'Админ‑панель для контента',
+        'Личный кабинет клиента',
+        'Интеграции с CRM/БД',
+        'Уведомления и рассылки',
+        '2 месяца техподдержки',
+      ],
+      extras: [
+        'Сегментация рассылок: +10 000 ₽',
+        'А/Б‑тесты сценариев: +10 000 ₽',
+      ],
+      notes: ['Хостинг на 3 месяца включён'],
+      timeline: 'Сроки: 3–5 недель',
+      tech: 'Технологии: Node.js/Python, PostgreSQL, CloudPayments/ЮKassa'
+    },
+    {
+      id: 'bot-premium', title: 'Премиум',
+      desc: 'Сложная логика, интеграции и realtime',
+      price: 'от 180 000 ₽',
+      features: [
+        'Сложные сценарии и роли',
+        'WebSockets для live‑обновлений',
+        'Полная аналитика и сегментация',
+        'Интеграции: CRM/ERP/облако',
+        'Авто‑тесты и мониторинг',
+        '6 месяцев техподдержки',
+        'Документация и инструкции',
+      ],
+      extras: [
+        'Нейро‑модули (NLP): от 30 000 ₽',
+        'Миграции/перенос: от 20 000 ₽',
+      ],
+      notes: ['Хостинг/домен по договоренности'],
+      timeline: 'Сроки: 4–8 недель',
+      tech: 'Технологии: Node.js/Python, PostgreSQL, WebSockets'
+    },
+  ]
+
+  // Прайс‑планы: программы / автоматизация (одна карточка, по договоренности)
+  const servicesAutomation = [
+    {
+      id: 'auto-custom',
+      title: 'По договоренности',
+      desc: 'Программы, интеграции, автоматизация процессов под задачу',
+      price: 'Custom',
+      features: [
+        'Анализ задачи и проектирование',
+        'Интеграции с CRM/ERP/Sheets/API',
+        'Скрипты, ETL, отчёты и уведомления',
+        'Реал‑тайм при необходимости',
+        'Документация и обучение',
+      ],
+      extras: [],
+      notes: ['Стоимость обсуждается после брифинга'],
+      timeline: 'Сроки: зависят от объёма',
+      tech: 'Технологии: Python/Node.js, Google API, PostgreSQL',
+    }
   ]
 
   const projectsRows = {
@@ -795,7 +1276,7 @@ const MenuPage = () => {
       { id: 'wa-support', title: 'KLAMbot', description: 'Документооборот и статусы по объектам/альбомам. Google Sheets + уведомления.', href: '#', image: '/images/klambot.png', tech: ['Python', 'PTB v20+', 'Google Sheets API', 'aiosmtplib'], year: '2025', role: 'Automation', features: ['Интеграция с Google Sheets', 'Раскраска статусов и уведомления'] },
     ],
     tools: [
-      { id: 'wb-integrator', title: 'WB Integrator', description: 'Интеграция с Wildberries + Google Sheets: акции, маржа, выгрузки', href: '#', image: '/images/rudakovrz8.png', tech: ['Python', 'Requests', 'Pandas', 'Google Sheets API'], year: '2025', role: 'Automation', features: ['Расчёт маржи и отбор в акции', 'Выгрузки в Google Sheets'] },
+      { id: 'wb-integrator', title: 'WB Авто-акции', description: 'Интеграция с Wildberries + Google Sheets: акции, маржа, выгрузки', href: '#', image: '/images/WB.png', tech: ['Python', 'Requests', 'Pandas', 'Google Sheets API'], year: '2025', role: 'Automation', features: ['Расчёт маржи и отбор в акции', 'Выгрузки в Google Sheets'] },
     ],
   }
 
@@ -809,6 +1290,8 @@ const MenuPage = () => {
   }
 
   const handleHover = (index, isHovering) => {
+    // На сенсорных устройствах отключаем hover-анимации, чтобы контент не "съезжал"
+    if (isTouchRef.current) return
     // Игнорируем любые hover-изменения, пока открыта/закрывается модалка
     if (isModalOpenRef.current) return
     const cardElement = cardRefs.current[index]
@@ -951,28 +1434,33 @@ const MenuPage = () => {
     try { setParticleSpeed?.(0.4) } catch {}
     // Глобальный dither: раскрываем до фуллскриновского состояния
     const gd = globalDitherRef.current
-    let ditherDuration = 0.6
+    let ditherDuration = isTouchRef.current ? 0.24 : 0.6
     if (gd) {
       // Сбрасываем любые зависшие анимации dither, чтобы старт был чистым
       resetGlobalDither()
-      // FLIP-анимация dither от размеров карточки до fullscreen — исключает резкий прыжок
-      gd.classList.add('front')
-      const rect = el.getBoundingClientRect()
-      // Важно: у GlobalDither по стилям есть inset: 0; чтобы не было мгновенного фуллскрина, переопределяем right/bottom на auto
-      gsap.set(gd, { opacity: 1, clipPath: 'none', position: 'fixed' })
-      // Состояние «как карточка»
-      gsap.set(gd, { top: rect.top, left: rect.left, right: 'auto', bottom: 'auto', width: rect.width, height: rect.height, borderRadius: 16 })
-      const ditherState = Flip.getState(gd)
-      // Состояние «fullscreen»
-      gsap.set(gd, { top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', borderRadius: 0 })
-      Flip.from(ditherState, { duration: ditherDuration, ease: 'power2.inOut', absolute: true, onComplete: () => {
-        gd.classList.remove('front')
-        // Дышащая анимация dither в модалке
-        ditherBreatheTlRef.current?.kill()
-        ditherBreatheTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
-          .to(gd, { opacity: 0.32, duration: 2.8, ease: 'sine.inOut' })
-          .to(gd, { opacity: 0.25, duration: 2.8, ease: 'sine.inOut' })
-      } })
+      if (isTouchRef.current) {
+        // Мобильный UX: простое затемнение фона, без FLIP и дыхания
+        gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', borderRadius: 0, opacity: 0, clipPath: 'none' })
+        gsap.to(gd, { opacity: 0.26, duration: ditherDuration, ease: 'power2.out' })
+      } else {
+        // Desktop: FLIP dither до fullscreen
+        gd.classList.add('front')
+        const rect = el.getBoundingClientRect()
+        gsap.set(gd, { opacity: 1, clipPath: 'none', position: 'fixed' })
+        gsap.set(gd, { top: rect.top, left: rect.left, right: 'auto', bottom: 'auto', width: rect.width, height: rect.height, borderRadius: 16 })
+        const ditherState = Flip.getState(gd)
+        gsap.set(gd, { top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', borderRadius: 0 })
+        Flip.from(ditherState, { duration: ditherDuration, ease: 'power2.inOut', absolute: true, onComplete: () => {
+          gd.classList.remove('front')
+          // Дышащая анимация dither в модалке — только desktop
+          ditherBreatheTlRef.current?.kill()
+          if (!isTouchRef.current) {
+            ditherBreatheTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
+              .to(gd, { opacity: 0.32, duration: 2.8, ease: 'sine.inOut' })
+              .to(gd, { opacity: 0.25, duration: 2.8, ease: 'sine.inOut' })
+          }
+        } })
+      }
     }
 
     // Прячем соседние карточки с лёгкой задержкой, чтобы dither начал закрывать их первым
@@ -987,19 +1475,37 @@ const MenuPage = () => {
     setOpenedIndex(index)
     // Никакого текста не осталось, поэтому Flip только для карточки
     Flip.from(state, {
-      duration: 0.5,
-      ease: 'power2.inOut',
+      duration: isTouchRef.current ? 0.28 : 0.5,
+      ease: isTouchRef.current ? 'power2.out' : 'power2.inOut',
       absolute: true,
       scale: false,
       nested: true,
-      delay: 0.2
+      delay: isTouchRef.current ? 0 : 0.2
     })
+
+    // Появление контента модалки на мобильных: лёгкий fade/slide
+    if (isTouchRef.current) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try {
+            const content = el.querySelector('.about-modal, .projects-modal, .services-modal')
+            if (content) {
+              gsap.fromTo(content, { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.22, ease: 'power2.out' })
+            }
+          } catch {}
+        })
+      })
+    }
   }
 
   const closeCardFullscreen = (index) => {
     const el = cardRefs.current[index]
     if (!el) return
     try { setParticleSpeed?.(1.0) } catch {}
+    // На сенсорных: одиночный тап по открытому блоку — закрыть и снять принудительный hover
+    if (isTouchRef.current) {
+      cardRefs.current.forEach((c) => c && c.classList.remove('force-hover'))
+    }
     // Блокируем закрытие hover на короткое время после старта закрытия
     hoverLockRef.current[index] = performance.now() + 600
     const gd = globalDitherRef.current
@@ -1008,14 +1514,14 @@ const MenuPage = () => {
     const titleEl = el.querySelector(`.title-${index}`)
     if (titleEl) {
       gsap.set(titleEl, { willChange: 'opacity' })
-      gsap.to(titleEl, { opacity: 0, duration: 0.18, ease: 'power2.out' })
+      gsap.to(titleEl, { opacity: 0, duration: isTouchRef.current ? 0.12 : 0.18, ease: 'power2.out' })
     }
     el.classList.remove('is-open')
     setOpenedIndex(null)
     lastOpenModalIndexRef.current = null
     Flip.from(state, {
-      duration: 0.5,
-      ease: 'power2.inOut',
+      duration: isTouchRef.current ? 0.24 : 0.5,
+      ease: isTouchRef.current ? 'power2.in' : 'power2.inOut',
       absolute: true,
       scale: false,
       nested: true,
@@ -1026,27 +1532,30 @@ const MenuPage = () => {
         if (gd) {
           // Останавливаем дыхание dither
           ditherBreatheTlRef.current?.kill()
-          // Плавно сжимаем dither обратно в область карточки
-          const endClip = computeClipFromElement(el)
-          // На момент завершения решаем: оставить dither для hover или скрыть полностью
-          const { x, y } = mousePosRef.current
-          const elAtPoint = document.elementFromPoint(x, y)
-          const stillHover = !!(elAtPoint && el.contains(elAtPoint))
-          const shouldHoverAfterClose = stillHover || lastHoveredBeforeOpenRef.current === index
-          gsap.to(gd, {
-            clipPath: endClip,
-            duration: 0.35,
-            ease: 'power2.inOut',
-            onComplete: () => {
-              if (shouldHoverAfterClose) {
-                // Оставляем dither видимым и обрезанным по карточке, чтобы hover не схлопывался
-                gsap.set(gd, { opacity: 1, clipPath: endClip })
-              } else {
-                gsap.set(gd, { opacity: 0, clipPath: 'inset(0 100% 100% 0 round 16px)' })
+          if (isTouchRef.current) {
+            // На мобилке — просто гасим фон
+            gsap.to(gd, { opacity: 0, duration: 0.18, ease: 'power2.in', onComplete: () => { gd.classList.remove('front') } })
+          } else {
+            // Desktop — возвращаем dither к карточке
+            const endClip = computeClipFromElement(el)
+            const { x, y } = mousePosRef.current
+            const elAtPoint = document.elementFromPoint(x, y)
+            const stillHover = !!(elAtPoint && el.contains(elAtPoint))
+            const shouldHoverAfterClose = stillHover || lastHoveredBeforeOpenRef.current === index
+            gsap.to(gd, {
+              clipPath: endClip,
+              duration: 0.35,
+              ease: 'power2.inOut',
+              onComplete: () => {
+                if (shouldHoverAfterClose) {
+                  gsap.set(gd, { opacity: 1, clipPath: endClip })
+                } else {
+                  gsap.set(gd, { opacity: 0, clipPath: 'inset(0 100% 100% 0 round 16px)' })
+                }
+                gd.classList.remove('front')
               }
-              gd.classList.remove('front')
-            }
-          })
+            })
+          }
         }
         // Возвращаем видимость остальных карточек
         cardRefs.current.forEach((card) => {
@@ -1097,7 +1606,7 @@ const MenuPage = () => {
     const onMove = (e) => {
       mousePosRef.current = { x: e.clientX, y: e.clientY }
       // если модалки нет — проверяем, не находимся ли мы над текущей карточкой и не потерян ли hover
-      if (!isModalOpenRef.current) {
+      if (!isModalOpenRef.current && !isTouchRef.current) {
         for (let i = 0; i < cardRefs.current.length; i++) {
           const c = cardRefs.current[i]
           if (!c) continue
@@ -1112,14 +1621,14 @@ const MenuPage = () => {
     }
     window.addEventListener('mousemove', onMove, { passive: true })
 
-    // Немедленная анимация fade-in при загрузке
+    // Немедленная анимация fade-in при загрузке (на мобилке мягче/короче)
     cards.forEach((_, index) => {
       gsap.fromTo(`.card-${index}`, 
         { opacity: 0, y: 0 }, // Начинаем с y: 0, чтобы карточки не были смещены вниз
         {
           opacity: 1,
           y: 0,
-          duration: 0.8,
+          duration: isTouchRef.current ? 0.5 : 0.8,
           delay: index * 0.1 // Лёгкая задержка для последовательности
         }
       )
@@ -1522,6 +2031,109 @@ const MenuPage = () => {
                       </RowScroller>
                     </ProjectsRow>
                   </ProjectsModalWrap>
+                )}
+
+                {openedIndex === index && index === 2 && (
+                  <ServicesModalWrap>
+                    <ProjectsTopTitle>Услуги</ProjectsTopTitle>
+                    <PricingHeader>
+                      <HeadingsRow style={{marginBottom: 8, position:'relative'}} ref={tabsRowRef}>
+                        <HeadingTab ref={tabWebRef} data-active={servicesCategory==='web'} onClick={(e)=>{e.stopPropagation(); switchCategory('web')}}>
+                          Сайты / Веб‑приложения
+                        </HeadingTab>
+                        <HeadingTab ref={tabBotsRef} data-active={servicesCategory==='bots'} onClick={(e)=>{e.stopPropagation(); switchCategory('bots')}}>
+                          Боты
+                        </HeadingTab>
+                        <HeadingTab ref={tabAutoRef} data-active={servicesCategory==='automation'} onClick={(e)=>{e.stopPropagation(); switchCategory('automation')}}>
+                          Программы / Автоматизация
+                        </HeadingTab>
+                        <TabIndicator ref={indicatorRef} />
+                      </HeadingsRow>
+                    </PricingHeader>
+
+                    <PricingGrid ref={servicesGridRef} $center={servicesCategory === 'automation'}>
+                      {(servicesCategory === 'automation'
+                        ? servicesAutomation
+                        : (servicesCategory === 'web' ? servicesWeb : servicesBots)).map((s, i) => (
+                        <PricingCard key={s.id} className={i === 1 ? 'featured' : ''} onClick={(e)=>{ e.stopPropagation(); navigate('/contact') }}>
+                          <PricingTop>
+                            <PricingHead>
+                              <h4>{s.title}</h4>
+                              <p>{s.desc}</p>
+                            </PricingHead>
+                            <TopPrice>
+                              <span className="amount">{s.price}</span>
+                              <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
+                            </TopPrice>
+                          </PricingTop>
+                          <Divider />
+                          <CardSectionTitle>Что входит</CardSectionTitle>
+                          <SectionBlock $minHeight={256}>
+                            <Bullets>
+                              {s.features.map(f => {
+                                const map = {
+                                  'Адаптивная верстка': 'Сайт удобно читать с телефона и компьютера — всё подстраивается под экран.',
+                                  'Форма обратной связи': 'Посетитель быстро свяжется с вами: заявки уходят на почту или в мессенджер.',
+                                  'Кросс‑браузерное тестирование': 'Сайт выглядит и работает одинаково у большинства людей: Chrome, Safari, Firefox, Edge.',
+                                  'Развертывание на сервере': 'Публикую сайт на хостинге и настраиваем, чтобы он открывался по адресу.',
+                                  'Хостинг/домен': 'Хостинг — место, где живёт сайт. Домен — его адрес (например, site.ru).',
+                                  'База данных/CRM': 'Хранение информации о клиентах, покупках, заявках и т.д. Видим аналитику. Всё в одном месте.',
+                                  'админ‑панель': 'Управляете страницами, товарами и заявками без программиста.',
+                                  'Платежная система': 'Приём оплат на сайте: карты, СБП, криптовалюты и т.п.',
+                                  'Калькуляторы и формы': 'Быстрые расчёты и удобные заявки: клиент видит цену и отправляет данные в пару кликов.',
+                                  'Калькуляторы/формы': 'Быстрые расчёты и удобные заявки: клиент видит цену и отправляет данные в пару кликов.',
+                                  'Мультиязычность': 'Несколько языков и удобное переключение между ними.',
+                                  'Безопасность': 'SSL (https) и соблюдение законов о данных — защита и доверие пользователей.',
+                                  'GDPR/ФЗ‑152': 'Работа с персональными данными по закону: согласия, политика, защита.',
+                                  'Авто‑тесты': 'Автоматические проверки кода и нагрузочные тесты — ловим ошибки до релиза.',
+                                  'Документация и инструкции': 'Пошаговые материалы, чтобы вы могли сами работать с сайтом.',
+                                  'WebSockets': 'Живые обновления без перезагрузки сайта: чат, уведомления, изменения статусов сразу.',
+                                  'PWA (офлайн‑доступ)': 'Сайт как приложение: значок на телефоне, быстрее, часть функций доступна без интернета.',
+                                  'SEO': 'Делаю сайт понятным для Google/Yandex, чтобы он был выше в поиске и приводил больше клиентов.',
+                                }
+                                const norm = (s) => s.toLowerCase().replace(/‑/g, '-');
+                                const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
+                                const text = key ? (
+                                  <span className="term" data-hint={map[key]}>{f}</span>
+                                ) : f
+                                return (<li key={f}>{text}</li>)
+                              })}
+                            </Bullets>
+                          </SectionBlock>
+                          {s.extras?.length ? (
+                            <>
+                              <Divider />
+                              <CardSectionTitle>Доп. услуги</CardSectionTitle>
+                              <SectionBlock $minHeight={96}>
+                                <Bullets>
+                                  {s.extras.map(f => {
+                                    const map = {
+                                      'Хостинг/домен': 'Хостинг — место, где живёт сайт. Домен — его адрес (например, site.ru).',
+                                      'Доп. страница': 'Добавим новую страницу в общий стиль сайта с нужным контентом.',
+                                      'Расширенная аналитика': 'Подключим метрики (Google/Yandex), события, цели — чтобы видеть, что работает.',
+                                       'Миграции/перенос': 'Безопасный переезд: бэкап, перенос кода/БД/файлов, настройка домена и SSL, редиректы и проверка — без потери данных и SEO.',
+                                      'Мультиязычность': 'Добавим ещё один язык и переключатель. Контент можно перевести позже.',
+                                    }
+                                    const norm = (s) => s.toLowerCase().replace(/‑/g,'-')
+                                    const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
+                                    const text = key ? (<span className="term" data-hint={map[key]}>{f}</span>) : f
+                                    return (<li key={f}>{text}</li>)
+                                  })}
+                                </Bullets>
+                              </SectionBlock>
+                            </>
+                          ) : null}
+                          <Divider />
+                          <Muted style={{marginTop: 6}}>{s.timeline}</Muted>
+                          <Muted style={{opacity: 0.7}}>{s.tech}</Muted>
+                          {s.notes?.length ? (
+                            <Muted style={{opacity: 0.7, marginTop: 6}}>{s.notes.join(' • ')}</Muted>
+                          ) : null}
+                          
+                        </PricingCard>
+                      ))}
+                    </PricingGrid>
+                  </ServicesModalWrap>
                 )}
               </CardContent>
               {openedIndex === index && (
