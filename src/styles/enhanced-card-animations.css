@@ -1,0 +1,265 @@
+/* Mobile Card Full-Height Expansion Styles - Task 2 Implementation */
+
+/* Base card styles for mobile full-height expansion support */
+.card-hovered,
+.card-touched,
+.card-mobile-expanded {
+  position: relative;
+  overflow: visible;
+  transform-style: preserve-3d;
+  will-change: transform, position, width, height, z-index, box-shadow;
+}
+
+/* Mobile full-height expansion state with proper viewport handling */
+.card-mobile-expanded {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important; /* Mobile viewport handling (Requirement 2.4) */
+  z-index: 100 !important;
+  transform-origin: center top;
+  transition: none; /* GSAP handles all transitions */
+}
+
+/* Dimmed state for non-hovered cards with enhanced opacity control */
+.card-dimmed {
+  transition: opacity 0.3s ease, filter 0.3s ease, transform 0.2s ease;
+  pointer-events: none;
+  opacity: 0.6 !important;
+  filter: saturate(0.7) brightness(0.8) !important;
+}
+
+/* Mobile full-height expansion effects with improved visual depth */
+.card-hovered::before,
+.card-mobile-expanded::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.card-hovered::before,
+.card-mobile-expanded::before {
+  opacity: 1;
+}
+
+/* Mobile backdrop blur effect for depth during full-height expansion */
+.card-mobile-expanded::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(1px);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.card-mobile-expanded::after {
+  opacity: 1;
+}
+
+/* Touch interaction feedback with enhanced scaling */
+.card-touched {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* Mobile full-height expansion shadow effects for depth with improved layering */
+.card-hovered,
+.card-touched,
+.card-mobile-expanded {
+  filter: drop-shadow(0 15px 40px rgba(0, 0, 0, 0.25)) 
+          drop-shadow(0 5px 15px rgba(0, 0, 0, 0.15));
+}
+
+/* Mobile full-height expansion animation support with enhanced shadows */
+.card-mobile-expanded {
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4), 
+              0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile title and arrow animations during full-height expansion */
+.card-mobile-expanded .title-0,
+.card-mobile-expanded .title-1,
+.card-mobile-expanded .title-2,
+.card-mobile-expanded .title-3 {
+  transform: scale(1.15) translateY(-25px);
+  transition: none; /* GSAP handles transitions */
+}
+
+.card-mobile-expanded .arrow-0,
+.card-mobile-expanded .arrow-1,
+.card-mobile-expanded .arrow-2,
+.card-mobile-expanded .arrow-3 {
+  transform: translateX(20px) translateY(-50%) rotate(45deg) scale(1.3);
+  opacity: 0.9;
+  transition: none; /* GSAP handles transitions */
+}
+
+/* Smooth transitions for all card properties with mobile full-height expansion support */
+[data-card-index] {
+  transition: 
+    opacity 0.3s ease,
+    filter 0.3s ease,
+    transform 0.2s ease,
+    scale 0.2s ease;
+  will-change: transform, opacity, filter, position, width, height, z-index;
+  transform-origin: center top;
+}
+
+/* Mobile performance optimizations for full-height expansion */
+[data-card-index] * {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Mobile full-height expansion container preparation */
+[data-card-index] {
+  position: relative;
+  overflow: visible;
+}
+
+/* Mobile z-index layering system for full-height expansion */
+[data-card-index].card-mobile-expanded {
+  z-index: 100 !important;
+  position: fixed !important;
+}
+
+[data-card-index].card-dimmed {
+  z-index: 1 !important;
+}
+
+/* Smooth mobile viewport transitions for full expansion (Requirements 2.1, 2.2, 2.3) */
+.card-mobile-expanded {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important; /* Mobile viewport handling (Requirement 2.4) */
+}
+
+/* Mobile-specific optimizations for full-height expansion */
+@media (max-width: 768px) {
+  .card-hovered,
+  .card-touched,
+  .card-mobile-expanded {
+    transform: translateZ(0); /* Force GPU acceleration on mobile */
+  }
+  
+  /* Reduce shadow complexity on mobile for performance during full-height expansion */
+  .card-hovered,
+  .card-touched,
+  .card-mobile-expanded {
+    filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.15));
+  }
+  
+  /* Enhanced mobile viewport handling for full-height expansion */
+  .card-mobile-expanded {
+    /* Use viewport units that account for mobile browser UI */
+    height: 100vh !important;
+    height: 100dvh !important; /* Dynamic viewport height for mobile */
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+  }
+}
+
+/* High performance mode enhancements for desktop full-height expansion */
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .card-hovered::after,
+  .card-mobile-expanded::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(255, 255, 255, 0.03) 0%,
+      transparent 50%
+    );
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .card-hovered::after,
+  .card-mobile-expanded::after {
+    opacity: 1;
+  }
+}
+
+/* Accessibility: Respect reduced motion preferences for mobile full-height expansion */
+@media (prefers-reduced-motion: reduce) {
+  [data-card-index],
+  .card-hovered,
+  .card-touched,
+  .card-dimmed,
+  .card-mobile-expanded {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+    position: relative !important;
+    width: auto !important;
+    height: auto !important;
+    top: auto !important;
+    left: auto !important;
+  }
+  
+  .card-hovered::before,
+  .card-hovered::after,
+  .card-mobile-expanded::before,
+  .card-mobile-expanded::after {
+    display: none;
+  }
+}
+
+/* Focus states for keyboard navigation */
+[data-card-index]:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Mobile full-height expansion z-index management */
+.card-hovered,
+.card-mobile-expanded {
+  z-index: 100 !important;
+}
+
+.card-touched {
+  z-index: 99 !important;
+}
+
+.card-dimmed {
+  z-index: 1 !important;
+}
+
+/* Additional mobile viewport support for various devices */
+@supports (height: 100dvh) {
+  .card-mobile-expanded {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+  }
+}
+
+/* Fallback for older mobile browsers without dvh support */
+@supports not (height: 100dvh) {
+  .card-mobile-expanded {
+    height: 100vh !important;
+    min-height: 100vh !important;
+  }
+}
