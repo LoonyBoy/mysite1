@@ -1,0 +1,226 @@
+/**
+ * Mobile Card Hover System Styles
+ * Provides touch-optimized visual feedback and animations
+ * Requirements: 1.1, 1.2, 1.3, 5.2, 5.3
+ */
+
+/* Base card styles for mobile hover system */
+.card-mobile-hover {
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform, box-shadow;
+  
+  /* Enhanced touch target sizing for mobile accessibility */
+  min-height: 44px; /* Minimum touch target size per accessibility guidelines */
+  min-width: 44px;
+  
+  /* Prevent text selection during touch interactions */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
+  /* Optimize for touch interactions */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* Prevent double-tap zoom */
+}
+
+/* Touch active state - immediate feedback on touch start */
+.card-touch-active {
+  transform: scale(0.98);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Subtle shadow to indicate touch */
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Touch hover state - sustained touch interaction */
+.card-touch-hover {
+  /* Enhanced visual feedback for touch hover */
+  transform: scale(1.02);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  /* Enhanced shadow for depth */
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.15),
+    0 3px 10px rgba(0, 0, 0, 0.1);
+  
+  /* Subtle glow effect */
+  filter: brightness(1.05);
+}
+
+/* Haptic-like feedback animation keyframes */
+@keyframes haptic-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.98); }
+  100% { transform: scale(1.02); }
+}
+
+/* Apply haptic animation to touched cards */
+.card-touch-active.haptic-feedback {
+  animation: haptic-pulse 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Mobile-specific card title animations */
+.card-touch-hover .card-title {
+  transform: translateY(-2px) scale(1.05);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile-specific arrow animations */
+.card-touch-hover .card-arrow {
+  transform: translateX(8px) rotate(45deg) scale(1.1);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  opacity: 0.9;
+}
+
+/* Enhanced visual feedback for card content */
+.card-touch-hover .card-content {
+  transform: translateY(-1px);
+  transition: transform 0.3s ease-out;
+}
+
+/* Dimmed state for non-active cards */
+.card-dimmed {
+  opacity: 0.6;
+  filter: saturate(0.7) brightness(0.8);
+  transform: scale(0.98);
+  transition: 
+    opacity 0.3s ease,
+    filter 0.3s ease,
+    transform 0.3s ease;
+}
+
+/* Prevent dimming on the active card */
+.card-touch-hover:not(.card-dimmed) {
+  opacity: 1;
+  filter: saturate(1) brightness(1.05);
+}
+
+/* Mobile viewport optimizations */
+@media (max-width: 768px) {
+  .card-mobile-hover {
+    /* Larger touch targets on mobile */
+    min-height: 48px;
+    padding: 8px;
+  }
+  
+  /* Reduced animation intensity on smaller screens */
+  .card-touch-hover {
+    transform: scale(1.01);
+  }
+  
+  .card-touch-active {
+    transform: scale(0.99);
+  }
+  
+  /* Optimize animations for mobile performance */
+  .card-touch-hover .card-title {
+    transform: translateY(-1px) scale(1.03);
+  }
+  
+  .card-touch-hover .card-arrow {
+    transform: translateX(6px) rotate(45deg) scale(1.05);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card-touch-active {
+    border: 2px solid currentColor;
+  }
+  
+  .card-touch-hover {
+    border: 2px solid currentColor;
+    box-shadow: none;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .card-mobile-hover,
+  .card-touch-active,
+  .card-touch-hover,
+  .card-touch-hover .card-title,
+  .card-touch-hover .card-arrow,
+  .card-touch-hover .card-content,
+  .card-dimmed {
+    transition: none;
+    animation: none;
+    transform: none;
+  }
+  
+  /* Provide alternative feedback for reduced motion */
+  .card-touch-active {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .card-touch-hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    outline: 2px solid rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .card-touch-active {
+    box-shadow: 
+      0 2px 8px rgba(255, 255, 255, 0.05),
+      0 1px 3px rgba(255, 255, 255, 0.03);
+  }
+  
+  .card-touch-hover {
+    box-shadow: 
+      0 8px 25px rgba(255, 255, 255, 0.08),
+      0 3px 10px rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* Focus styles for keyboard navigation */
+.card-mobile-hover:focus {
+  outline: 2px solid #007AFF; /* iOS blue */
+  outline-offset: 2px;
+}
+
+.card-mobile-hover:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Ensure proper layering during interactions */
+.card-touch-active,
+.card-touch-hover {
+  z-index: 10;
+  position: relative;
+}
+
+/* Smooth transitions for all interactive elements */
+.card-mobile-hover * {
+  transition-property: transform, opacity, filter, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent layout shift during animations */
+.card-mobile-hover {
+  contain: layout style;
+}
+
+/* Performance optimizations */
+.card-mobile-hover,
+.card-touch-active,
+.card-touch-hover {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+/* Ensure text remains readable during animations */
+.card-touch-hover .card-title,
+.card-touch-hover .card-content {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
