@@ -1,0 +1,394 @@
+/* Enhanced Mobile Menu Styles for MenuPage */
+
+/* Mobile-first responsive design improvements */
+@media (max-width: 768px) {
+  /* Enhanced card layout for mobile */
+  .card-row {
+    flex-direction: column;
+    height: auto;
+    min-height: 100dvh;
+    gap: 0;
+  }
+
+  /* Improved mobile card styling */
+  .menu-card {
+    width: 100% !important;
+    height: 25vh;
+    min-height: 120px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(
+      135deg,
+      rgba(0, 0, 0, 0.4) 0%,
+      rgba(0, 0, 0, 0.2) 100%
+    );
+    backdrop-filter: blur(8px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .menu-card:last-child {
+    border-bottom: none;
+  }
+
+  /* Enhanced mobile hover/touch states */
+  .menu-card:hover,
+  .menu-card.force-hover,
+  .menu-card:active {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+    backdrop-filter: blur(12px);
+    transform: scale(1.02);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  /* Mobile card content improvements */
+  .card-content {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    gap: 16px;
+  }
+
+  /* Enhanced mobile typography */
+  .card-title {
+    font-size: clamp(20px, 5vw, 28px) !important;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Mobile card icons/arrows */
+  .card-arrow {
+    font-size: 20px;
+    opacity: 0.7;
+    transition: all 0.3s ease;
+    transform: translateX(0);
+  }
+
+  .menu-card:hover .card-arrow,
+  .menu-card.force-hover .card-arrow {
+    opacity: 1;
+    transform: translateX(8px);
+  }
+
+  /* Mobile modal enhancements */
+  .menu-card.is-open {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 1001 !important;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(20px);
+    border: none;
+    transform: none;
+  }
+
+  /* Enhanced mobile modal content */
+  .menu-card.is-open .card-content {
+    padding: 24px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Mobile close button improvements */
+  .close-button {
+    position: fixed;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    right: 16px;
+    z-index: 1102;
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+  }
+
+  .close-button:hover,
+  .close-button:active {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+  }
+
+  /* Mobile navigation improvements */
+  .mobile-navigation {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Mobile navigation items */
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    touch-action: manipulation;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .mobile-nav-item:hover,
+  .mobile-nav-item:active {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .mobile-nav-item .icon {
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .mobile-nav-item .label {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .mobile-nav-item.active .icon {
+    color: #fff;
+  }
+
+  .mobile-nav-item.active .label {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+/* Enhanced tablet styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .card-row {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .menu-card {
+    width: 50% !important;
+    height: 50vh;
+    min-height: 300px;
+  }
+
+  .card-content {
+    padding: 24px;
+  }
+
+  .card-title {
+    font-size: clamp(24px, 4vw, 32px) !important;
+  }
+}
+
+/* Touch interaction improvements */
+@media (hover: none) and (pointer: coarse) {
+  .menu-card {
+    cursor: default;
+  }
+
+  .menu-card:hover {
+    transform: none;
+  }
+
+  .menu-card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+
+  /* Enhanced touch feedback */
+  .menu-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.05);
+    opacity: 0;
+    transition: opacity 0.1s ease;
+    pointer-events: none;
+  }
+
+  .menu-card:active::after {
+    opacity: 1;
+  }
+}
+
+/* Performance optimizations for mobile */
+@media (max-width: 768px) {
+  .menu-card,
+  .card-content,
+  .card-title,
+  .card-arrow {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Reduce motion for better performance */
+  @media (prefers-reduced-motion: reduce) {
+    .menu-card,
+    .card-content,
+    .card-title,
+    .card-arrow,
+    .close-button,
+    .mobile-nav-item {
+      transition: none !important;
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  .menu-card {
+    background: linear-gradient(
+      135deg,
+      rgba(20, 20, 25, 0.6) 0%,
+      rgba(10, 10, 15, 0.4) 100%
+    );
+  }
+
+  .menu-card:hover,
+  .menu-card.force-hover {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.03) 100%
+    );
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .menu-card {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .card-title {
+    color: #fff;
+    text-shadow: none;
+  }
+
+  .close-button {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* Landscape orientation adjustments for mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .card-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .menu-card {
+    width: 50% !important;
+    height: 50vh;
+  }
+
+  .mobile-navigation {
+    height: calc(50px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Ultra-wide mobile screens */
+@media (max-width: 480px) {
+  .card-content {
+    padding: 12px 16px;
+  }
+
+  .card-title {
+    font-size: clamp(18px, 6vw, 24px) !important;
+  }
+
+  .close-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    font-size: 16px;
+  }
+}
+
+/* Loading states for mobile */
+.menu-card.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.menu-card.loading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Accessibility improvements */
+.menu-card:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+.close-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+/* Safe area handling for notched devices */
+@supports (padding: max(0px)) {
+  .menu-card.is-open .card-content {
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+}

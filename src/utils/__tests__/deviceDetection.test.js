@@ -1,289 +1,390 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  detectTouchDevice,
-  getDeviceCapabilities,
-  prefersReducedMotion,
-  getOrientation,
-  debounce,
-  throttle
-} from '../deviceDetection'
+import { DeviceDetection } from '../deviceDetection'
 
-// Mock window and navigator
+// Mock window and navigator objects
 const mockWindow = {
-  matchMedia: vi.fn(() => ({ matches: false })),
   screen: {
     width: 1920,
-    height: 1080
+    height: 1080,
+    availWidth: 1920,
+    availHeight: 1040,
+    orientation: {
+      angle: 0,
+      addEventListener: jest.fn()
+    }
   },
   innerWidth: 1920,
   innerHeight: 1080,
   devicePixelRatio: 1,
-  orientation: undefined
+  matchMedia: jest.fn(),
+  addEventListener: jest.fn(),
+  DocumentTouch: undefined
 }
 
 const mockNavigator = {
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
   maxTouchPoints: 0,
   msMaxTouchPoints: 0,
-  deviceMemory: undefined,
-  connection: undefined,
-  hardwareConcurrency: 4
+  deviceMemory: 8,
+  hardwareConcurrency: 8
 }
 
-describe('deviceDetection', () => {
+// Setup global mocks
+global.window = mockWindow
+global.navigator = mockNavigator
+global.document = {
+  documentElement: {},
+  addEventListener: jest.fn()
+}
+
+describe('DeviceDetection', () => {
+  let deviceDetection
+
   beforeEach(() => {
     // Reset mocks
-    vi.clearAllMocks()
+    jest.clearAllMocks()
     
-    // Setup global objects
-    global.window = mockWindow
-    global.navigator = mockNavigator
-    global.console = {
-      log: vi.fn(),
-      warn: vi.fn()
+    // Reset window.matchMedia mock
+    window.matchMedia = jest.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn()
+    }))
+
+    deviceDetection = new DeviceDetection()
+  })
+
+  afterEach(() => {
+    if (deviceDetection) {
+      deviceDetection.destroy()
     }
   })
 
-  describe('detectTouchDevice', () => {
-    it('should return false for desktop devices by default', () => {
-      expect(detectTouchDevice()).toBe(false)
+  describe('Touch Detection', () => {
+    test('should detect touch when ontouchstart is available', () => {
+      window.ontouchstart = undefined
+      
+      const hasTouch = deviceDetection.detectTouch()
+      expect(hasTouch).toBe(true)
     })
 
-    it('should detect touch via ontouchstart', () => {
-      global.window.ontouchstart = true
-      expect(detectTouchDevice()).toBe(true)
-      delete global.window.ontouchstart
+    test('should detect touch when maxTouchPoints > 0', () => {
+      delete window.ontouchstart
+      navigator.maxTouchPoints = 5
+      
+      const hasTouch = deviceDetection.detectTouch()
+      expect(hasTouch).toBe(true)
     })
 
-    it('should detect touch via pointer media query', () => {
-      mockWindow.matchMedia.mockReturnValue({ matches: true })
-      expect(detectTouchDevice()).toBe(true)
+    test('should detect touch with coarse pointer', () => {
+      delete window.ontouchstart
+      navigator.maxTouchPoints = 0
+      
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: query === '(pointer: coarse)',
+        media: query
+      }))
+      
+      const hasTouch = deviceDetection.detectTouch()
+      expect(hasTouch).toBe(true)
     })
 
-    it('should detect touch via maxTouchPoints', () => {
-      global.navigator.maxTouchPoints = 1
-      expect(detectTouchDevice()).toBe(true)
-      global.navigator.maxTouchPoints = 0
+    test('should not detect touch on desktop', () => {
+      delete window.ontouchstart
+      navigator.maxTouchPoints = 0
+      navigator.msMaxTouchPoints = 0
+      
+      window.matchMedia = jest.fn().mockImplementation(() => ({
+        matches: false
+      }))
+      
+      const hasTouch = deviceDetection.detectTouch()
+      expect(hasTouch).toBe(false)
+    })
+  })
+
+  describe('Mouse Detection', () => {
+    test('should detect mouse with fine pointer', () => {
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: query === '(pointer: fine)',
+        media: query
+      }))
+      
+      const hasMouse = deviceDetection.detectMouse()
+      expect(hasMouse).toBe(true)
     })
 
-    it('should detect touch via msMaxTouchPoints (IE/Edge)', () => {
-      global.navigator.msMaxTouchPoints = 1
-      expect(detectTouchDevice()).toBe(true)
-      global.navigator.msMaxTouchPoints = 0
+    test('should detect mouse with hover support', () => {
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: query === '(hover: hover)',
+        media: query
+      }))
+      
+      const hasMouse = deviceDetection.detectMouse()
+      expect(hasMouse).toBe(true)
     })
 
-    it('should detect mobile devices via user agent', () => {
-      global.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)'
-      expect(detectTouchDevice()).toBe(true)
+    test('should detect mouse events', () => {
+      window.matchMedia = jest.fn().mockImplementation(() => ({
+        matches: false
+      }))
+      
+      window.onmouseenter = undefined
+      
+      const hasMouse = deviceDetection.detectMouse()
+      expect(hasMouse).toBe(true)
+    })
+  })
+
+  describe('Device Type Detection', () => {
+    test('should detect mobile device', () => {
+      window.screen.width = 375
+      window.screen.height = 667
+      
+      const deviceType = deviceDetection.getDeviceType()
+      expect(deviceType).toBe('mobile')
     })
 
-    it('should detect Android devices via user agent', () => {
-      global.navigator.userAgent = 'Mozilla/5.0 (Linux; Android 10; SM-G975F)'
-      expect(detectTouchDevice()).toBe(true)
+    test('should detect tablet device', () => {
+      window.screen.width = 768
+      window.screen.height = 1024
+      
+      const deviceType = deviceDetection.getDeviceType()
+      expect(deviceType).toBe('tablet')
     })
 
-    it('should handle detection errors gracefully', () => {
-      // Mock error in matchMedia
-      mockWindow.matchMedia.mockImplementation(() => {
-        throw new Error('matchMedia error')
+    test('should detect desktop device', () => {
+      window.screen.width = 1920
+      window.screen.height = 1080
+      
+      const deviceType = deviceDetection.getDeviceType()
+      expect(deviceType).toBe('desktop')
+    })
+  })
+
+  describe('Orientation Detection', () => {
+    test('should detect portrait orientation', () => {
+      window.innerWidth = 375
+      window.innerHeight = 667
+      
+      const orientation = deviceDetection.getOrientation()
+      expect(orientation).toBe('portrait')
+    })
+
+    test('should detect landscape orientation', () => {
+      window.innerWidth = 667
+      window.innerHeight = 375
+      
+      const orientation = deviceDetection.getOrientation()
+      expect(orientation).toBe('landscape')
+    })
+
+    test('should use screen.orientation if available', () => {
+      window.screen.orientation = {
+        angle: 90
+      }
+      
+      const orientation = deviceDetection.getOrientation()
+      expect(orientation).toBe('landscape')
+    })
+  })
+
+  describe('Performance Detection', () => {
+    test('should return high performance for desktop with good specs', () => {
+      navigator.deviceMemory = 8
+      navigator.hardwareConcurrency = 8
+      window.screen.width = 1920
+      window.screen.height = 1080
+      
+      deviceDetection.detectCapabilities()
+      const performanceLevel = deviceDetection.getPerformanceLevel()
+      expect(performanceLevel).toBe('high')
+    })
+
+    test('should return medium performance for tablets', () => {
+      navigator.deviceMemory = 4
+      navigator.hardwareConcurrency = 4
+      window.screen.width = 768
+      window.screen.height = 1024
+      
+      deviceDetection.detectCapabilities()
+      const performanceLevel = deviceDetection.getPerformanceLevel()
+      expect(performanceLevel).toBe('medium')
+    })
+
+    test('should return low performance for mobile devices', () => {
+      navigator.deviceMemory = 2
+      navigator.hardwareConcurrency = 2
+      window.screen.width = 375
+      window.screen.height = 667
+      
+      deviceDetection.detectCapabilities()
+      const performanceLevel = deviceDetection.getPerformanceLevel()
+      expect(performanceLevel).toBe('low')
+    })
+  })
+
+  describe('Primary Interaction Detection', () => {
+    test('should set mobile as primary touch', () => {
+      window.screen.width = 375
+      window.screen.height = 667
+      window.ontouchstart = undefined
+      
+      const capabilities = deviceDetection.detectCapabilities()
+      expect(capabilities.isPrimaryTouch).toBe(true)
+      expect(capabilities.isPrimaryMouse).toBe(false)
+    })
+
+    test('should set desktop as primary mouse', () => {
+      window.screen.width = 1920
+      window.screen.height = 1080
+      delete window.ontouchstart
+      navigator.maxTouchPoints = 0
+      
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: query === '(pointer: fine)' || query === '(hover: hover)',
+        media: query
+      }))
+      
+      const capabilities = deviceDetection.detectCapabilities()
+      expect(capabilities.isPrimaryTouch).toBe(false)
+      expect(capabilities.isPrimaryMouse).toBe(true)
+    })
+
+    test('should prefer touch for tablets with both capabilities', () => {
+      window.screen.width = 768
+      window.screen.height = 1024
+      window.ontouchstart = undefined
+      
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: query === '(pointer: fine)' || query === '(hover: hover)' || query === '(pointer: coarse)',
+        media: query
+      }))
+      
+      const capabilities = deviceDetection.detectCapabilities()
+      expect(capabilities.isPrimaryTouch).toBe(true)
+      expect(capabilities.isPrimaryMouse).toBe(false)
+    })
+  })
+
+  describe('Accessibility Detection', () => {
+    test('should detect reduced motion preference', () => {
+      window.matchMedia = jest.fn().mockImplementation((query) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+        media: query
+      }))
+      
+      const prefersReduced = deviceDetection.prefersReducedMotion()
+      expect(prefersReduced).toBe(true)
+    })
+
+    test('should detect no reduced motion preference', () => {
+      window.matchMedia = jest.fn().mockImplementation(() => ({
+        matches: false
+      }))
+      
+      const prefersReduced = deviceDetection.prefersReducedMotion()
+      expect(prefersReduced).toBe(false)
+    })
+  })
+
+  describe('Capability Listeners', () => {
+    test('should add and remove capability listeners', () => {
+      const listener = jest.fn()
+      
+      deviceDetection.addCapabilityListener(listener)
+      expect(deviceDetection.listeners.has(listener)).toBe(true)
+      
+      deviceDetection.removeCapabilityListener(listener)
+      expect(deviceDetection.listeners.has(listener)).toBe(false)
+    })
+
+    test('should notify listeners of capability changes', () => {
+      const listener = jest.fn()
+      deviceDetection.addCapabilityListener(listener)
+      
+      const newCapabilities = { test: true }
+      deviceDetection.notifyListeners(newCapabilities)
+      
+      expect(listener).toHaveBeenCalledWith(newCapabilities)
+    })
+
+    test('should handle listener errors gracefully', () => {
+      const errorListener = jest.fn().mockImplementation(() => {
+        throw new Error('Test error')
+      })
+      const goodListener = jest.fn()
+      
+      deviceDetection.addCapabilityListener(errorListener)
+      deviceDetection.addCapabilityListener(goodListener)
+      
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
+      
+      const newCapabilities = { test: true }
+      deviceDetection.notifyListeners(newCapabilities)
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Error in capability change listener:', expect.any(Error))
+      expect(goodListener).toHaveBeenCalledWith(newCapabilities)
+      
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('Caching', () => {
+    test('should cache capabilities', () => {
+      const capabilities1 = deviceDetection.detectCapabilities()
+      const capabilities2 = deviceDetection.detectCapabilities()
+      
+      expect(capabilities1).toBe(capabilities2) // Same object reference due to caching
+    })
+
+    test('should clear cache and re-detect', () => {
+      const capabilities1 = deviceDetection.detectCapabilities()
+      
+      deviceDetection.cache.clear()
+      const capabilities2 = deviceDetection.detectCapabilities()
+      
+      expect(capabilities1).not.toBe(capabilities2) // Different object references
+      expect(capabilities1).toEqual(capabilities2) // But same content
+    })
+  })
+
+  describe('Error Handling', () => {
+    test('should handle touch detection errors', () => {
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
+      
+      // Mock an error in touch detection
+      const originalMatchMedia = window.matchMedia
+      window.matchMedia = jest.fn().mockImplementation(() => {
+        throw new Error('Test error')
       })
       
-      expect(detectTouchDevice()).toBe(false)
-      expect(console.warn).toHaveBeenCalled()
+      const hasTouch = deviceDetection.detectTouch()
+      expect(hasTouch).toBe(false)
+      expect(consoleSpy).toHaveBeenCalledWith('Error detecting touch capabilities:', expect.any(Error))
+      
+      window.matchMedia = originalMatchMedia
+      consoleSpy.mockRestore()
     })
 
-    it('should consider small screens with touch indicators', () => {
-      // Small screen
-      mockWindow.screen.width = 600
-      mockWindow.screen.height = 800
+    test('should handle mouse detection errors', () => {
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
       
-      // With touch start support
-      global.window.ontouchstart = true
-      
-      expect(detectTouchDevice()).toBe(true)
-      
-      // Reset
-      delete global.window.ontouchstart
-      mockWindow.screen.width = 1920
-      mockWindow.screen.height = 1080
-    })
-  })
-
-  describe('getDeviceCapabilities', () => {
-    it('should return basic device information', () => {
-      const capabilities = getDeviceCapabilities()
-      
-      expect(capabilities).toHaveProperty('isTouch')
-      expect(capabilities).toHaveProperty('deviceMemory')
-      expect(capabilities).toHaveProperty('connectionType')
-      expect(capabilities).toHaveProperty('hardwareConcurrency')
-      expect(capabilities).toHaveProperty('screen')
-      expect(capabilities).toHaveProperty('performanceLevel')
-      expect(capabilities).toHaveProperty('userAgent')
-    })
-
-    it('should detect high performance devices', () => {
-      global.navigator.deviceMemory = 8
-      
-      const capabilities = getDeviceCapabilities()
-      expect(capabilities.performanceLevel).toBe('high')
-    })
-
-    it('should detect low performance devices', () => {
-      global.navigator.deviceMemory = 2
-      
-      const capabilities = getDeviceCapabilities()
-      expect(capabilities.performanceLevel).toBe('low')
-    })
-
-    it('should adjust performance based on connection', () => {
-      global.navigator.connection = { effectiveType: 'slow-2g' }
-      
-      const capabilities = getDeviceCapabilities()
-      expect(capabilities.performanceLevel).toBe('low')
-    })
-
-    it('should handle missing navigator properties', () => {
-      const originalNavigator = global.navigator
-      global.navigator = { userAgent: 'test' }
-      
-      const capabilities = getDeviceCapabilities()
-      expect(capabilities.deviceMemory).toBe(null)
-      expect(capabilities.hardwareConcurrency).toBe(null)
-      
-      global.navigator = originalNavigator
-    })
-
-    it('should handle errors gracefully', () => {
-      // Mock error in screen access
-      Object.defineProperty(global.window, 'screen', {
-        get: () => { throw new Error('Screen access error') }
+      // Mock an error in mouse detection
+      const originalMatchMedia = window.matchMedia
+      window.matchMedia = jest.fn().mockImplementation(() => {
+        throw new Error('Test error')
       })
       
-      const capabilities = getDeviceCapabilities()
-      expect(capabilities.screen.width).toBe(null)
-      expect(console.warn).toHaveBeenCalled()
-    })
-  })
-
-  describe('prefersReducedMotion', () => {
-    it('should return false by default', () => {
-      expect(prefersReducedMotion()).toBe(false)
-    })
-
-    it('should detect reduced motion preference', () => {
-      mockWindow.matchMedia.mockReturnValue({ matches: true })
-      expect(prefersReducedMotion()).toBe(true)
-    })
-
-    it('should handle matchMedia errors', () => {
-      mockWindow.matchMedia.mockImplementation(() => {
-        throw new Error('matchMedia error')
-      })
+      const hasMouse = deviceDetection.detectMouse()
+      expect(hasMouse).toBe(false)
+      expect(consoleSpy).toHaveBeenCalledWith('Error detecting mouse capabilities:', expect.any(Error))
       
-      expect(prefersReducedMotion()).toBe(false)
-      expect(console.warn).toHaveBeenCalled()
-    })
-  })
-
-  describe('getOrientation', () => {
-    it('should detect landscape orientation via screen.orientation', () => {
-      mockWindow.screen.orientation = { angle: 90 }
-      expect(getOrientation()).toBe('landscape')
-    })
-
-    it('should detect portrait orientation via screen.orientation', () => {
-      mockWindow.screen.orientation = { angle: 0 }
-      expect(getOrientation()).toBe('portrait')
-    })
-
-    it('should detect orientation via window.orientation', () => {
-      global.window.orientation = 90
-      expect(getOrientation()).toBe('landscape')
-      
-      global.window.orientation = 0
-      expect(getOrientation()).toBe('portrait')
-    })
-
-    it('should fallback to window dimensions', () => {
-      // Remove orientation APIs
-      delete mockWindow.screen.orientation
-      delete global.window.orientation
-      
-      // Landscape dimensions
-      mockWindow.innerWidth = 1920
-      mockWindow.innerHeight = 1080
-      expect(getOrientation()).toBe('landscape')
-      
-      // Portrait dimensions
-      mockWindow.innerWidth = 800
-      mockWindow.innerHeight = 1200
-      expect(getOrientation()).toBe('portrait')
-    })
-
-    it('should return unknown on errors', () => {
-      // Remove all orientation detection methods
-      delete mockWindow.screen
-      delete global.window.orientation
-      delete mockWindow.innerWidth
-      delete mockWindow.innerHeight
-      
-      expect(getOrientation()).toBe('unknown')
-    })
-  })
-
-  describe('debounce', () => {
-    it('should debounce function calls', (done) => {
-      const mockFn = vi.fn()
-      const debouncedFn = debounce(mockFn, 100)
-      
-      // Call multiple times rapidly
-      debouncedFn()
-      debouncedFn()
-      debouncedFn()
-      
-      // Should not be called immediately
-      expect(mockFn).not.toHaveBeenCalled()
-      
-      // Should be called once after delay
-      setTimeout(() => {
-        expect(mockFn).toHaveBeenCalledTimes(1)
-        done()
-      }, 150)
-    })
-
-    it('should execute immediately when immediate flag is true', () => {
-      const mockFn = vi.fn()
-      const debouncedFn = debounce(mockFn, 100, true)
-      
-      debouncedFn()
-      expect(mockFn).toHaveBeenCalledTimes(1)
-      
-      // Subsequent calls should be debounced
-      debouncedFn()
-      expect(mockFn).toHaveBeenCalledTimes(1)
-    })
-  })
-
-  describe('throttle', () => {
-    it('should throttle function calls', (done) => {
-      const mockFn = vi.fn()
-      const throttledFn = throttle(mockFn, 100)
-      
-      // Call multiple times rapidly
-      throttledFn()
-      throttledFn()
-      throttledFn()
-      
-      // Should be called immediately once
-      expect(mockFn).toHaveBeenCalledTimes(1)
-      
-      // Should allow another call after limit
-      setTimeout(() => {
-        throttledFn()
-        expect(mockFn).toHaveBeenCalledTimes(2)
-        done()
-      }, 150)
+      window.matchMedia = originalMatchMedia
+      consoleSpy.mockRestore()
     })
   })
 })

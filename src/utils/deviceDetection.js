@@ -1,266 +1,400 @@
 /**
- * Device Detection Utilities
- * Provides reliable touch vs mouse device detection with multiple fallback methods
+ * Enhanced device detection utility for mobile web applications
+ * Provides robust touch device detection with multiple fallback methods
  */
 
-/**
- * Detect if the current device supports touch interactions
- * Uses multiple detection methods for maximum reliability
- * 
- * @returns {boolean} True if device supports touch, false for mouse-only devices
- */
-export const detectTouchDevice = () => {
-  try {
-    // Method 1: Check for touch events support
-    const hasTouchStart = 'ontouchstart' in window
+class DeviceDetection {
+  constructor() {
+    this.cache = new Map()
+    this.listeners = new Set()
+    this.currentCapabilities = null
     
-    // Method 2: Check pointer media query (most reliable for modern browsers)
-    const hasPointerCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches
+    // Initialize detection on construction
+    this.detectCapabilities()
     
-    // Method 3: Check navigator touch points
-    const hasTouchPoints = navigator.maxTouchPoints > 0
-    
-    // Method 4: IE/Edge fallback
-    const hasTouch = navigator.msMaxTouchPoints > 0
-    
-    // Method 5: User agent detection (fallback for older devices)
-    const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
-    const isMobileUA = mobileRegex.test(navigator.userAgent)
-    
-    // Method 6: Screen size heuristic (additional check)
-    const isSmallScreen = window.screen && (window.screen.width <= 768 || window.screen.height <= 768)
-    
-    // Combine all detection methods
-    const touchIndicators = [
-      hasTouchStart,
-      hasPointerCoarse,
-      hasTouchPoints,
-      hasTouch,
-      isMobileUA
-    ]
-    
-    // Device is considered touch if any primary method returns true
-    const primaryTouch = touchIndicators.some(indicator => indicator)
-    
-    // Additional confidence boost for small screens with touch indicators
-    const isTouch = primaryTouch || (isSmallScreen && (hasTouchStart || isMobileUA))
-    
-    // Log detection results for debugging
-    if (typeof console !== 'undefined' && console.log) {
-      console.log('Touch device detection:', {
-        hasTouchStart,
-        hasPointerCoarse,
-        hasTouchPoints,
-        hasTouch,
-        isMobileUA,
-        isSmallScreen,
-        finalResult: isTouch,
-        userAgent: navigator.userAgent
-      })
-    }
-    
-    return isTouch
-    
-  } catch (error) {
-    // If detection fails, default to mouse device
-    console.warn('Error in touch device detection:', error)
-    return false
+    // Listen for orientation changes to re-detect capabilities
+    this.setupOrientationListener()
   }
-}
 
-/**
- * Detect device capabilities and performance characteristics
- * 
- * @returns {Object} Device information object
- */
-export const getDeviceCapabilities = () => {
-  try {
-    const isTouch = detectTouchDevice()
+  /**
+   * Comprehensive device capability detection
+   * @returns {Object} Device capabilities object
+   */
+  detectCapabilities() {
+    const cacheKey = 'device-capabilities'
     
-    // Detect device memory (if available)
-    const deviceMemory = navigator.deviceMemory || null
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey)
+    }
+
+    const capabilities = {
+      // Primary touch detection methods
+      hasTouch: this.detectTouch(),
+      hasMouse: this.detectMouse(),
+      hasKeyboard: this.detectKeyboard(),
+      
+      // Device characteristics
+      screenSize: this.getScreenSize(),
+      deviceType: this.getDeviceType(),
+      orientation: this.getOrientation(),
+      
+      // Performance indicators
+      deviceMemory: this.getDeviceMemory(),
+      hardwareConcurrency: this.getHardwareConcurrency(),
+      
+      // Browser capabilities
+      supportsPointerEvents: this.supportsPointerEvents(),
+      supportsHover: this.supportsHover(),
+      
+      // Accessibility preferences
+      prefersReducedMotion: this.prefersReducedMotion(),
+      
+      // Final determination
+      isPrimaryTouch: false,
+      isPrimaryMouse: false
+    }
+
+    // Determine primary interaction method
+    this.determinePrimaryInteraction(capabilities)
     
-    // Detect connection type (if available)
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
-    const connectionType = connection ? connection.effectiveType : null
+    this.cache.set(cacheKey, capabilities)
+    this.currentCapabilities = capabilities
     
-    // Detect hardware concurrency (CPU cores)
-    const hardwareConcurrency = navigator.hardwareConcurrency || null
+    console.log('Device capabilities detected:', capabilities)
     
-    // Screen information
-    const screen = {
-      width: window.screen ? window.screen.width : null,
-      height: window.screen ? window.screen.height : null,
+    return capabilities
+  }
+
+  /**
+   * Detect touch capabilities using multiple methods
+   * @returns {boolean} True if device has touch capabilities
+   */
+  detectTouch() {
+    try {
+      // Method 1: Touch events support
+      const hasTouchEvents = 'ontouchstart' in window || 
+                            'ontouchstart' in document.documentElement
+
+      // Method 2: Navigator touch points
+      const hasTouchPoints = navigator.maxTouchPoints > 0 || 
+                            navigator.msMaxTouchPoints > 0
+
+      // Method 3: Pointer media query
+      const hasCoarsePointer = window.matchMedia && 
+                              window.matchMedia('(pointer: coarse)').matches
+
+      // Method 4: Touch media query
+      const hasTouchHover = window.matchMedia && 
+                           window.matchMedia('(hover: none)').matches
+
+      // Method 5: DocumentTouch (legacy)
+      const hasDocumentTouch = window.DocumentTouch && 
+                              document instanceof window.DocumentTouch
+
+      return hasTouchEvents || hasTouchPoints || hasCoarsePointer || 
+             hasTouchHover || hasDocumentTouch
+    } catch (error) {
+      console.warn('Error detecting touch capabilities:', error)
+      return false
+    }
+  }
+
+  /**
+   * Detect mouse capabilities
+   * @returns {boolean} True if device has mouse capabilities
+   */
+  detectMouse() {
+    try {
+      // Method 1: Pointer media query
+      const hasFinePointer = window.matchMedia && 
+                            window.matchMedia('(pointer: fine)').matches
+
+      // Method 2: Hover support
+      const hasHoverSupport = window.matchMedia && 
+                             window.matchMedia('(hover: hover)').matches
+
+      // Method 3: Mouse events (less reliable on touch devices)
+      const hasMouseEvents = 'onmouseenter' in window
+
+      return hasFinePointer || hasHoverSupport || hasMouseEvents
+    } catch (error) {
+      console.warn('Error detecting mouse capabilities:', error)
+      return false
+    }
+  }
+
+  /**
+   * Detect keyboard capabilities
+   * @returns {boolean} True if device likely has keyboard
+   */
+  detectKeyboard() {
+    try {
+      // Physical keyboard detection is limited in browsers
+      // We use screen size and device type as heuristics
+      const screenSize = this.getScreenSize()
+      const isLargeScreen = screenSize.width >= 1024 && screenSize.height >= 768
+      
+      // Assume desktop/laptop devices have keyboards
+      return isLargeScreen || this.detectMouse()
+    } catch (error) {
+      console.warn('Error detecting keyboard capabilities:', error)
+      return false
+    }
+  }
+
+  /**
+   * Get screen size information
+   * @returns {Object} Screen size data
+   */
+  getScreenSize() {
+    // Use viewport size for more accurate detection in web context
+    return {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      availWidth: window.screen ? window.screen.availWidth : window.innerWidth,
+      availHeight: window.screen ? window.screen.availHeight : window.innerHeight,
+      screenWidth: window.screen ? window.screen.width : window.innerWidth,
+      screenHeight: window.screen ? window.screen.height : window.innerHeight,
       pixelRatio: window.devicePixelRatio || 1
     }
-    
-    // Estimate performance level based on available information
-    let performanceLevel = 'medium' // default
-    
-    if (deviceMemory) {
-      if (deviceMemory >= 8) {
-        performanceLevel = 'high'
-      } else if (deviceMemory <= 2) {
-        performanceLevel = 'low'
-      }
-    }
-    
-    // Adjust based on connection if available
-    if (connectionType) {
-      if (connectionType === 'slow-2g' || connectionType === '2g') {
-        performanceLevel = 'low'
-      }
-    }
-    
-    return {
-      isTouch,
-      deviceMemory,
-      connectionType,
-      hardwareConcurrency,
-      screen,
-      performanceLevel,
-      userAgent: navigator.userAgent
-    }
-    
-  } catch (error) {
-    console.warn('Error getting device capabilities:', error)
-    return {
-      isTouch: false,
-      deviceMemory: null,
-      connectionType: null,
-      hardwareConcurrency: null,
-      screen: { width: null, height: null, pixelRatio: 1 },
-      performanceLevel: 'medium',
-      userAgent: navigator.userAgent || 'unknown'
-    }
   }
-}
 
-/**
- * Check if device prefers reduced motion
- * 
- * @returns {boolean} True if user prefers reduced motion
- */
-export const prefersReducedMotion = () => {
-  try {
-    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  } catch (error) {
-    console.warn('Error checking reduced motion preference:', error)
-    return false
+  /**
+   * Determine device type based on screen size and capabilities
+   * @returns {string} Device type: 'mobile', 'tablet', 'desktop'
+   */
+  getDeviceType() {
+    const screenSize = this.getScreenSize()
+    const { width, height } = screenSize
+    const minDimension = Math.min(width, height)
+    const maxDimension = Math.max(width, height)
+
+    // Mobile: smaller screens
+    if (maxDimension <= 768) {
+      return 'mobile'
+    }
+    
+    // Tablet: medium screens
+    if (maxDimension <= 1024) {
+      return 'tablet'
+    }
+    
+    // Desktop: large screens
+    return 'desktop'
   }
-}
 
-/**
- * Detect if device is in landscape or portrait orientation
- * 
- * @returns {'landscape'|'portrait'|'unknown'} Current orientation
- */
-export const getOrientation = () => {
-  try {
+  /**
+   * Get current orientation
+   * @returns {string} 'portrait' or 'landscape'
+   */
+  getOrientation() {
+    const screenSize = this.getScreenSize()
+    
+    // Always use viewport size for orientation detection in web context
+    // This is more reliable than screen.orientation API
+    return screenSize.width > screenSize.height ? 'landscape' : 'portrait'
+  }
+
+  /**
+   * Get device memory if available
+   * @returns {number|null} Device memory in GB or null if not available
+   */
+  getDeviceMemory() {
+    return navigator.deviceMemory || null
+  }
+
+  /**
+   * Get hardware concurrency (CPU cores)
+   * @returns {number} Number of logical processors
+   */
+  getHardwareConcurrency() {
+    return navigator.hardwareConcurrency || 4 // Default to 4 if not available
+  }
+
+  /**
+   * Check if pointer events are supported
+   * @returns {boolean} True if pointer events are supported
+   */
+  supportsPointerEvents() {
+    return 'PointerEvent' in window
+  }
+
+  /**
+   * Check if CSS hover is supported
+   * @returns {boolean} True if hover is supported
+   */
+  supportsHover() {
+    return window.matchMedia && window.matchMedia('(hover: hover)').matches
+  }
+
+  /**
+   * Check if user prefers reduced motion
+   * @returns {boolean} True if reduced motion is preferred
+   */
+  prefersReducedMotion() {
+    return window.matchMedia && 
+           window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  }
+
+  /**
+   * Determine primary interaction method
+   * @param {Object} capabilities - Device capabilities object
+   */
+  determinePrimaryInteraction(capabilities) {
+    const { hasTouch, hasMouse, deviceType, screenSize } = capabilities
+
+    // Mobile devices are primarily touch
+    if (deviceType === 'mobile') {
+      capabilities.isPrimaryTouch = true
+      capabilities.isPrimaryMouse = false
+      return
+    }
+
+    // Desktop devices are primarily mouse
+    if (deviceType === 'desktop') {
+      capabilities.isPrimaryTouch = false
+      capabilities.isPrimaryMouse = true
+      return
+    }
+
+    // Tablets: check for external mouse/keyboard
+    if (deviceType === 'tablet') {
+      // If both touch and mouse are available, prefer touch for tablets
+      if (hasTouch && hasMouse) {
+        capabilities.isPrimaryTouch = true
+        capabilities.isPrimaryMouse = false
+      } else if (hasTouch) {
+        capabilities.isPrimaryTouch = true
+        capabilities.isPrimaryMouse = false
+      } else {
+        capabilities.isPrimaryTouch = false
+        capabilities.isPrimaryMouse = true
+      }
+      return
+    }
+
+    // Fallback: prefer touch if available, otherwise mouse
+    capabilities.isPrimaryTouch = hasTouch
+    capabilities.isPrimaryMouse = !hasTouch
+  }
+
+  /**
+   * Setup orientation change listener to re-detect capabilities
+   */
+  setupOrientationListener() {
+    const handleOrientationChange = () => {
+      // Clear cache and re-detect
+      this.cache.clear()
+      const newCapabilities = this.detectCapabilities()
+      
+      // Notify listeners of capability changes
+      this.notifyListeners(newCapabilities)
+    }
+
+    // Listen for orientation changes
     if (window.screen && window.screen.orientation) {
-      return window.screen.orientation.angle % 180 === 0 ? 'portrait' : 'landscape'
-    }
-    
-    if (window.orientation !== undefined) {
-      return Math.abs(window.orientation) === 90 ? 'landscape' : 'portrait'
-    }
-    
-    // Fallback to window dimensions
-    if (window.innerWidth && window.innerHeight) {
-      return window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
-    }
-    
-    return 'unknown'
-  } catch (error) {
-    console.warn('Error detecting orientation:', error)
-    return 'unknown'
-  }
-}
-
-/**
- * Create a device detection hook for React components
- * 
- * @returns {Function} Hook function that returns device information
- */
-export const createDeviceDetectionHook = () => {
-  return () => {
-    const [deviceInfo, setDeviceInfo] = useState(() => getDeviceCapabilities())
-    
-    useEffect(() => {
-      // Update device info if orientation changes
-      const handleOrientationChange = () => {
-        setDeviceInfo(prev => ({
-          ...prev,
-          orientation: getOrientation()
-        }))
-      }
-      
-      // Listen for orientation changes
+      window.screen.orientation.addEventListener('change', handleOrientationChange)
+    } else {
       window.addEventListener('orientationchange', handleOrientationChange)
-      window.addEventListener('resize', handleOrientationChange)
-      
-      return () => {
-        window.removeEventListener('orientationchange', handleOrientationChange)
-        window.removeEventListener('resize', handleOrientationChange)
+    }
+
+    // Also listen for resize events as a fallback
+    window.addEventListener('resize', handleOrientationChange)
+  }
+
+  /**
+   * Add listener for capability changes
+   * @param {Function} listener - Callback function
+   */
+  addCapabilityListener(listener) {
+    this.listeners.add(listener)
+  }
+
+  /**
+   * Remove capability change listener
+   * @param {Function} listener - Callback function to remove
+   */
+  removeCapabilityListener(listener) {
+    this.listeners.delete(listener)
+  }
+
+  /**
+   * Notify all listeners of capability changes
+   * @param {Object} capabilities - New capabilities object
+   */
+  notifyListeners(capabilities) {
+    this.listeners.forEach(listener => {
+      try {
+        listener(capabilities)
+      } catch (error) {
+        console.warn('Error in capability change listener:', error)
       }
-    }, [])
-    
-    return deviceInfo
+    })
   }
-}
 
-/**
- * Debounce function for preventing rapid event firing
- * 
- * @param {Function} func - Function to debounce
- * @param {number} wait - Wait time in milliseconds
- * @param {boolean} immediate - Whether to execute immediately on first call
- * @returns {Function} Debounced function
- */
-export const debounce = (func, wait, immediate = false) => {
-  let timeout
-  
-  return function executedFunction(...args) {
-    const later = () => {
-      timeout = null
-      if (!immediate) func.apply(this, args)
+  /**
+   * Get current capabilities (cached)
+   * @returns {Object} Current device capabilities
+   */
+  getCapabilities() {
+    return this.currentCapabilities || this.detectCapabilities()
+  }
+
+  /**
+   * Check if device is primarily touch-based
+   * @returns {boolean} True if primary interaction is touch
+   */
+  isPrimaryTouch() {
+    const capabilities = this.getCapabilities()
+    return capabilities.isPrimaryTouch
+  }
+
+  /**
+   * Check if device is primarily mouse-based
+   * @returns {boolean} True if primary interaction is mouse
+   */
+  isPrimaryMouse() {
+    const capabilities = this.getCapabilities()
+    return capabilities.isPrimaryMouse
+  }
+
+  /**
+   * Get device performance level based on hardware
+   * @returns {string} 'low', 'medium', or 'high'
+   */
+  getPerformanceLevel() {
+    const capabilities = this.getCapabilities()
+    const { deviceMemory, hardwareConcurrency, deviceType } = capabilities
+
+    // High performance: desktop with good specs
+    if (deviceType === 'desktop' && 
+        (deviceMemory >= 8 || hardwareConcurrency >= 8)) {
+      return 'high'
     }
-    
-    const callNow = immediate && !timeout
-    
-    clearTimeout(timeout)
-    timeout = setTimeout(later, wait)
-    
-    if (callNow) func.apply(this, args)
-  }
-}
 
-/**
- * Throttle function for limiting event frequency
- * 
- * @param {Function} func - Function to throttle
- * @param {number} limit - Time limit in milliseconds
- * @returns {Function} Throttled function
- */
-export const throttle = (func, limit) => {
-  let inThrottle
-  
-  return function executedFunction(...args) {
-    if (!inThrottle) {
-      func.apply(this, args)
-      inThrottle = true
-      setTimeout(() => inThrottle = false, limit)
+    // Medium performance: tablets or decent mobile devices
+    if (deviceType === 'tablet' || 
+        (deviceMemory >= 4 || hardwareConcurrency >= 4)) {
+      return 'medium'
     }
+
+    // Low performance: older or budget mobile devices
+    return 'low'
+  }
+
+  /**
+   * Clean up listeners and resources
+   */
+  destroy() {
+    this.listeners.clear()
+    this.cache.clear()
+    // Note: We don't remove window listeners as they might be needed by other instances
   }
 }
 
-// Export default object with all utilities
-export default {
-  detectTouchDevice,
-  getDeviceCapabilities,
-  prefersReducedMotion,
-  getOrientation,
-  createDeviceDetectionHook,
-  debounce,
-  throttle
-}
+// Create singleton instance
+const deviceDetection = new DeviceDetection()
+
+// Export both the class and singleton instance
+export { DeviceDetection }
+export default deviceDetection
