@@ -10,6 +10,8 @@ import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
 import useParticleControl from '../hooks/useParticleControl'
 import Dither from '../../dither.jsx'; // Adjusted to new file extension
+import ExpandableTabs from '../components/ui/expandable-tabs'
+import { Cpu, Monitor, MessageCircle } from 'lucide-react'
 // ProjectsScrollStack не используем в новой версии модалки
 
 
@@ -200,14 +202,23 @@ const Card = styled.div`
     position: fixed;
     inset: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     z-index: 1001; /* выше GlobalDither */
     border-right: none;
     padding: 0; /* Без padding на контейнере во время Flip */
     background: transparent; /* фон дает GlobalDither на полном экране */
     backdrop-filter: none;
     cursor: default;
+   /* Позиционируем содержимое модалки у верхнего края
+     и разрешаем вертикальный скролл при переполнении. */
+   display: flex;
+   align-items: flex-start;
+   justify-content: flex-start;
+   overflow-y: auto;
+   -webkit-overflow-scrolling: touch;
+   padding-top: env(safe-area-inset-top, 0px);
   }
+
 `
 
 // Плейсхолдер, удерживающий место карточки в строке во время открытия модалки
@@ -511,6 +522,75 @@ const TabIndicator = styled.div`
   display: none;
 `
 
+const CarouselTabs = styled.div`
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 12px 8px;
+
+  @media (max-width: 768px) {
+    display: flex;
+    flex-wrap: nowrap; /* prevent wrapping to next line */
+    overflow-x: auto; /* allow horizontal scroll when needed */
+    border: 1px solid rgba(255,255,255,0.08); /* visual block around tabs */
+    border-radius: 12px;
+    padding: 8px;
+    background: rgba(0,0,0,0.14);
+  }
+
+  .tab {
+    width: auto;
+    min-width: 28%;
+    text-align: center;
+    opacity: 0.7;
+    transform-origin: center;
+    transition: transform 0.18s ease, opacity 0.18s ease;
+    position: relative;
+    padding-bottom: 12px; /* space for underline */
+    flex: 0 0 auto; /* keep each tab on a single row */
+  }
+
+  .tab::after {
+    content: '';
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    bottom: 4px;
+    height: 3px;
+    background: transparent;
+    border-radius: 2px;
+    transition: background 0.18s ease, transform 0.18s ease;
+  }
+
+  .tab.center {
+    min-width: 44%;
+    opacity: 1;
+    transform: scale(1.02);
+    z-index: 2;
+  }
+
+  .tab.center::after {
+    background: rgba(255,255,255,0.95);
+    transform: scaleX(1);
+  }
+`
+
+// Show mobile list on small screens and hide desktop rows
+const MobileProjectsList = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: block;
+  }
+`
+
+const DesktopProjects = styled.div`
+  display: block;
+  @media (max-width: 768px) {
+    display: none;
+  }
+`
+
 const BadgePill = styled.div`
   font-size: 11px; padding: 4px 8px; border-radius: 999px; color: #fff;
   background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28);
@@ -665,8 +745,9 @@ const CardsStrip = styled.div`
   /* Mobile/Tablet: горизонтальная лента со скроллом */
   @media (max-width: 1024px) {
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(240px, 300px);
+  grid-auto-flow: column;
+  /* allow cards to grow to most of the viewport on small screens */
+  grid-auto-columns: minmax(220px, 92vw);
     gap: 12px;
     overflow-x: auto;
     scroll-snap-type: x proximity;
@@ -693,9 +774,10 @@ const ProjectCard = styled.div`
   scroll-snap-align: center;
 
   @media (max-width: 768px) {
-    width: 260px;
-    min-width: 240px;
-    height: 180px;
+    /* Mobile: make cards responsive to viewport width and flexible height */
+    width: min(92vw, 340px);
+    min-width: auto;
+    height: auto;
   }
 `
 
@@ -712,6 +794,12 @@ const CardInner = styled.div`
   border: none;
   background: transparent;
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    /* allow flexible height on mobile while keeping visual ratio */
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
 `
 
 const CardFace = styled.div`
@@ -747,6 +835,10 @@ const CardBack = styled(CardFace)`
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   text-align: left;
+  @media (max-width: 768px) {
+    padding: 12px;
+    justify-content: center;
+  }
 `
 
 const TechChips = styled.div`
@@ -768,7 +860,7 @@ const CardImage = styled.div`
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center;
+  background-position: center center;
   filter: saturate(1) brightness(0.9);
   transform: scale(1.02);
   transition: transform 0.4s ease;
@@ -999,6 +1091,21 @@ const MenuPage = () => {
   const ditherBreatheTlRef = useRef(null)
   const [servicesCategory, setServicesCategory] = useState('web')
   const serviceCategories = ['web','bots','automation']
+  // Projects modal: selected category on mobile and swipe handling
+  const [projectsCategory, setProjectsCategory] = useState('web')
+  const projectsCategories = ['web', 'bots', 'tools']
+  const projectsCategoryLabels = {
+    web: 'Сайты/приложения',
+    bots: 'Боты',
+    tools: 'Автоматизации'
+  }
+  const projectsTouchStartXRef = useRef(null)
+  const projectsTouchingRef = useRef(false)
+  const projectsTouchLastTimeRef = useRef(0)
+  const projectsTouchLastXRef = useRef(0)
+  const projectsTransitionDirRef = useRef(0) // -1 next, 1 prev
+  const mobileListRef = useRef(null)
+  const mobilePaneRef = useRef(null)
   const isTouchRef = useRef((() => {
     try {
       return (typeof window !== 'undefined' && (('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)))
@@ -1016,6 +1123,119 @@ const MenuPage = () => {
   const tabAutoRef = useRef(null)
   const indicatorRef = useRef(null)
   const isServicesSwitchingRef = useRef(false)
+
+  const onProjectsTouchStart = (e) => {
+    if (!e.touches || e.touches.length === 0) return
+    projectsTouchStartXRef.current = e.touches[0].clientX
+    projectsTouchingRef.current = true
+    projectsTouchLastTimeRef.current = performance.now()
+    projectsTouchLastXRef.current = e.touches[0].clientX
+  try { const p = mobilePaneRef.current; if (p) { p.style.willChange = 'transform'; gsap.set(p, { x: 0 }) } } catch {}
+  }
+
+  const onProjectsTouchMove = (e) => {
+    if (!projectsTouchingRef.current) return
+    const x = (e.touches && e.touches[0] && e.touches[0].clientX) || 0
+    const dx = x - (projectsTouchStartXRef.current || 0)
+    // follow finger: move whole pane (tabs + list)
+    try {
+      const pane = mobilePaneRef.current
+      if (pane) gsap.set(pane, { x: dx })
+    } catch {}
+    // store for velocity
+    projectsTouchLastTimeRef.current = performance.now()
+    projectsTouchLastXRef.current = x
+  }
+
+  const onProjectsTouchEnd = (e) => {
+    if (!projectsTouchingRef.current) return
+    projectsTouchingRef.current = false
+    const startX = projectsTouchStartXRef.current
+    const endX = (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientX) || null
+    if (startX == null || endX == null) return
+    const dx = endX - startX
+    const dt = Math.max(1, performance.now() - projectsTouchLastTimeRef.current)
+    const vx = (endX - projectsTouchLastXRef.current) / dt
+    const threshold = 60 // px
+    const velocityThreshold = 0.3
+    const idx = projectsCategories.indexOf(projectsCategory)
+    let targetIdx = idx
+    let dir = 0
+    if (dx < -threshold || vx < -velocityThreshold) {
+      targetIdx = Math.min(projectsCategories.length - 1, idx + 1)
+      dir = -1
+    } else if (dx > threshold || vx > velocityThreshold) {
+      targetIdx = Math.max(0, idx - 1)
+      dir = 1
+    }
+    if (targetIdx === idx) {
+      // animate back to center of pane
+      try { const p = mobilePaneRef.current; if (p) gsap.to(p, { x: 0, duration: 0.28, ease: 'power2.out', clearProps: 'willChange' }) } catch {}
+      return
+    }
+    if (targetIdx === idx) {
+      try { const el = mobileListRef.current; if (el) gsap.to(el, { x: 0, duration: 0.28, ease: 'power2.out' }) } catch {}
+      return
+    }
+    const newCat = projectsCategories[targetIdx]
+    // animate change
+    changeProjectsCategory(newCat, dir)
+  }
+
+  // animate category change: slide out current, swap content, slide in new
+  const isProjectsAnimatingRef = useRef(false)
+  const changeProjectsCategory = (newCat, dir = 0, animateSlide = true) => {
+    if (isProjectsAnimatingRef.current) return
+    if (newCat === projectsCategory) return
+    const el = mobilePaneRef.current || mobileListRef.current
+    if (!el) { setProjectsCategory(newCat); return }
+    isProjectsAnimatingRef.current = true
+    const w = window.innerWidth || document.documentElement.clientWidth
+    if (!animateSlide) {
+      // crossfade: fade out, swap, fade in
+      try {
+        gsap.to(el, { opacity: 0, duration: 0.18, ease: 'power2.in', onComplete: () => {
+          setProjectsCategory(newCat)
+          gsap.set(el, { x: 0 })
+          try { gsap.to(el, { opacity: 1, duration: 0.24, ease: 'power2.out', onComplete: () => { isProjectsAnimatingRef.current = false } }) } catch { isProjectsAnimatingRef.current = false }
+        }})
+      } catch (err) {
+        setProjectsCategory(newCat)
+        isProjectsAnimatingRef.current = false
+      }
+      return
+    }
+
+    // if animateSlide true and dir not provided (0) compute shortest circular direction
+    try {
+      if (!dir) {
+        const n = projectsCategories.length
+        const cur = projectsCategories.indexOf(projectsCategory)
+        const next = projectsCategories.indexOf(newCat)
+        const forward = (next - cur + n) % n
+        const backward = (cur - next + n) % n
+        dir = forward <= backward ? -1 : 1
+      }
+    } catch {}
+
+    const outX = dir === -1 ? -w * 0.6 : dir === 1 ? w * 0.6 : -w * 0.6
+    // animate current out
+    try {
+      gsap.to(el, { x: outX, opacity: 0, duration: 0.28, ease: 'power2.in', onComplete: () => {
+        // swap content
+        setProjectsCategory(newCat)
+        // immediately position offscreen opposite side
+        const inX = dir === -1 ? w * 0.6 : dir === 1 ? -w * 0.6 : 0
+        try { gsap.set(el, { x: inX, opacity: 0 }) } catch {}
+        // animate in
+        try { gsap.to(el, { x: 0, opacity: 1, duration: 0.36, ease: 'power2.out', onComplete: () => { isProjectsAnimatingRef.current = false; try{ el.style.willChange = '' }catch{} } }) } catch { isProjectsAnimatingRef.current = false }
+      }})
+    } catch (err) {
+      // fallback
+      setProjectsCategory(newCat)
+      isProjectsAnimatingRef.current = false
+    }
+  }
 
   const positionServicesIndicator = () => {
     const ind = indicatorRef.current
@@ -1424,6 +1644,20 @@ const MenuPage = () => {
     lastHoveredBeforeOpenRef.current = index
     lastOpenModalIndexRef.current = index
     isModalOpenRef.current = true
+    // when opening Projects modal (index 1), default to web category
+    if (index === 1) {
+      setProjectsCategory('web')
+    }
+    // Сбрасываем возможные transform/opacity/filter у контейнера section, чтобы fixed располагался от окна
+    try {
+      const sectionEl = document.querySelector('section')
+      if (sectionEl) {
+        sectionEl.style.transform = 'none'
+        sectionEl.style.opacity = ''
+        sectionEl.style.filter = ''
+        sectionEl.style.transition = ''
+      }
+    } catch {}
     // Отключаем hover-анимации только на других карточках, текущую оставляем как есть
     try {
       hoverTimelinesRef.current.forEach((tl, i) => {
@@ -1440,7 +1674,7 @@ const MenuPage = () => {
       resetGlobalDither()
       if (isTouchRef.current) {
         // Мобильный UX: простое затемнение фона, без FLIP и дыхания
-        gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', borderRadius: 0, opacity: 0, clipPath: 'none' })
+        gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', borderRadius: 0, opacity: 0, clipPath: 'none' })
         gsap.to(gd, { opacity: 0.26, duration: ditherDuration, ease: 'power2.out' })
       } else {
         // Desktop: FLIP dither до fullscreen
@@ -1449,7 +1683,7 @@ const MenuPage = () => {
         gsap.set(gd, { opacity: 1, clipPath: 'none', position: 'fixed' })
         gsap.set(gd, { top: rect.top, left: rect.left, right: 'auto', bottom: 'auto', width: rect.width, height: rect.height, borderRadius: 16 })
         const ditherState = Flip.getState(gd)
-        gsap.set(gd, { top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', borderRadius: 0 })
+        gsap.set(gd, { top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', borderRadius: 0 })
         Flip.from(ditherState, { duration: ditherDuration, ease: 'power2.inOut', absolute: true, onComplete: () => {
           gd.classList.remove('front')
           // Дышащая анимация dither в модалке — только desktop
@@ -1741,7 +1975,7 @@ const MenuPage = () => {
           const gd = globalDitherRef.current
           if (gd) {
             resetGlobalDither()
-            gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', borderRadius: 0, clipPath: 'none', opacity: 0.28 })
+            gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', borderRadius: 0, clipPath: 'none', opacity: 0.28 })
           }
           try { setParticleSpeed?.(0.4) } catch {}
         } else {
@@ -1922,8 +2156,57 @@ const MenuPage = () => {
                 )}
 
                 {openedIndex === index && index === 1 && (
-                  <ProjectsModalWrap>
+                  <ProjectsModalWrap onTouchStart={onProjectsTouchStart} onTouchEnd={onProjectsTouchEnd}>
                     <ProjectsTopTitle>Проекты</ProjectsTopTitle>
+                      <div ref={mobilePaneRef} style={{display:'block'}}>
+                      <CarouselTabs>
+                        <ExpandableTabs
+                          tabs={[
+                            { title: projectsCategoryLabels['tools'] || 'Автоматизации', icon: Cpu },
+                            { title: projectsCategoryLabels['web'] || 'Сайты/приложения', icon: Monitor },
+                            { title: projectsCategoryLabels['bots'] || 'Боты', icon: MessageCircle },
+                          ]}
+                          className="w-full p-0 bg-transparent border-none shadow-none"
+                          selectedIndex={(() => {
+                            const map = { tools: 0, web: 1, bots: 2 };
+                            return map[projectsCategory] ?? 1;
+                          })()}
+                          onChange={(idx) => {
+                            if (idx === null) return;
+                            const map = [ 'tools', 'web', 'bots' ];
+                            const target = map[idx] || 'web';
+                            changeProjectsCategory(target, 0, false);
+                          }}
+                        />
+                      </CarouselTabs>
+
+                    <MobileProjectsList ref={mobileListRef} onTouchMove={onProjectsTouchMove}>
+                      {(projectsCategory === 'web' ? projectsRows.web : (projectsCategory === 'bots' ? projectsRows.bots : projectsRows.tools)).map(p => (
+                        <div key={p.id} style={{padding:12}} onClick={(e)=>{ e.stopPropagation(); if(p.href) navigate(p.href) }}>
+                          <ProjectCard style={{width:'100%'}}>
+                            <CardInner>
+                              <CardFront>
+                                <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                                <CardOverlay />
+                                <CardText>
+                                  <h4>{p.title}</h4>
+                                  <p>{p.description}</p>
+                                </CardText>
+                              </CardFront>
+                              <CardBack>
+                                <h4 style={{margin:0, fontSize:16, fontWeight:600}}>{p.title}</h4>
+                                <div style={{fontSize:13, opacity:0.9}}>{p.description}</div>
+                                <TechChips>
+                                  {(p.tech||[]).map(t => (<span key={t} className="chip">{t}</span>))}
+                                </TechChips>
+                              </CardBack>
+                            </CardInner>
+                          </ProjectCard>
+                        </div>
+                      ))}
+                    </MobileProjectsList>
+                      </div>
+                    <DesktopProjects>
                     <ProjectsRow>
                       <RowHeader>Веб‑приложения / сайты</RowHeader>
                       <RowScroller>
@@ -1956,7 +2239,7 @@ const MenuPage = () => {
                                     {(p.features||[]).slice(0,2).map((f, i) => (
                                       <div key={i} style={{display:'flex', alignItems:'center', gap:6, fontSize:12, opacity:0.95}}>
                                         <span style={{width:10, height:10, borderRadius:3, background:'rgba(255,165,0,0.25)', display:'inline-block'}} />
-                                        <span style={{whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'250px'}}>{f}</span>
+                                        <span style={{whiteSpace:'normal'}}>{f}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -2030,6 +2313,7 @@ const MenuPage = () => {
                         </CardsStrip>
                       </RowScroller>
                     </ProjectsRow>
+                    </DesktopProjects>
                   </ProjectsModalWrap>
                 )}
 
