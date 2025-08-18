@@ -26,6 +26,21 @@ const MobileNavigation = () => {
   const location = useLocation()
   const { setParticleSpeed, setTransitionContext } = useParticles()
 
+  // Блокируем жестовую навигацию, если открыт модал/оверлей
+  const isNavigationBlocked = () => {
+    try {
+      // На /menu полноэкранная карточка помечается классом .is-open
+      if (location.pathname === '/menu' && document.querySelector('.is-open')) {
+        return true
+      }
+      // Универсальный индикатор открытого оверлея/модалки
+      if (document?.body?.style?.overflow === 'hidden') {
+        return true
+      }
+    } catch {}
+    return false
+  }
+
   useEffect(() => {
     let startX = 0
     let startY = 0
@@ -45,6 +60,12 @@ const MobileNavigation = () => {
     }
     
     const handleTouchStart = (e) => {
+      // Если открыт модал/оверлей — пропускаем, даём внутреннему контенту обрабатывать жест
+      if (isNavigationBlocked()) {
+        logger.touch('Touch start ignored: navigation blocked by modal/overlay', { page: location.pathname })
+        return
+      }
+
       const touch = e.touches[0]
       startX = touch.clientX
       startY = touch.clientY
@@ -69,6 +90,11 @@ const MobileNavigation = () => {
     }
 
     const handleTouchMove = (e) => {
+      // Если открыт модал/оверлей — не блокируем прокрутку, просто выходим
+      if (isNavigationBlocked()) {
+        return
+      }
+
       if (!startX || !startY) return
       
       const touch = e.touches[0]
@@ -158,6 +184,11 @@ const MobileNavigation = () => {
     }
 
     const handleTouchEnd = (e) => {
+      // Если открыт модал/оверлей — ничего не делаем
+      if (isNavigationBlocked()) {
+        return
+      }
+
       if (!startX || !startY) return
       
       const touch = e.changedTouches[0]

@@ -1,0 +1,690 @@
+/**
+ * Mobile Card Full-Height Expansion Styles
+ * Task 3: Create Mobile Card Full-Height Expansion
+ * 
+ * CSS styles for card expansion animations to reach full viewport height (100dvh)
+ * with proper mobile viewport handling and safe area support.
+ * 
+ * Requirements: 2.1, 2.2, 2.3, 2.4
+ */
+
+/* Base styles for cards with full-height expansion capability */
+.mobile-card-full-height {
+  position: relative;
+  overflow: visible;
+  transform-style: preserve-3d;
+  will-change: transform, position, width, height, z-index;
+  
+  /* Ensure proper touch target sizing */
+  min-height: 44px;
+  min-width: 44px;
+  
+  /* Optimize for animations */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Card in expanding state */
+.card-expanding {
+  z-index: 999 !important;
+  pointer-events: none; /* Prevent interactions during animation */
+  
+  /* GPU acceleration for smooth animations */
+  transform: translateZ(0);
+  will-change: transform, position, width, height, z-index, box-shadow;
+}
+
+/* Card in fully expanded state - Requirements 2.1, 2.2, 2.4 */
+.card-full-height-expanded {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important; /* Mobile viewport handling (Requirement 2.4) */
+  z-index: 1000 !important;
+  
+  /* Enhanced visual effects for expanded state */
+  box-shadow: 
+    0 25px 80px rgba(0, 0, 0, 0.4),
+    0 10px 30px rgba(0, 0, 0, 0.2) !important;
+  backdrop-filter: blur(2px) !important;
+  
+  /* Ensure content is accessible */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Safe area support for notched devices (Requirement 2.4) */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Card in contracting state */
+.card-contracting {
+  z-index: 999 !important;
+  pointer-events: none; /* Prevent interactions during animation */
+  
+  /* Maintain GPU acceleration during contraction */
+  transform: translateZ(0);
+  will-change: transform, position, width, height, z-index, box-shadow;
+}
+
+/* Enhanced visual effects during expansion */
+.card-expanding::before,
+.card-full-height-expanded::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* Backdrop blur effect for depth during expansion */
+.card-full-height-expanded::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(1px);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* Content animations during expansion */
+.card-full-height-expanded .card-title,
+.card-expanding .card-title {
+  transform: scale(1.15) translateY(-25px);
+  transition: none; /* GSAP handles all transitions */
+}
+
+.card-full-height-expanded .card-arrow,
+.card-expanding .card-arrow {
+  transform: translateX(20px) translateY(-50%) rotate(45deg) scale(1.3);
+  opacity: 0.9;
+  transition: none; /* GSAP handles all transitions */
+}
+
+/* Mobile-specific optimizations for full-height expansion */
+@media (max-width: 768px) {
+  .mobile-card-full-height {
+    /* Force GPU acceleration on mobile */
+    transform: translateZ(0);
+  }
+  
+  /* Enhanced mobile viewport handling for full-height expansion */
+  .card-full-height-expanded {
+    /* Use viewport units that account for mobile browser UI */
+    height: 100vh !important;
+    height: 100dvh !important; /* Dynamic viewport height for mobile */
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+    
+    /* Optimize for mobile performance */
+    backdrop-filter: blur(1px) !important; /* Reduce blur complexity */
+  }
+  
+  /* Reduce shadow complexity on mobile for performance */
+  .card-expanding,
+  .card-full-height-expanded {
+    box-shadow: 
+      0 15px 40px rgba(0, 0, 0, 0.25),
+      0 5px 15px rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  /* Mobile content adjustments */
+  .card-full-height-expanded .card-title {
+    transform: scale(1.1) translateY(-20px); /* Slightly less dramatic on mobile */
+  }
+  
+  .card-full-height-expanded .card-arrow {
+    transform: translateX(15px) translateY(-50%) rotate(45deg) scale(1.2);
+  }
+}
+
+/* Tablet-specific adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .card-full-height-expanded {
+    /* Tablet viewport handling */
+    height: 100vh !important;
+    height: 100dvh !important;
+  }
+}
+
+/* High performance mode for desktop */
+@media (min-width: 1025px) and (prefers-reduced-motion: no-preference) {
+  .card-full-height-expanded::after {
+    /* Enhanced backdrop effects for desktop */
+    backdrop-filter: blur(2px);
+  }
+  
+  /* Mouse tracking effect for desktop */
+  .card-full-height-expanded {
+    background: radial-gradient(
+      circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(255, 255, 255, 0.03) 0%,
+      transparent 50%
+    );
+  }
+}
+
+/* Support for browsers without dvh support */
+@supports not (height: 100dvh) {
+  .card-full-height-expanded {
+    height: 100vh !important;
+    min-height: 100vh !important;
+  }
+}
+
+/* Enhanced support for browsers with dvh */
+@supports (height: 100dvh) {
+  .card-full-height-expanded {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+  }
+}
+
+/* Accessibility: Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-card-full-height,
+  .card-expanding,
+  .card-full-height-expanded,
+  .card-contracting {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+    
+    /* Maintain basic functionality without animations */
+    position: relative !important;
+    width: auto !important;
+    height: auto !important;
+    top: auto !important;
+    left: auto !important;
+  }
+  
+  /* Hide decorative effects for reduced motion */
+  .card-expanding::before,
+  .card-full-height-expanded::before,
+  .card-full-height-expanded::after {
+    display: none;
+  }
+  
+  /* Provide alternative visual feedback */
+  .card-full-height-expanded {
+    background-color: rgba(0, 0, 0, 0.9) !important;
+    border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card-expanding,
+  .card-full-height-expanded {
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: none !important;
+  }
+  
+  .card-full-height-expanded::before,
+  .card-full-height-expanded::after {
+    display: none;
+  }
+}
+
+/* Focus states for keyboard navigation */
+.mobile-card-full-height:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.card-full-height-expanded:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 4px;
+}
+
+/* Z-index management for proper layering */
+.card-expanding,
+.card-full-height-expanded {
+  z-index: 1000 !important;
+}
+
+.card-contracting {
+  z-index: 999 !important;
+}
+
+/* Ensure other cards are behind expanded card */
+.mobile-card-full-height:not(.card-expanding):not(.card-full-height-expanded):not(.card-contracting) {
+  z-index: 1 !important;
+}
+
+/* Performance optimizations */
+.mobile-card-full-height,
+.card-expanding,
+.card-full-height-expanded,
+.card-contracting {
+  /* Optimize rendering performance */
+  contain: layout style paint;
+  
+  /* Prevent layout shifts */
+  transform-origin: center top;
+}
+
+/* Smooth text rendering during animations */
+.card-expanding .card-title,
+.card-full-height-expanded .card-title,
+.card-contracting .card-title {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Landscape orientation adjustments for mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .card-full-height-expanded {
+    /* Adjust for landscape mobile viewport */
+    height: 100vh !important;
+    height: 100dvh !important;
+  }
+}
+
+/* Ultra-wide mobile screens */
+@media (max-width: 480px) {
+  .card-full-height-expanded {
+    /* Ensure proper expansion on small screens */
+    min-width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  
+  /* Adjust content scaling for small screens */
+  .card-full-height-expanded .card-title {
+    transform: scale(1.05) translateY(-15px);
+  }
+  
+  .card-full-height-expanded .card-arrow {
+    transform: translateX(12px) translateY(-50%) rotate(45deg) scale(1.15);
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .card-expanding,
+  .card-full-height-expanded {
+    box-shadow: 
+      0 25px 80px rgba(0, 0, 0, 0.6),
+      0 10px 30px rgba(0, 0, 0, 0.4) !important;
+  }
+  
+  .card-expanding::before,
+  .card-full-height-expanded::before {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      rgba(255, 255, 255, 0.1) 100%
+    );
+  }
+}
+
+/* Loading states during expansion */
+.card-expanding.loading {
+  opacity: 0.9;
+}
+
+.card-expanding.loading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  animation: expansion-shimmer 1.5s infinite;
+  z-index: 10;
+}
+
+@keyframes expansion-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Error states */
+.card-expansion-error {
+  border: 2px solid rgba(255, 0, 0, 0.5) !important;
+  background: rgba(255, 0, 0, 0.1) !important;
+}
+
+/* Success states */
+.card-expansion-success {
+  border: 2px solid rgba(0, 255, 0, 0.5) !important;
+}
+/* Dem
+o Component Styles */
+.mobile-card-full-height-demo {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.demo-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.demo-header h2 {
+  color: #333;
+  margin-bottom: 10px;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.demo-header p {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.expansion-card {
+  background: linear-gradient(135deg, var(--card-color, #4ECDC4), rgba(255, 255, 255, 0.1));
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.expansion-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.expansion-card.selected {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-title {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.card-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  margin: 0 0 16px 0;
+  font-weight: 500;
+}
+
+.card-body p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.card-indicator {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.expand-icon {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+  opacity: 0.7;
+}
+
+.expand-icon.rotated {
+  transform: rotate(45deg);
+  opacity: 1;
+}
+
+.full-height-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.expanded-card-container {
+  width: 100%;
+  height: 100%;
+  max-width: 800px;
+  position: relative;
+}
+
+.expanded-card {
+  background: linear-gradient(135deg, var(--card-color, #4ECDC4), rgba(255, 255, 255, 0.1));
+  border-radius: 20px;
+  padding: 30px;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+}
+
+.expanded-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.expanded-header h2 {
+  color: white;
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.close-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.close-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.close-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.expanded-content {
+  color: white;
+}
+
+.expanded-subtitle {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 20px 0;
+  font-weight: 500;
+}
+
+.expanded-body p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 30px 0;
+}
+
+.additional-content h4 {
+  color: white;
+  font-size: 1.3rem;
+  margin: 0 0 15px 0;
+  font-weight: 600;
+}
+
+.additional-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.additional-content li {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+  padding-left: 20px;
+  position: relative;
+}
+
+.additional-content li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: bold;
+}
+
+.demo-controls {
+  text-align: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+}
+
+.status-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+
+.status {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status.expanded {
+  background: #4CAF50;
+  color: white;
+}
+
+.status.collapsed {
+  background: #757575;
+  color: white;
+}
+
+.animating {
+  background: #FF9800;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .mobile-card-full-height-demo {
+    padding: 15px;
+  }
+  
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .expansion-card {
+    min-height: 180px;
+    padding: 20px;
+  }
+  
+  .card-title {
+    font-size: 1.3rem;
+  }
+  
+  .full-height-overlay {
+    padding: 10px;
+  }
+  
+  .expanded-card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+  
+  .expanded-header h2 {
+    font-size: 1.6rem;
+  }
+  
+  .demo-controls {
+    padding: 15px;
+  }
+  
+  .status-indicator {
+    flex-direction: column;
+    gap: 10px;
+  }
+}

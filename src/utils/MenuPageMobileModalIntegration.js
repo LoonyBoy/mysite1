@@ -11,10 +11,12 @@
 import { gsap } from 'gsap'
 import { Flip } from 'gsap/Flip'
 import MobileModalAnimations from './MobileModalAnimations'
+import MobileAnimationManager from './MobileAnimationManager'
 
 class MenuPageMobileModalIntegration {
   constructor() {
     this.mobileAnimator = null
+    this.manager = null
     this.isInitialized = false
     this.performanceMetrics = {
       fps: 60,
@@ -22,6 +24,7 @@ class MenuPageMobileModalIntegration {
       animationCount: 0,
       errorCount: 0
     }
+    this._qualityMonitorCancel = null
     this.activeAnimations = new Map()
     this.errorHandlers = new Map()
   }
@@ -33,10 +36,14 @@ class MenuPageMobileModalIntegration {
     if (this.isInitialized) return
     
     try {
+      // Initialize mobile GSAP manager (handles global defaults and FPS-based tuning)
+      this.manager = new MobileAnimationManager()
+
+      // Initialize modal-specific animator (uses GSAP defaults from manager)
       this.mobileAnimator = new MobileModalAnimations()
       
-      // Start performance monitoring
-      this.mobileAnimator.startPerformanceMonitoring()
+      // Avoid double performance monitoring on animator when manager is present
+      // this.mobileAnimator.startPerformanceMonitoring() // DO NOT CALL to prevent conflicting timeScale adjustments
       
       // Setup error handling
       this.setupErrorHandling()
@@ -45,6 +52,9 @@ class MenuPageMobileModalIntegration {
       this.setupAccessibilityFeatures()
       
       this.isInitialized = true
+      
+      // Start adaptive quality monitor that only tweaks animator settings (no global timeScale)
+      this._startAdaptiveQualityMonitor()
       
       console.log('Enhanced Mobile Modal Animations initialized:', {
         isMobile: this.mobileAnimator.isMobile,
@@ -164,6 +174,80 @@ class MenuPageMobileModalIntegration {
   }
 
   /**
+   * Adaptive quality monitor (adjusts only animator settings, not global timeScale)
+   */
+  _startAdaptiveQualityMonitor() {
+    if (this._qualityMonitorCancel) return
+
+    let frameCount = 0
+    let lastTime = performance.now()
+    let isMonitoring = true
+
+    const adaptAnimationQuality = (quality) => {
+      if (!this.mobileAnimator) return
+      const settings = {
+        low: {
+          duration: 0.2,
+          ease: 'power1.out',
+          enableBlur: false,
+          enableShadows: false,
+          staggerAmount: 0.05
+        },
+        medium: {
+          duration: 0.26,
+          ease: 'power2.out',
+          enableBlur: true,
+          enableShadows: false,
+          staggerAmount: 0.06
+        },
+        high: {
+          duration: 0.32,
+          ease: 'back.out(1.2)',
+          enableBlur: true,
+          enableShadows: true,
+          staggerAmount: 0.08
+        }
+      }
+      const cfg = settings[quality] || settings.medium
+      try { this.mobileAnimator.updateSettings(cfg) } catch {}
+      this.performanceMetrics.quality = quality
+    }
+
+    const monitor = () => {
+      if (!isMonitoring) return
+      
+      frameCount++
+      const currentTime = performance.now()
+      
+      if (currentTime - lastTime >= 1000) {
+        const fps = frameCount
+        frameCount = 0
+        lastTime = currentTime
+        
+        this.performanceMetrics.fps = fps
+        
+        // Adaptive quality thresholds (aligned with hook)
+        if (fps < 30 && this.performanceMetrics.quality !== 'low') {
+          adaptAnimationQuality('low')
+        } else if (fps > 50 && this.performanceMetrics.quality === 'low') {
+          adaptAnimationQuality('medium')
+        } else if (fps > 55 && this.performanceMetrics.quality === 'medium') {
+          adaptAnimationQuality('high')
+        }
+      }
+      
+      requestAnimationFrame(monitor)
+    }
+    
+    requestAnimationFrame(monitor)
+
+    this._qualityMonitorCancel = () => {
+      isMonitoring = false
+      this._qualityMonitorCancel = null
+    }
+  }
+
+  /**
    * Enhanced openCardFullscreen with mobile optimizations
    */
   async openCardFullscreen(index, cardRefs, options = {}) {
@@ -198,44 +282,38 @@ class MenuPageMobileModalIntegration {
       console.warn('Error setting particle speed:', error)
     }
 
-    // Disable hover animations on other cards
-    try {
-      cardRefs.current.forEach((cardEl, i) => {
-        if (i !== index && cardEl) {
-          cardEl.style.pointerEvents = 'none'
-          gsap.set(cardEl, { opacity: 0.3 })
-        }
-      })
-    } catch (error) {
-      console.warn('Error disabling other cards:', error)
-    }
-
-    // Get modal content for stagger animations
+    // Get modal content
     const modalContent = this.getModalContent(el, index)
 
-    // Use mobile-optimized animation
+    // Animate global dither background in
+    this.animateGlobalDither(el, globalDitherRef, true)
+
     try {
+      // Use mobile-optimized opening animation
       await this.mobileAnimator.animateModalOpen(el, modalContent, {
-        enableStagger: true,
         onComplete: () => {
           setOpenedIndex(index)
-          
-          // Animate global dither background
-          this.animateGlobalDither(el, globalDitherRef, true)
-          
+          // Disable other cards to avoid accidental interactions
+          if (cardRefs.current) {
+            cardRefs.current.forEach((cardEl, i) => {
+              if (i !== index && cardEl) {
+                cardEl.style.pointerEvents = 'none'
+                gsap.to(cardEl, { opacity: 0.5, duration: this.mobileAnimator.isMobile ? 0.2 : 0.3 })
+              }
+            })
+          }
           onComplete()
         }
       })
     } catch (error) {
-      console.error('Error in mobile modal animation:', error)
-      
+      console.error('Error in mobile modal open animation:', error)
       // Fallback to basic animation
       this.fallbackOpenAnimation(el, index, setOpenedIndex)
     }
   }
 
   /**
-   * Enhanced closeCardFullscreen with mobile optimizations
+   * Close fullscreen modal with mobile optimizations
    */
   async closeCardFullscreen(index, cardRefs, options = {}) {
     const {
@@ -421,11 +499,17 @@ class MenuPageMobileModalIntegration {
    * Get device and performance information
    */
   getDeviceInfo() {
+    const managerMetrics = this.manager?.getPerformanceMetrics?.() || { fps: this.performanceMetrics.fps, performanceLevel: 'medium' }
     return {
-      isMobile: this.mobileAnimator.isMobile,
-      performanceLevel: this.mobileAnimator.performanceLevel,
-      prefersReducedMotion: this.mobileAnimator.prefersReducedMotion,
-      animationSettings: this.mobileAnimator.animationSettings
+      isMobile: this.mobileAnimator?.isMobile ?? false,
+      performanceLevel: this.mobileAnimator?.performanceLevel ?? 'medium',
+      prefersReducedMotion: this.mobileAnimator?.prefersReducedMotion ?? false,
+      animationSettings: this.mobileAnimator?.animationSettings ?? {},
+      currentFPS: managerMetrics.fps,
+      currentQuality: this.performanceMetrics.quality,
+      isReady: this.isInitialized,
+      supportsHaptic: typeof navigator !== 'undefined' && !!navigator.vibrate,
+      supportsTouch: typeof window !== 'undefined' && ('ontouchstart' in window || (navigator?.maxTouchPoints ?? 0) > 0)
     }
   }
 
@@ -433,9 +517,16 @@ class MenuPageMobileModalIntegration {
    * Cleanup method
    */
   cleanup() {
+    if (this._qualityMonitorCancel) {
+      try { this._qualityMonitorCancel() } catch {}
+    }
     if (this.mobileAnimator) {
       this.mobileAnimator.cleanup()
     }
+    if (this.manager) {
+      try { this.manager.cleanup() } catch {}
+    }
+    this.manager = null
     this.isInitialized = false
   }
 }

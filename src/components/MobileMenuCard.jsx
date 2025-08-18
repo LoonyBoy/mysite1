@@ -11,6 +11,8 @@ import { Flip } from 'gsap/Flip'
 import styled from 'styled-components'
 import { useMobileModalAnimations } from '../hooks/useMobileModalAnimations'
 import { useMenuPageMobileModals } from '../hooks/useMenuPageMobileModals'
+import { useParticles } from './GlobalParticleManager'
+import { useParticleColorController } from '../hooks/useParticleColorController'
 
 const CardContainer = styled.div`
   position: relative;
@@ -267,7 +269,9 @@ const MobileMenuCard = ({
   
   const { animateModalOpen, animateModalClose, getDeviceInfo } = useMobileModalAnimations()
   const { openCardFullscreen, closeCardFullscreen } = useMenuPageMobileModals()
-  
+  const particleManager = useParticles()
+  const { setCardColor, restoreCardColor } = useParticleColorController(particleManager)
+
   // Device detection
   const deviceInfo = getDeviceInfo()
   const isMobile = deviceInfo?.isMobile || false
@@ -384,19 +388,52 @@ const MobileMenuCard = ({
     if (!isTouchDevice()) return
     
     setIsTouched(true)
+
+    // Apply particle color change within this card's bounds
+    try {
+      const bounds = cardRef.current?.getBoundingClientRect?.()
+      if (bounds) {
+        setCardColor(index, '#000000', bounds)
+      } else {
+        setCardColor(index, '#000000')
+      }
+    } catch (e) {
+      // fail-safe: continue without blocking UX
+      console.warn('Failed to set particle color on touch start:', e)
+    }
     
     // Haptic feedback if available
     if (navigator.vibrate) {
       navigator.vibrate(10)
     }
-  }, [isTouchDevice])
+  }, [isTouchDevice, setCardColor, index])
   
   const handleTouchEnd = useCallback((event) => {
     if (!isTouchDevice()) return
     
     setIsTouched(false)
+
+    // Restore particle color after touch ends
+    try {
+      restoreCardColor(index)
+    } catch (e) {
+      console.warn('Failed to restore particle color on touch end:', e)
+    }
+    
     handleCardInteraction(event)
-  }, [isTouchDevice, handleCardInteraction])
+  }, [isTouchDevice, handleCardInteraction, restoreCardColor, index])
+  
+  // Restore particle color if touch is canceled (e.g., gesture interrupted)
+  const handleTouchCancel = useCallback(() => {
+    if (!isTouchDevice()) return
+
+    setIsTouched(false)
+    try {
+      restoreCardColor(index)
+    } catch (e) {
+      console.warn('Failed to restore particle color on touch cancel:', e)
+    }
+  }, [isTouchDevice, restoreCardColor, index])
   
   // Mouse event handlers for desktop
   const handleMouseEnter = useCallback(() => {
@@ -458,6 +495,7 @@ const MobileMenuCard = ({
       onClick={handleClick}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
       onKeyDown={handleKeyDown}
       {...props}
     >

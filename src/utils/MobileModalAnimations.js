@@ -128,6 +128,73 @@ class MobileModalAnimations {
   }
 
   /**
+   * Update runtime settings for mobile animations (used by hook's adaptive quality)
+   * @param {Object} newSettings
+   * @param {number} [newSettings.duration] - Base duration for modal open; close/background derived from it
+   * @param {string} [newSettings.ease] - Easing to apply for modalOpen/contentIn
+   * @param {boolean} [newSettings.enableBlur]
+   * @param {boolean} [newSettings.enableShadows]
+   * @param {number} [newSettings.staggerAmount] - Content stagger per item amount
+   */
+  updateSettings(newSettings = {}) {
+    try {
+      if (!newSettings || typeof newSettings !== 'object') return
+      const {
+        duration,
+        ease,
+        enableBlur,
+        enableShadows,
+        staggerAmount
+      } = newSettings
+
+      // Update timings
+      if (typeof duration === 'number' && isFinite(duration)) {
+        const base = Math.max(0.1, duration)
+        // Keep mobile feel: close/background slightly faster
+        this.mobileTimings.modalOpen = base
+        this.mobileTimings.modalClose = Math.max(0.1, base * 0.75)
+        this.mobileTimings.backgroundFade = Math.max(0.1, base * 0.6)
+      }
+
+      if (typeof staggerAmount === 'number' && isFinite(staggerAmount)) {
+        this.mobileTimings.contentStagger = Math.max(0, staggerAmount)
+      }
+
+      // Update easing
+      if (typeof ease === 'string' && ease.trim()) {
+        this.mobileEasing.modalOpen = ease
+        this.mobileEasing.contentIn = ease
+        // Derive an exit easing if possible (fallback to power2.in)
+        const deriveIn = (val) => {
+          try {
+            if (val.includes('.out')) return val.replace('.out', '.in')
+            if (val.includes('.inOut')) return val.replace('.inOut', '.in')
+          } catch (_) {}
+          return 'power2.in'
+        }
+        this.mobileEasing.modalClose = deriveIn(ease)
+        this.mobileEasing.contentOut = deriveIn(ease)
+      }
+
+      // Update feature flags while preserving other settings
+      if (typeof enableBlur === 'boolean') {
+        this.animationSettings = {
+          ...this.animationSettings,
+          enableBlur
+        }
+      }
+      if (typeof enableShadows === 'boolean') {
+        this.animationSettings = {
+          ...this.animationSettings,
+          enableShadows
+        }
+      }
+    } catch (e) {
+      console.warn('updateSettings failed:', e)
+    }
+  }
+
+  /**
    * Optimized modal opening animation for mobile
    */
   animateModalOpen(cardElement, modalContent, options = {}) {
