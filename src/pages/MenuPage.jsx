@@ -10,8 +10,8 @@ import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
 import useParticleControl from '../hooks/useParticleControl'
 import Dither from '../../dither.jsx'; // Adjusted to new file extension
-import ExpandableTabs from '../components/ui/expandable-tabs'
-import { Cpu, Monitor, MessageCircle } from 'lucide-react'
+
+import { useDeviceDetection } from '../hooks/useDeviceDetection'
 // ProjectsScrollStack не используем в новой версии модалки
 
 
@@ -526,29 +526,30 @@ const CarouselTabs = styled.div`
   display: none;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   padding: 8px 12px 8px;
 
   @media (max-width: 768px) {
     display: flex;
-    flex-wrap: nowrap; /* prevent wrapping to next line */
-    overflow-x: auto; /* allow horizontal scroll when needed */
-    border: 1px solid rgba(255,255,255,0.08); /* visual block around tabs */
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 12px;
-    padding: 8px;
+    padding: 6px;
     background: rgba(0,0,0,0.14);
   }
 
   .tab {
     width: auto;
-    min-width: 28%;
     text-align: center;
     opacity: 0.7;
     transform-origin: center;
     transition: transform 0.18s ease, opacity 0.18s ease;
     position: relative;
-    padding-bottom: 12px; /* space for underline */
-    flex: 0 0 auto; /* keep each tab on a single row */
+    padding-bottom: 8px;
+    padding-left: 6px;
+    padding-right: 6px;
+    flex: 0 0 auto;
   }
 
   .tab::after {
@@ -564,7 +565,6 @@ const CarouselTabs = styled.div`
   }
 
   .tab.center {
-    min-width: 44%;
     opacity: 1;
     transform: scale(1.02);
     z-index: 2;
@@ -573,6 +573,102 @@ const CarouselTabs = styled.div`
   .tab.center::after {
     background: rgba(255,255,255,0.95);
     transform: scaleX(1);
+  }
+`
+
+const MobileProjectsNavigation = styled.div`
+  display: none;
+  
+  @media (max-width: 768px) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    padding: 16px 12px 20px;
+    position: relative;
+  }
+`
+
+const NavButton = styled.button`
+  position: relative;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  min-width: 90px;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #8B5CF6, #A855F7, #C084FC);
+    border-radius: 2px;
+    transform: translateX(-50%);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  &:hover {
+    color: rgba(255, 255, 255, 0.9);
+    transform: translateY(-2px);
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+  
+  &:active {
+    transform: translateY(0) scale(0.98);
+  }
+  
+  &.active {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    
+    &::before {
+      opacity: 1;
+    }
+    
+    &::after {
+      width: 80%;
+    }
+  }
+  
+  /* Ripple effect */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(0);
+    animation: ripple-animation 0.6s linear;
+    pointer-events: none;
+  }
+  
+  @keyframes ripple-animation {
+    to {
+      transform: scale(4);
+      opacity: 0;
+    }
   }
 `
 
@@ -1090,12 +1186,12 @@ const MenuPage = () => {
   const aboutContainerRef = useRef(null)
   const ditherBreatheTlRef = useRef(null)
   const [servicesCategory, setServicesCategory] = useState('web')
-  const serviceCategories = ['web','bots','automation']
+  const serviceCategories = ['web', 'bots', 'automation']
   // Projects modal: selected category on mobile and swipe handling
   const [projectsCategory, setProjectsCategory] = useState('web')
   const projectsCategories = ['web', 'bots', 'tools']
   const projectsCategoryLabels = {
-    web: 'Сайты/приложения',
+    web: 'Сайты',
     bots: 'Боты',
     tools: 'Автоматизации'
   }
@@ -1104,6 +1200,7 @@ const MenuPage = () => {
   const projectsTouchLastTimeRef = useRef(0)
   const projectsTouchLastXRef = useRef(0)
   const projectsTransitionDirRef = useRef(0) // -1 next, 1 prev
+  const projectsTouchRAFRef = useRef(null)
   const mobileListRef = useRef(null)
   const mobilePaneRef = useRef(null)
   const isTouchRef = useRef((() => {
@@ -1111,6 +1208,7 @@ const MenuPage = () => {
       return (typeof window !== 'undefined' && (('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)))
     } catch { return false }
   })())
+  const { isMobile } = useDeviceDetection()
   const getNextCategory = (dir) => {
     const idx = serviceCategories.indexOf(servicesCategory)
     const nextIdx = (idx + (dir === 'next' ? 1 : -1) + serviceCategories.length) % serviceCategories.length
@@ -1130,7 +1228,7 @@ const MenuPage = () => {
     projectsTouchingRef.current = true
     projectsTouchLastTimeRef.current = performance.now()
     projectsTouchLastXRef.current = e.touches[0].clientX
-  try { const p = mobilePaneRef.current; if (p) { p.style.willChange = 'transform'; gsap.set(p, { x: 0 }) } } catch {}
+    try { const p = mobilePaneRef.current; if (p) { p.style.willChange = 'transform'; p.style.transition = 'none'; /* use direct transform during touch */ gsap.set(p, { x: 0 }) } } catch { }
   }
 
   const onProjectsTouchMove = (e) => {
@@ -1140,8 +1238,23 @@ const MenuPage = () => {
     // follow finger: move whole pane (tabs + list)
     try {
       const pane = mobilePaneRef.current
-      if (pane) gsap.set(pane, { x: dx })
-    } catch {}
+      if (pane) {
+        // throttle visual updates via requestAnimationFrame to avoid calling GSAP on every event
+        if (projectsTouchRAFRef.current) cancelAnimationFrame(projectsTouchRAFRef.current)
+        projectsTouchRAFRef.current = requestAnimationFrame(() => {
+          try {
+            // apply a small resistance when dragging past half the screen
+            const w = window.innerWidth || document.documentElement.clientWidth
+            const max = w * 0.5
+            let applied = dx
+            if (Math.abs(dx) > max) {
+              applied = dx > 0 ? max + (dx - max) * 0.2 : -max + (dx + max) * 0.2
+            }
+            pane.style.transform = `translate3d(${applied}px,0,0)`
+          } catch (err) { }
+        })
+      }
+    } catch { }
     // store for velocity
     projectsTouchLastTimeRef.current = performance.now()
     projectsTouchLastXRef.current = x
@@ -1150,6 +1263,7 @@ const MenuPage = () => {
   const onProjectsTouchEnd = (e) => {
     if (!projectsTouchingRef.current) return
     projectsTouchingRef.current = false
+    if (projectsTouchRAFRef.current) { cancelAnimationFrame(projectsTouchRAFRef.current); projectsTouchRAFRef.current = null }
     const startX = projectsTouchStartXRef.current
     const endX = (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientX) || null
     if (startX == null || endX == null) return
@@ -1169,17 +1283,55 @@ const MenuPage = () => {
       dir = 1
     }
     if (targetIdx === idx) {
-      // animate back to center of pane
-      try { const p = mobilePaneRef.current; if (p) gsap.to(p, { x: 0, duration: 0.28, ease: 'power2.out', clearProps: 'willChange' }) } catch {}
+      // animate back to center of pane — use GSAP for smooth animation from current transform
+      try {
+        const p = mobilePaneRef.current
+        if (p) {
+          gsap.to(p, { x: 0, duration: 0.28, ease: 'power2.out', clearProps: 'willChange', onStart: () => { p.style.transition = '' } })
+        }
+      } catch { }
       return
     }
     if (targetIdx === idx) {
-      try { const el = mobileListRef.current; if (el) gsap.to(el, { x: 0, duration: 0.28, ease: 'power2.out' }) } catch {}
+      try { const el = mobileListRef.current; if (el) gsap.to(el, { x: 0, duration: 0.28, ease: 'power2.out' }) } catch { }
       return
     }
     const newCat = projectsCategories[targetIdx]
     // animate change
     changeProjectsCategory(newCat, dir)
+  }
+
+  // Ripple effect for navigation buttons
+  const createRipple = (event, button) => {
+    const rect = button.getBoundingClientRect()
+    const size = Math.max(rect.width, rect.height)
+    const x = event.clientX - rect.left - size / 2
+    const y = event.clientY - rect.top - size / 2
+
+    const ripple = document.createElement('span')
+    ripple.className = 'ripple'
+    ripple.style.width = ripple.style.height = size + 'px'
+    ripple.style.left = x + 'px'
+    ripple.style.top = y + 'px'
+
+    button.appendChild(ripple)
+
+    setTimeout(() => {
+      if (ripple.parentNode) {
+        ripple.parentNode.removeChild(ripple)
+      }
+    }, 600)
+  }
+
+  // Handle navigation button click with animation
+  const handleNavButtonClick = (category, event) => {
+    if (projectsCategory === category) return
+
+    // Create ripple effect
+    createRipple(event, event.currentTarget)
+
+    // Animate category change
+    changeProjectsCategory(category, 0, true)
   }
 
   // animate category change: slide out current, swap content, slide in new
@@ -1192,13 +1344,31 @@ const MenuPage = () => {
     isProjectsAnimatingRef.current = true
     const w = window.innerWidth || document.documentElement.clientWidth
     if (!animateSlide) {
-      // crossfade: fade out, swap, fade in
+      // Enhanced crossfade with scale and blur
       try {
-        gsap.to(el, { opacity: 0, duration: 0.18, ease: 'power2.in', onComplete: () => {
-          setProjectsCategory(newCat)
-          gsap.set(el, { x: 0 })
-          try { gsap.to(el, { opacity: 1, duration: 0.24, ease: 'power2.out', onComplete: () => { isProjectsAnimatingRef.current = false } }) } catch { isProjectsAnimatingRef.current = false }
-        }})
+        gsap.to(el, {
+          opacity: 0,
+          y: 15,
+          scale: 0.98,
+          filter: 'blur(2px)',
+          duration: 0.25,
+          ease: 'power2.inOut',
+          onComplete: () => {
+            setProjectsCategory(newCat)
+            gsap.set(el, { x: 0, y: -15, scale: 0.98, filter: 'blur(2px)' })
+            gsap.to(el, {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              filter: 'blur(0px)',
+              duration: 0.3,
+              ease: 'power2.out',
+              onComplete: () => {
+                isProjectsAnimatingRef.current = false
+              }
+            })
+          }
+        })
       } catch (err) {
         setProjectsCategory(newCat)
         isProjectsAnimatingRef.current = false
@@ -1216,20 +1386,43 @@ const MenuPage = () => {
         const backward = (cur - next + n) % n
         dir = forward <= backward ? -1 : 1
       }
-    } catch {}
+    } catch { }
 
     const outX = dir === -1 ? -w * 0.6 : dir === 1 ? w * 0.6 : -w * 0.6
     // animate current out
     try {
-      gsap.to(el, { x: outX, opacity: 0, duration: 0.28, ease: 'power2.in', onComplete: () => {
-        // swap content
-        setProjectsCategory(newCat)
-        // immediately position offscreen opposite side
-        const inX = dir === -1 ? w * 0.6 : dir === 1 ? -w * 0.6 : 0
-        try { gsap.set(el, { x: inX, opacity: 0 }) } catch {}
-        // animate in
-        try { gsap.to(el, { x: 0, opacity: 1, duration: 0.36, ease: 'power2.out', onComplete: () => { isProjectsAnimatingRef.current = false; try{ el.style.willChange = '' }catch{} } }) } catch { isProjectsAnimatingRef.current = false }
-      }})
+      // clear inline transform to let GSAP control 'x' properly
+      try { if (el && el.style) { el.style.transform = ''; el.style.transition = ''; } } catch { }
+      gsap.to(el, {
+        x: outX,
+        opacity: 0,
+        scale: 0.95,
+        filter: 'blur(3px)',
+        duration: 0.3,
+        ease: 'power2.in',
+        onComplete: () => {
+          setProjectsCategory(newCat)
+          const inX = dir === -1 ? w * 0.6 : dir === 1 ? -w * 0.6 : 0
+          try { gsap.set(el, { x: inX, opacity: 0, scale: 0.95, filter: 'blur(3px)' }) } catch { }
+
+          try {
+            gsap.to(el, {
+              x: 0,
+              opacity: 1,
+              scale: 1,
+              filter: 'blur(0px)',
+              duration: 0.4,
+              ease: 'power2.out',
+              onComplete: () => {
+                isProjectsAnimatingRef.current = false
+                try { el.style.willChange = '' } catch { }
+              }
+            })
+          } catch {
+            isProjectsAnimatingRef.current = false
+          }
+        }
+      })
     } catch (err) {
       // fallback
       setProjectsCategory(newCat)
@@ -1258,11 +1451,13 @@ const MenuPage = () => {
     if (isServicesSwitchingRef.current) return
     isServicesSwitchingRef.current = true
     const grid = servicesGridRef.current
-    try { gsap.killTweensOf(grid) } catch {}
+    try { gsap.killTweensOf(grid) } catch { }
     if (grid) {
-      gsap.to(grid, { opacity: 0, y: 8, duration: 0.18, ease: 'power2.in', onComplete: () => {
-        setServicesCategory(nextCat)
-      }})
+      gsap.to(grid, {
+        opacity: 0, y: 8, duration: 0.18, ease: 'power2.in', onComplete: () => {
+          setServicesCategory(nextCat)
+        }
+      })
     } else {
       setServicesCategory(nextCat)
     }
@@ -1277,7 +1472,7 @@ const MenuPage = () => {
     gsap.to(grid, { opacity: 1, duration: 0.01 })
     gsap.to(children, { opacity: 1, y: 0, duration: 0.24, ease: 'power2.out', stagger: 0.06, onComplete: () => { isServicesSwitchingRef.current = false } })
     // анимация индикатора под активным заголовком
-  // Индикатор больше не используется — подчёркивание рисуем через ::after у активного заголовка
+    // Индикатор больше не используется — подчёркивание рисуем через ::after у активного заголовка
   }, [servicesCategory])
 
   // Позиционируем индикатор и анимируем карточки при первом открытии модалки "Услуги"
@@ -1320,7 +1515,7 @@ const MenuPage = () => {
   // Прайс‑планы для модалки "Услуги" — веб/приложения
   const servicesWeb = [
     {
-      id: 'basic',  title: 'Базовый',
+      id: 'basic', title: 'Базовый',
       desc: 'Лендинг/одностраничник для презентации услуг/продуктов',
       price: 'от 70 000 ₽',
       features: [
@@ -1538,7 +1733,7 @@ const MenuPage = () => {
     }
 
     const arrow = cardElement.querySelector(`.arrow-${index}`)
-    
+
     // Единственный заголовок (позиция не меняется)
     const title = cardElement.querySelector(`.title-${index}`)
 
@@ -1657,15 +1852,15 @@ const MenuPage = () => {
         sectionEl.style.filter = ''
         sectionEl.style.transition = ''
       }
-    } catch {}
+    } catch { }
     // Отключаем hover-анимации только на других карточках, текущую оставляем как есть
     try {
       hoverTimelinesRef.current.forEach((tl, i) => {
         if (i !== index && tl) tl.kill()
       })
-    } catch {}
+    } catch { }
     // Снижаем активность частиц в фоне под модалкой для чистоты текста
-    try { setParticleSpeed?.(0.4) } catch {}
+    try { setParticleSpeed?.(0.4) } catch { }
     // Глобальный dither: раскрываем до фуллскриновского состояния
     const gd = globalDitherRef.current
     let ditherDuration = isTouchRef.current ? 0.24 : 0.6
@@ -1684,16 +1879,18 @@ const MenuPage = () => {
         gsap.set(gd, { top: rect.top, left: rect.left, right: 'auto', bottom: 'auto', width: rect.width, height: rect.height, borderRadius: 16 })
         const ditherState = Flip.getState(gd)
         gsap.set(gd, { top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', borderRadius: 0 })
-        Flip.from(ditherState, { duration: ditherDuration, ease: 'power2.inOut', absolute: true, onComplete: () => {
-          gd.classList.remove('front')
-          // Дышащая анимация dither в модалке — только desktop
-          ditherBreatheTlRef.current?.kill()
-          if (!isTouchRef.current) {
-            ditherBreatheTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
-              .to(gd, { opacity: 0.32, duration: 2.8, ease: 'sine.inOut' })
-              .to(gd, { opacity: 0.25, duration: 2.8, ease: 'sine.inOut' })
+        Flip.from(ditherState, {
+          duration: ditherDuration, ease: 'power2.inOut', absolute: true, onComplete: () => {
+            gd.classList.remove('front')
+            // Дышащая анимация dither в модалке — только desktop
+            ditherBreatheTlRef.current?.kill()
+            if (!isTouchRef.current) {
+              ditherBreatheTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
+                .to(gd, { opacity: 0.32, duration: 2.8, ease: 'sine.inOut' })
+                .to(gd, { opacity: 0.25, duration: 2.8, ease: 'sine.inOut' })
+            }
           }
-        } })
+        })
       }
     }
 
@@ -1726,7 +1923,7 @@ const MenuPage = () => {
             if (content) {
               gsap.fromTo(content, { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.22, ease: 'power2.out' })
             }
-          } catch {}
+          } catch { }
         })
       })
     }
@@ -1735,7 +1932,7 @@ const MenuPage = () => {
   const closeCardFullscreen = (index) => {
     const el = cardRefs.current[index]
     if (!el) return
-    try { setParticleSpeed?.(1.0) } catch {}
+    try { setParticleSpeed?.(1.0) } catch { }
     // На сенсорных: одиночный тап по открытому блоку — закрыть и снять принудительный hover
     if (isTouchRef.current) {
       cardRefs.current.forEach((c) => c && c.classList.remove('force-hover'))
@@ -1831,12 +2028,11 @@ const MenuPage = () => {
 
   // Подключаем интерактивное управление частицами
   const sensitivity = { wheel: 0.002, touch: 0.005 }
-  const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window;
-  const { resetRotation } = useParticleControl(camera, !isMobile, sensitivity)
+  const isMobileDevice = window.innerWidth <= 768 || 'ontouchstart' in window;
+  const { resetRotation } = useParticleControl(camera, !isMobileDevice, sensitivity)
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
     const onMove = (e) => {
       mousePosRef.current = { x: e.clientX, y: e.clientY }
       // если модалки нет — проверяем, не находимся ли мы над текущей карточкой и не потерян ли hover
@@ -1857,7 +2053,7 @@ const MenuPage = () => {
 
     // Немедленная анимация fade-in при загрузке (на мобилке мягче/короче)
     cards.forEach((_, index) => {
-      gsap.fromTo(`.card-${index}`, 
+      gsap.fromTo(`.card-${index}`,
         { opacity: 0, y: 0 }, // Начинаем с y: 0, чтобы карточки не были смещены вниз
         {
           opacity: 1,
@@ -1866,17 +2062,17 @@ const MenuPage = () => {
           delay: index * 0.1 // Лёгкая задержка для последовательности
         }
       )
-      
+
       // Установка начального состояния текста без анимации
       const cardElement = cardRefs.current[index];
       if (cardElement) {
         const normalTitle = cardElement.querySelector(`.normal-title-${index}`);
         const normalDesc = cardElement.querySelector(`.normal-desc-${index}`);
-        
+
         if (normalTitle) {
           gsap.set(normalTitle, { x: 0, opacity: 1 });
         }
-        
+
         if (normalDesc) {
           gsap.set(normalDesc, { x: 0, opacity: 1 });
         }
@@ -1894,7 +2090,7 @@ const MenuPage = () => {
 
       // Стартовые состояния
       gsap.set(underline, { scaleX: 0 })
-      gsap.set([ ...paragraphs, ...listItems ], { opacity: 0, y: 12 })
+      gsap.set([...paragraphs, ...listItems], { opacity: 0, y: 12 })
       gsap.set(photo, { opacity: 0, scale: 0.96, rotateZ: -1 })
 
       const tl = gsap.timeline({ defaults: { ease: 'power2.out' } })
@@ -1907,7 +2103,7 @@ const MenuPage = () => {
     // Preload dither effects: только opacity, без изменения width
     cardRefs.current.forEach((card, index) => {
       if (!card) return;
-        const dither = card.querySelector(`.dither-bg-${index}`);
+      const dither = card.querySelector(`.dither-bg-${index}`);
       if (!dither) return;
       gsap.set(dither, { opacity: 0 });
     });
@@ -1923,7 +2119,7 @@ const MenuPage = () => {
   // Центрирование горизонтальных рядов в модалке «Проекты» и блокировка вертикального скролла
   useEffect(() => {
     if (openedIndex === 1) {
-      try { document.body.style.overflow = 'hidden' } catch {}
+      try { document.body.style.overflow = 'hidden' } catch { }
       // Центрируем каждый ряд по ширине контейнера
       requestAnimationFrame(() => {
         stripsRef.current.forEach((el) => {
@@ -1933,10 +2129,10 @@ const MenuPage = () => {
         })
       })
     } else {
-      try { document.body.style.overflow = '' } catch {}
+      try { document.body.style.overflow = '' } catch { }
     }
 
-    return () => { try { document.body.style.overflow = '' } catch {} }
+    return () => { try { document.body.style.overflow = '' } catch { } }
   }, [openedIndex])
 
   // Защита от layout-съезда после alt-tab/visibilitychange/resize
@@ -1944,17 +2140,17 @@ const MenuPage = () => {
     const hardResetLayout = () => {
       if (document.hidden) return
       // Обновляем GSAP/ScrollTrigger измерения
-      try { ScrollTrigger.refresh(true) } catch {}
+      try { ScrollTrigger.refresh(true) } catch { }
 
       // Сбрасываем глобальный dither и зависшие твины
       try {
         resetGlobalDither({ opacity: 0, clipPath: 'inset(0 100% 100% 0 round 16px)' })
         gsap.killTweensOf(globalDitherRef.current)
-      } catch {}
+      } catch { }
 
       // Восстанавливаем ВСЁ в зависимости от того, была ли открыта модалка
       try {
-        hoverTimelinesRef.current.forEach((tl) => { try { tl?.kill() } catch {} })
+        hoverTimelinesRef.current.forEach((tl) => { try { tl?.kill() } catch { } })
         const openIdx = lastOpenModalIndexRef.current
         if (isModalOpenRef.current && openIdx !== null && openIdx !== undefined) {
           // Режим модалки: удерживаем открытую карточку и скрываем остальные
@@ -1977,7 +2173,7 @@ const MenuPage = () => {
             resetGlobalDither()
             gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', borderRadius: 0, clipPath: 'none', opacity: 0.28 })
           }
-          try { setParticleSpeed?.(0.4) } catch {}
+          try { setParticleSpeed?.(0.4) } catch { }
         } else {
           // Обычный режим: всё видимо, модалка закрыта
           isModalOpenRef.current = false
@@ -1992,7 +2188,7 @@ const MenuPage = () => {
             el.classList.remove('dimmed')
             gsap.set(el, { opacity: 1, pointerEvents: 'auto' })
           })
-          try { setParticleSpeed?.(1.0) } catch {}
+          try { setParticleSpeed?.(1.0) } catch { }
           requestAnimationFrame(() => {
             stripsRef.current.forEach((el) => {
               if (!el) return
@@ -2001,7 +2197,7 @@ const MenuPage = () => {
             })
           })
         }
-      } catch {}
+      } catch { }
     }
 
     let lastHiddenAt = 0
@@ -2023,29 +2219,29 @@ const MenuPage = () => {
 
   // Переход на /home при скролле вверх (только десктоп)
   useEffect(() => {
-    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
-    if (isMobile) return
+    const isMobileDevice = window.innerWidth <= 768 || 'ontouchstart' in window
+    if (isMobileDevice) return
 
     const onWheelToHome = (e) => {
-        if (isTransitioningRef.current) return
+      if (isTransitioningRef.current) return
       if (isModalOpenRef.current) return
       const deltaY = e.deltaY || 0
       // Навигация только при заметной прокрутке вверх
       if (deltaY >= -12) return
-        isTransitioningRef.current = true
+      isTransitioningRef.current = true
       if (typeof e.preventDefault === 'function') e.preventDefault()
-        
-        gsap.to(menuRef.current, {
-          opacity: 0,
-          duration: 0.3,
+
+      gsap.to(menuRef.current, {
+        opacity: 0,
+        duration: 0.3,
         ease: 'power2.out',
-          onComplete: () => {
-            sessionStorage.setItem('returning-to-home', 'true')
-            navigate('/home')
-          }
-        })
-      }
-      
+        onComplete: () => {
+          sessionStorage.setItem('returning-to-home', 'true')
+          navigate('/home')
+        }
+      })
+    }
+
     window.addEventListener('wheel', onWheelToHome, { passive: false })
     return () => window.removeEventListener('wheel', onWheelToHome)
   }, [navigate])
@@ -2053,7 +2249,7 @@ const MenuPage = () => {
   const handleMenuClick = (item) => {
     if (isTransitioningRef.current) return
     isTransitioningRef.current = true
-    
+
     // Анимация вспышки
     const flashOverlay = document.createElement('div')
     flashOverlay.style.cssText = `
@@ -2068,7 +2264,7 @@ const MenuPage = () => {
       pointer-events: none;
     `
     document.body.appendChild(flashOverlay)
-    
+
     // Анимация вспышки
     gsap.to(flashOverlay, {
       opacity: 1,
@@ -2076,7 +2272,7 @@ const MenuPage = () => {
       ease: "power2.out",
       onComplete: () => {
         navigate(item.route)
-        
+
         setTimeout(() => {
           if (document.body.contains(flashOverlay)) {
             document.body.removeChild(flashOverlay)
@@ -2092,367 +2288,370 @@ const MenuPage = () => {
   return (
     <MenuContainer>
       <CustomCursor />
-      
+
       {/* Удалён левый edge для возврата домой, чтобы не перекрывать первую карточку */}
-      
+
       <Section ref={menuRef}>
         <GlobalDither ref={globalDitherRef} aria-hidden="true">
-          <Dither style={{position:'absolute', inset:0}} waveColor={waveColors[globalDitherColorIndex]} enableMouseInteraction={true} trackWindowMouse={true} mouseRadius={0.4} />
+          <Dither style={{ position: 'absolute', inset: 0 }} waveColor={waveColors[globalDitherColorIndex]} enableMouseInteraction={true} trackWindowMouse={true} mouseRadius={0.4} />
         </GlobalDither>
         <CardRow>
           {cards.map((card, index) => (
             <React.Fragment key={index}>
-            <Card
-              ref={(el) => (cardRefs.current[index] = el)}
-              className={`card-${index}`}
-              onMouseEnter={() => handleHover(index, true)}
-              onMouseLeave={() => handleHover(index, false)}
-              onClick={() => openCardFullscreen(index)}
-            >
-              {/* per-card dither удален, используем глобальный */}
-              <CardContent>
-                {openedIndex !== index && (
-                  <>
-                <TitleSection>
-                  <CardTitle className={`title-${index}`}>{card.title}</CardTitle>
-                </TitleSection>
-                <Arrow className={`arrow-${index}`}>→</Arrow>
-                  </>
-                )}
+              <Card
+                ref={(el) => (cardRefs.current[index] = el)}
+                className={`card-${index}`}
+                onMouseEnter={() => handleHover(index, true)}
+                onMouseLeave={() => handleHover(index, false)}
+                onClick={() => openCardFullscreen(index)}
+              >
+                {/* per-card dither удален, используем глобальный */}
+                <CardContent>
+                  {openedIndex !== index && (
+                    <>
+                      <TitleSection>
+                        <CardTitle className={`title-${index}`}>{card.title}</CardTitle>
+                      </TitleSection>
+                      <Arrow className={`arrow-${index}`}>→</Arrow>
+                    </>
+                  )}
 
-                {openedIndex === index && index === 0 && (
-                  <AboutModalContent ref={aboutContainerRef} className="about-modal">
-                    <AboutLeft>
-                      <AboutTitle className="about-title">О себе<AboutTitleUnderline className="about-title-underline" /></AboutTitle>
-                      <AboutText className="about-text">
-                        <p>Привет, меня зовут Михаил.</p>
-                        <p>
-                          Я разрабатываю сайты, Telegram- и WhatsApp-ботов, а также автоматизирую всё,
-                          что может сэкономить твоё время и упростить жизнь.
-                        </p>
-                        <p>
-                          Клиенты ценят меня за то, что я быстро понимаю задачи, предлагаю адекватные и
-                          нестандартные решения и чётко соблюдаю сроки. Со мной легко общаться: я не люблю
-                          формальностей, зато люблю, когда сделано красиво, продуманно и качественно.
-                        </p>
-                        <AboutCaption className="about-caption">Как я работаю</AboutCaption>
-                        <ul className="about-list">
-                          <li>Общаемся, обсуждаем задачу, утверждаем концепцию.</li>
-                          <li>Я готовлю чёткий план, где прописаны сроки и этапы.</li>
-                          <li>Реализую проект, держа тебя в курсе и уточняя моменты, если нужно.</li>
-                        </ul>
-                        <p>
-                          Сделать «как у всех» — это не ко мне. Сделать продуманно и стильно — это ко мне.
-                        </p>
-                      </AboutText>
-                    </AboutLeft>
-                    <AboutRight>
-                      <AboutPhotoWrap className="about-photo-wrap">
-                        <AboutPhoto className="about-photo" src="/images/rudakovrz7.png" alt="" />
-                        <FilmGrainOverlay className="film-grain" aria-hidden="true" />
-                      </AboutPhotoWrap>
-                    </AboutRight>
-                  </AboutModalContent>
-                )}
+                  {openedIndex === index && index === 0 && (
+                    <AboutModalContent ref={aboutContainerRef} className="about-modal">
+                      <AboutLeft>
+                        <AboutTitle className="about-title">О себе<AboutTitleUnderline className="about-title-underline" /></AboutTitle>
+                        <AboutText className="about-text">
+                          <p>Привет, меня зовут Михаил.</p>
+                          <p>
+                            Я разрабатываю сайты, Telegram- и WhatsApp-ботов, а также автоматизирую всё,
+                            что может сэкономить твоё время и упростить жизнь.
+                          </p>
+                          <p>
+                            Клиенты ценят меня за то, что я быстро понимаю задачи, предлагаю адекватные и
+                            нестандартные решения и чётко соблюдаю сроки. Со мной легко общаться: я не люблю
+                            формальностей, зато люблю, когда сделано красиво, продуманно и качественно.
+                          </p>
+                          <AboutCaption className="about-caption">Как я работаю</AboutCaption>
+                          <ul className="about-list">
+                            <li>Общаемся, обсуждаем задачу, утверждаем концепцию.</li>
+                            <li>Я готовлю чёткий план, где прописаны сроки и этапы.</li>
+                            <li>Реализую проект, держа тебя в курсе и уточняя моменты, если нужно.</li>
+                          </ul>
+                          <p>
+                            Сделать «как у всех» — это не ко мне. Сделать продуманно и стильно — это ко мне.
+                          </p>
+                        </AboutText>
+                      </AboutLeft>
+                      <AboutRight>
+                        <AboutPhotoWrap className="about-photo-wrap">
+                          <AboutPhoto className="about-photo" src="/images/rudakovrz7.png" alt="" />
+                          <FilmGrainOverlay className="film-grain" aria-hidden="true" />
+                        </AboutPhotoWrap>
+                      </AboutRight>
+                    </AboutModalContent>
+                  )}
 
-                {openedIndex === index && index === 1 && (
-                  <ProjectsModalWrap onTouchStart={onProjectsTouchStart} onTouchEnd={onProjectsTouchEnd}>
-                    <ProjectsTopTitle>Проекты</ProjectsTopTitle>
-                      <div ref={mobilePaneRef} style={{display:'block'}}>
-                      <CarouselTabs>
-                        <ExpandableTabs
-                          tabs={[
-                            { title: projectsCategoryLabels['tools'] || 'Автоматизации', icon: Cpu },
-                            { title: projectsCategoryLabels['web'] || 'Сайты/приложения', icon: Monitor },
-                            { title: projectsCategoryLabels['bots'] || 'Боты', icon: MessageCircle },
-                          ]}
-                          className="w-full p-0 bg-transparent border-none shadow-none"
-                          selectedIndex={(() => {
-                            const map = { tools: 0, web: 1, bots: 2 };
-                            return map[projectsCategory] ?? 1;
-                          })()}
-                          onChange={(idx) => {
-                            if (idx === null) return;
-                            const map = [ 'tools', 'web', 'bots' ];
-                            const target = map[idx] || 'web';
-                            changeProjectsCategory(target, 0, false);
-                          }}
-                        />
-                      </CarouselTabs>
+                  {openedIndex === index && index === 1 && (
+                    <ProjectsModalWrap data-testid="projects-modal" onTouchStart={onProjectsTouchStart} onTouchEnd={onProjectsTouchEnd}>
+                      <ProjectsTopTitle>Проекты</ProjectsTopTitle>
+                      <div ref={mobilePaneRef} style={{ display: 'block' }}>
+                        <MobileProjectsNavigation data-testid="mobile-projects-nav">
+                          <NavButton
+                            className={projectsCategory === 'bots' ? 'active' : ''}
+                            onClick={(e) => handleNavButtonClick('bots', e)}
+                            data-testid="nav-button-bots"
+                          >
+                            Боты
+                          </NavButton>
+                          <NavButton
+                            className={projectsCategory === 'web' ? 'active' : ''}
+                            onClick={(e) => handleNavButtonClick('web', e)}
+                            data-testid="nav-button-web"
+                          >
+                            Сайты
+                          </NavButton>
+                          <NavButton
+                            className={projectsCategory === 'tools' ? 'active' : ''}
+                            onClick={(e) => handleNavButtonClick('tools', e)}
+                            data-testid="nav-button-tools"
+                          >
+                            Автоматизация
+                          </NavButton>
+                        </MobileProjectsNavigation>
 
-                    <MobileProjectsList ref={mobileListRef} onTouchMove={onProjectsTouchMove}>
-                      {(projectsCategory === 'web' ? projectsRows.web : (projectsCategory === 'bots' ? projectsRows.bots : projectsRows.tools)).map(p => (
-                        <div key={p.id} style={{padding:12}} onClick={(e)=>{ e.stopPropagation(); if(p.href) navigate(p.href) }}>
-                          <ProjectCard style={{width:'100%'}}>
-                            <CardInner>
-                              <CardFront>
-                                <CardImage style={{ backgroundImage: `url(${p.image})` }} />
-                                <CardOverlay />
-                                <CardText>
-                                  <h4>{p.title}</h4>
-                                  <p>{p.description}</p>
-                                </CardText>
-                              </CardFront>
-                              <CardBack>
-                                <h4 style={{margin:0, fontSize:16, fontWeight:600}}>{p.title}</h4>
-                                <div style={{fontSize:13, opacity:0.9}}>{p.description}</div>
-                                <TechChips>
-                                  {(p.tech||[]).map(t => (<span key={t} className="chip">{t}</span>))}
-                                </TechChips>
-                              </CardBack>
-                            </CardInner>
-                          </ProjectCard>
-                        </div>
-                      ))}
-                    </MobileProjectsList>
+                        <MobileProjectsList ref={mobileListRef} data-testid="projects-list" onTouchMove={onProjectsTouchMove}>
+                          {(projectsCategory === 'web' ? projectsRows.web : (projectsCategory === 'bots' ? projectsRows.bots : projectsRows.tools)).map(p => (
+                            <div key={p.id} style={{ padding: 12 }} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
+                              <ProjectCard style={{ width: '100%' }}>
+                                <CardInner>
+                                  <CardFront>
+                                    <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                                    <CardOverlay />
+                                    <CardText>
+                                      <h4>{p.title}</h4>
+                                      <p>{p.description}</p>
+                                    </CardText>
+                                  </CardFront>
+                                  <CardBack>
+                                    <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
+                                    <div style={{ fontSize: 13, opacity: 0.9 }}>{p.description}</div>
+                                    <TechChips>
+                                      {(p.tech || []).map(t => (<span key={t} className="chip">{t}</span>))}
+                                    </TechChips>
+                                  </CardBack>
+                                </CardInner>
+                              </ProjectCard>
+                            </div>
+                          ))}
+                        </MobileProjectsList>
                       </div>
-                    <DesktopProjects>
-                    <ProjectsRow>
-                      <RowHeader>Веб‑приложения / сайты</RowHeader>
-                      <RowScroller>
-                        <CardsStrip ref={el => stripsRef.current[0] = el}>
-                          {projectsRows.web.map(p => (
-                            <ProjectCard key={p.id} onClick={(e)=>{e.stopPropagation(); if(p.href) navigate(p.href)}}>
-                              <CardInner>
-                                <CardFront>
-                                  <CardImage style={{ backgroundImage: `url(${p.image})` }} />
-                                  <CardOverlay />
-                                  <CardText>
-                                    <h4>{p.title}</h4>
-                                    <p>{p.description}</p>
-                                  </CardText>
-                                </CardFront>
-                                <CardBack>
-                                  <h4 style={{margin:0, fontSize:16, fontWeight:600}}>{p.title}</h4>
-                                  <MetaRow>
-                                    <span>{p.role || 'Role'}</span>
-                                    <span className="dot" />
-                                    <span>{p.year || ''}</span>
-                                  </MetaRow>
-                                  <TechChips>
-                                    {(p.tech||[]).slice(0,2).map(t => (<span key={t} className="chip">{t}</span>))}
-                                    {((p.tech||[]).length > 2) && (
-                                      <span className="chip">+{(p.tech||[]).length - 2}</span>
-                                    )}
-                                  </TechChips>
-                                  <div style={{marginTop:6, display:'flex', flexDirection:'column', gap:4}}>
-                                    {(p.features||[]).slice(0,2).map((f, i) => (
-                                      <div key={i} style={{display:'flex', alignItems:'center', gap:6, fontSize:12, opacity:0.95}}>
-                                        <span style={{width:10, height:10, borderRadius:3, background:'rgba(255,165,0,0.25)', display:'inline-block'}} />
-                                        <span style={{whiteSpace:'normal'}}>{f}</span>
+                      <DesktopProjects>
+                        <ProjectsRow>
+                          <RowHeader>Веб‑приложения / сайты</RowHeader>
+                          <RowScroller>
+                            <CardsStrip ref={el => stripsRef.current[0] = el}>
+                              {projectsRows.web.map(p => (
+                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
+                                  <CardInner>
+                                    <CardFront>
+                                      <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                                      <CardOverlay />
+                                      <CardText>
+                                        <h4>{p.title}</h4>
+                                        <p>{p.description}</p>
+                                      </CardText>
+                                    </CardFront>
+                                    <CardBack>
+                                      <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
+                                      <MetaRow>
+                                        <span>{p.role || 'Role'}</span>
+                                        <span className="dot" />
+                                        <span>{p.year || ''}</span>
+                                      </MetaRow>
+                                      <TechChips>
+                                        {(p.tech || []).slice(0, 2).map(t => (<span key={t} className="chip">{t}</span>))}
+                                        {((p.tech || []).length > 2) && (
+                                          <span className="chip">+{(p.tech || []).length - 2}</span>
+                                        )}
+                                      </TechChips>
+                                      <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        {(p.features || []).slice(0, 2).map((f, i) => (
+                                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, opacity: 0.95 }}>
+                                            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(255,165,0,0.25)', display: 'inline-block' }} />
+                                            <span style={{ whiteSpace: 'normal' }}>{f}</span>
+                                          </div>
+                                        ))}
                                       </div>
-                                    ))}
-                                  </div>
-                                  {p.href && (
-                                    <button onClick={(e)=>{ e.stopPropagation(); navigate(p.href) }} style={{marginTop:10, fontSize:12, color:'#fff', background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:8, padding:'6px 10px', cursor:'pointer'}}>
-                                      Подробнее
-                                    </button>
-                                  )}
-                                </CardBack>
-                              </CardInner>
-                            </ProjectCard>
-                          ))}
-                        </CardsStrip>
-                      </RowScroller>
-                    </ProjectsRow>
+                                      {p.href && (
+                                        <button onClick={(e) => { e.stopPropagation(); navigate(p.href) }} style={{ marginTop: 10, fontSize: 12, color: '#fff', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer' }}>
+                                          Подробнее
+                                        </button>
+                                      )}
+                                    </CardBack>
+                                  </CardInner>
+                                </ProjectCard>
+                              ))}
+                            </CardsStrip>
+                          </RowScroller>
+                        </ProjectsRow>
 
-                    <ProjectsRow>
-                      <RowHeader>Боты</RowHeader>
-                      <RowScroller>
-                        <CardsStrip ref={el => stripsRef.current[1] = el}>
-                          {projectsRows.bots.map(p => (
-                            <ProjectCard key={p.id} onClick={(e)=>{e.stopPropagation(); if(p.href) navigate(p.href)}}>
-                              <CardInner>
-                                <CardFront>
-                                  <CardImage style={{ backgroundImage: `url(${p.image})` }} />
-                                  <CardOverlay />
-                                  <CardText>
-                                    <h4>{p.title}</h4>
-                                    <p>{p.description}</p>
-                                  </CardText>
-                                </CardFront>
-                                <CardBack>
-                                  <h4 style={{margin:0, fontSize:16, fontWeight:600}}>{p.title}</h4>
-                                  <div style={{fontSize:13, opacity:0.9}}>{p.description}</div>
-                                  <TechChips>
-                                    {(p.tech||[]).map(t => (<span key={t} className="chip">{t}</span>))}
-                                  </TechChips>
-                                </CardBack>
-                              </CardInner>
-                            </ProjectCard>
-                          ))}
-                        </CardsStrip>
-                      </RowScroller>
-                    </ProjectsRow>
+                        <ProjectsRow>
+                          <RowHeader>Боты</RowHeader>
+                          <RowScroller>
+                            <CardsStrip ref={el => stripsRef.current[1] = el}>
+                              {projectsRows.bots.map(p => (
+                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
+                                  <CardInner>
+                                    <CardFront>
+                                      <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                                      <CardOverlay />
+                                      <CardText>
+                                        <h4>{p.title}</h4>
+                                        <p>{p.description}</p>
+                                      </CardText>
+                                    </CardFront>
+                                    <CardBack>
+                                      <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
+                                      <div style={{ fontSize: 13, opacity: 0.9 }}>{p.description}</div>
+                                      <TechChips>
+                                        {(p.tech || []).map(t => (<span key={t} className="chip">{t}</span>))}
+                                      </TechChips>
+                                    </CardBack>
+                                  </CardInner>
+                                </ProjectCard>
+                              ))}
+                            </CardsStrip>
+                          </RowScroller>
+                        </ProjectsRow>
 
-                    <ProjectsRow>
-                      <RowHeader>Программы / автоматизации</RowHeader>
-                      <RowScroller>
-                        <CardsStrip ref={el => stripsRef.current[2] = el}>
-                          {projectsRows.tools.map(p => (
-                            <ProjectCard key={p.id} onClick={(e)=>{e.stopPropagation(); if(p.href) navigate(p.href)}}>
-                              <CardInner>
-                                <CardFront>
-                                  <CardImage style={{ backgroundImage: `url(${p.image})` }} />
-                                  <CardOverlay />
-                                  <CardText>
-                                    <h4>{p.title}</h4>
-                                    <p>{p.description}</p>
-                                  </CardText>
-                                </CardFront>
-                                <CardBack>
-                                  <h4 style={{margin:0, fontSize:16, fontWeight:600}}>{p.title}</h4>
-                                  <div style={{fontSize:13, opacity:0.9}}>{p.description}</div>
-                                  <TechChips>
-                                    {(p.tech||[]).map(t => (<span key={t} className="chip">{t}</span>))}
-                                  </TechChips>
-                                </CardBack>
-                              </CardInner>
-                            </ProjectCard>
-                          ))}
-                        </CardsStrip>
-                      </RowScroller>
-                    </ProjectsRow>
-                    </DesktopProjects>
-                  </ProjectsModalWrap>
-                )}
+                        <ProjectsRow>
+                          <RowHeader>Программы / автоматизации</RowHeader>
+                          <RowScroller>
+                            <CardsStrip ref={el => stripsRef.current[2] = el}>
+                              {projectsRows.tools.map(p => (
+                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
+                                  <CardInner>
+                                    <CardFront>
+                                      <CardImage style={{ backgroundImage: `url(${p.image})` }} />
+                                      <CardOverlay />
+                                      <CardText>
+                                        <h4>{p.title}</h4>
+                                        <p>{p.description}</p>
+                                      </CardText>
+                                    </CardFront>
+                                    <CardBack>
+                                      <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
+                                      <div style={{ fontSize: 13, opacity: 0.9 }}>{p.description}</div>
+                                      <TechChips>
+                                        {(p.tech || []).map(t => (<span key={t} className="chip">{t}</span>))}
+                                      </TechChips>
+                                    </CardBack>
+                                  </CardInner>
+                                </ProjectCard>
+                              ))}
+                            </CardsStrip>
+                          </RowScroller>
+                        </ProjectsRow>
+                      </DesktopProjects>
+                    </ProjectsModalWrap>
+                  )}
 
-                {openedIndex === index && index === 2 && (
-                  <ServicesModalWrap>
-                    <ProjectsTopTitle>Услуги</ProjectsTopTitle>
-                    <PricingHeader>
-                      <HeadingsRow style={{marginBottom: 8, position:'relative'}} ref={tabsRowRef}>
-                        <HeadingTab ref={tabWebRef} data-active={servicesCategory==='web'} onClick={(e)=>{e.stopPropagation(); switchCategory('web')}}>
-                          Сайты / Веб‑приложения
-                        </HeadingTab>
-                        <HeadingTab ref={tabBotsRef} data-active={servicesCategory==='bots'} onClick={(e)=>{e.stopPropagation(); switchCategory('bots')}}>
-                          Боты
-                        </HeadingTab>
-                        <HeadingTab ref={tabAutoRef} data-active={servicesCategory==='automation'} onClick={(e)=>{e.stopPropagation(); switchCategory('automation')}}>
-                          Программы / Автоматизация
-                        </HeadingTab>
-                        <TabIndicator ref={indicatorRef} />
-                      </HeadingsRow>
-                    </PricingHeader>
+                  {openedIndex === index && index === 2 && (
+                    <ServicesModalWrap>
+                      <ProjectsTopTitle>Услуги</ProjectsTopTitle>
+                      <PricingHeader>
+                        <HeadingsRow style={{ marginBottom: 8, position: 'relative' }} ref={tabsRowRef}>
+                          <HeadingTab ref={tabWebRef} data-active={servicesCategory === 'web'} onClick={(e) => { e.stopPropagation(); switchCategory('web') }}>
+                            Сайты / Веб‑приложения
+                          </HeadingTab>
+                          <HeadingTab ref={tabBotsRef} data-active={servicesCategory === 'bots'} onClick={(e) => { e.stopPropagation(); switchCategory('bots') }}>
+                            Боты
+                          </HeadingTab>
+                          <HeadingTab ref={tabAutoRef} data-active={servicesCategory === 'automation'} onClick={(e) => { e.stopPropagation(); switchCategory('automation') }}>
+                            Программы / Автоматизация
+                          </HeadingTab>
+                          <TabIndicator ref={indicatorRef} />
+                        </HeadingsRow>
+                      </PricingHeader>
 
-                    <PricingGrid ref={servicesGridRef} $center={servicesCategory === 'automation'}>
-                      {(servicesCategory === 'automation'
-                        ? servicesAutomation
-                        : (servicesCategory === 'web' ? servicesWeb : servicesBots)).map((s, i) => (
-                        <PricingCard key={s.id} className={i === 1 ? 'featured' : ''} onClick={(e)=>{ e.stopPropagation(); navigate('/contact') }}>
-                          <PricingTop>
-                            <PricingHead>
-                              <h4>{s.title}</h4>
-                              <p>{s.desc}</p>
-                            </PricingHead>
-                            <TopPrice>
-                              <span className="amount">{s.price}</span>
-                              <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
-                            </TopPrice>
-                          </PricingTop>
-                          <Divider />
-                          <CardSectionTitle>Что входит</CardSectionTitle>
-                          <SectionBlock $minHeight={256}>
-                            <Bullets>
-                              {s.features.map(f => {
-                                const map = {
-                                  'Адаптивная верстка': 'Сайт удобно читать с телефона и компьютера — всё подстраивается под экран.',
-                                  'Форма обратной связи': 'Посетитель быстро свяжется с вами: заявки уходят на почту или в мессенджер.',
-                                  'Кросс‑браузерное тестирование': 'Сайт выглядит и работает одинаково у большинства людей: Chrome, Safari, Firefox, Edge.',
-                                  'Развертывание на сервере': 'Публикую сайт на хостинге и настраиваем, чтобы он открывался по адресу.',
-                                  'Хостинг/домен': 'Хостинг — место, где живёт сайт. Домен — его адрес (например, site.ru).',
-                                  'База данных/CRM': 'Хранение информации о клиентах, покупках, заявках и т.д. Видим аналитику. Всё в одном месте.',
-                                  'админ‑панель': 'Управляете страницами, товарами и заявками без программиста.',
-                                  'Платежная система': 'Приём оплат на сайте: карты, СБП, криптовалюты и т.п.',
-                                  'Калькуляторы и формы': 'Быстрые расчёты и удобные заявки: клиент видит цену и отправляет данные в пару кликов.',
-                                  'Калькуляторы/формы': 'Быстрые расчёты и удобные заявки: клиент видит цену и отправляет данные в пару кликов.',
-                                  'Мультиязычность': 'Несколько языков и удобное переключение между ними.',
-                                  'Безопасность': 'SSL (https) и соблюдение законов о данных — защита и доверие пользователей.',
-                                  'GDPR/ФЗ‑152': 'Работа с персональными данными по закону: согласия, политика, защита.',
-                                  'Авто‑тесты': 'Автоматические проверки кода и нагрузочные тесты — ловим ошибки до релиза.',
-                                  'Документация и инструкции': 'Пошаговые материалы, чтобы вы могли сами работать с сайтом.',
-                                  'WebSockets': 'Живые обновления без перезагрузки сайта: чат, уведомления, изменения статусов сразу.',
-                                  'PWA (офлайн‑доступ)': 'Сайт как приложение: значок на телефоне, быстрее, часть функций доступна без интернета.',
-                                  'SEO': 'Делаю сайт понятным для Google/Yandex, чтобы он был выше в поиске и приводил больше клиентов.',
-                                }
-                                const norm = (s) => s.toLowerCase().replace(/‑/g, '-');
-                                const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
-                                const text = key ? (
-                                  <span className="term" data-hint={map[key]}>{f}</span>
-                                ) : f
-                                return (<li key={f}>{text}</li>)
-                              })}
-                            </Bullets>
-                          </SectionBlock>
-                          {s.extras?.length ? (
-                            <>
+                      <PricingGrid ref={servicesGridRef} $center={servicesCategory === 'automation'}>
+                        {(servicesCategory === 'automation'
+                          ? servicesAutomation
+                          : (servicesCategory === 'web' ? servicesWeb : servicesBots)).map((s, i) => (
+                            <PricingCard key={s.id} className={i === 1 ? 'featured' : ''} onClick={(e) => { e.stopPropagation(); navigate('/contact') }}>
+                              <PricingTop>
+                                <PricingHead>
+                                  <h4>{s.title}</h4>
+                                  <p>{s.desc}</p>
+                                </PricingHead>
+                                <TopPrice>
+                                  <span className="amount">{s.price}</span>
+                                  <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
+                                </TopPrice>
+                              </PricingTop>
                               <Divider />
-                              <CardSectionTitle>Доп. услуги</CardSectionTitle>
-                              <SectionBlock $minHeight={96}>
+                              <CardSectionTitle>Что входит</CardSectionTitle>
+                              <SectionBlock $minHeight={256}>
                                 <Bullets>
-                                  {s.extras.map(f => {
+                                  {s.features.map(f => {
                                     const map = {
+                                      'Адаптивная верстка': 'Сайт удобно читать с телефона и компьютера — всё подстраивается под экран.',
+                                      'Форма обратной связи': 'Посетитель быстро свяжется с вами: заявки уходят на почту или в мессенджер.',
+                                      'Кросс‑браузерное тестирование': 'Сайт выглядит и работает одинаково у большинства людей: Chrome, Safari, Firefox, Edge.',
+                                      'Развертывание на сервере': 'Публикую сайт на хостинге и настраиваем, чтобы он открывался по адресу.',
                                       'Хостинг/домен': 'Хостинг — место, где живёт сайт. Домен — его адрес (например, site.ru).',
-                                      'Доп. страница': 'Добавим новую страницу в общий стиль сайта с нужным контентом.',
-                                      'Расширенная аналитика': 'Подключим метрики (Google/Yandex), события, цели — чтобы видеть, что работает.',
-                                       'Миграции/перенос': 'Безопасный переезд: бэкап, перенос кода/БД/файлов, настройка домена и SSL, редиректы и проверка — без потери данных и SEO.',
-                                      'Мультиязычность': 'Добавим ещё один язык и переключатель. Контент можно перевести позже.',
+                                      'База данных/CRM': 'Хранение информации о клиентах, покупках, заявках и т.д. Видим аналитику. Всё в одном месте.',
+                                      'админ‑панель': 'Управляете страницами, товарами и заявками без программиста.',
+                                      'Платежная система': 'Приём оплат на сайте: карты, СБП, криптовалюты и т.п.',
+                                      'Калькуляторы и формы': 'Быстрые расчёты и удобные заявки: клиент видит цену и отправляет данные в пару кликов.',
+                                      'Калькуляторы/формы': 'Быстрые расчёты и удобные заявки: клиент видит цену и отправляет данные в пару кликов.',
+                                      'Мультиязычность': 'Несколько языков и удобное переключение между ними.',
+                                      'Безопасность': 'SSL (https) и соблюдение законов о данных — защита и доверие пользователей.',
+                                      'GDPR/ФЗ‑152': 'Работа с персональными данными по закону: согласия, политика, защита.',
+                                      'Авто‑тесты': 'Автоматические проверки кода и нагрузочные тесты — ловим ошибки до релиза.',
+                                      'Документация и инструкции': 'Пошаговые материалы, чтобы вы могли сами работать с сайтом.',
+                                      'WebSockets': 'Живые обновления без перезагрузки сайта: чат, уведомления, изменения статусов сразу.',
+                                      'PWA (офлайн‑доступ)': 'Сайт как приложение: значок на телефоне, быстрее, часть функций доступна без интернета.',
+                                      'SEO': 'Делаю сайт понятным для Google/Yandex, чтобы он был выше в поиске и приводил больше клиентов.',
                                     }
-                                    const norm = (s) => s.toLowerCase().replace(/‑/g,'-')
+                                    const norm = (s) => s.toLowerCase().replace(/‑/g, '-');
                                     const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
-                                    const text = key ? (<span className="term" data-hint={map[key]}>{f}</span>) : f
+                                    const text = key ? (
+                                      <span className="term" data-hint={map[key]}>{f}</span>
+                                    ) : f
                                     return (<li key={f}>{text}</li>)
                                   })}
                                 </Bullets>
                               </SectionBlock>
-                            </>
-                          ) : null}
-                          <Divider />
-                          <Muted style={{marginTop: 6}}>{s.timeline}</Muted>
-                          <Muted style={{opacity: 0.7}}>{s.tech}</Muted>
-                          {s.notes?.length ? (
-                            <Muted style={{opacity: 0.7, marginTop: 6}}>{s.notes.join(' • ')}</Muted>
-                          ) : null}
-                          
-                        </PricingCard>
-                      ))}
-                    </PricingGrid>
-                  </ServicesModalWrap>
+                              {s.extras?.length ? (
+                                <>
+                                  <Divider />
+                                  <CardSectionTitle>Доп. услуги</CardSectionTitle>
+                                  <SectionBlock $minHeight={96}>
+                                    <Bullets>
+                                      {s.extras.map(f => {
+                                        const map = {
+                                          'Хостинг/домен': 'Хостинг — место, где живёт сайт. Домен — его адрес (например, site.ru).',
+                                          'Доп. страница': 'Добавим новую страницу в общий стиль сайта с нужным контентом.',
+                                          'Расширенная аналитика': 'Подключим метрики (Google/Yandex), события, цели — чтобы видеть, что работает.',
+                                          'Миграции/перенос': 'Безопасный переезд: бэкап, перенос кода/БД/файлов, настройка домена и SSL, редиректы и проверка — без потери данных и SEO.',
+                                          'Мультиязычность': 'Добавим ещё один язык и переключатель. Контент можно перевести позже.',
+                                        }
+                                        const norm = (s) => s.toLowerCase().replace(/‑/g, '-')
+                                        const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
+                                        const text = key ? (<span className="term" data-hint={map[key]}>{f}</span>) : f
+                                        return (<li key={f}>{text}</li>)
+                                      })}
+                                    </Bullets>
+                                  </SectionBlock>
+                                </>
+                              ) : null}
+                              <Divider />
+                              <Muted style={{ marginTop: 6 }}>{s.timeline}</Muted>
+                              <Muted style={{ opacity: 0.7 }}>{s.tech}</Muted>
+                              {s.notes?.length ? (
+                                <Muted style={{ opacity: 0.7, marginTop: 6 }}>{s.notes.join(' • ')}</Muted>
+                              ) : null}
+
+                            </PricingCard>
+                          ))}
+                      </PricingGrid>
+                    </ServicesModalWrap>
+                  )}
+                </CardContent>
+                {openedIndex === index && (
+                  <CloseButton
+                    type="button"
+                    className="close-btn"
+                    onClick={(e) => { e.stopPropagation(); closeCardFullscreen(index) }}
+                    aria-label="Закрыть"
+                  >
+                    Закрыть ✕
+                  </CloseButton>
                 )}
-              </CardContent>
-              {openedIndex === index && (
-                <CloseButton
-                  type="button"
-                  className="close-btn"
-                  onClick={(e) => { e.stopPropagation(); closeCardFullscreen(index) }}
-                  aria-label="Закрыть"
-                >
-                  Закрыть ✕
-                </CloseButton>
-              )}
-              {/* Убрано изображение в хавере "О себе" */}
-              {index === 1 && (
-                <ProjectList className="project-list">
-                  <h4>Завершенные проекты</h4>
-                  <ul>
-                    <li><button onClick={() => navigate('/project/lightlab')}>Light Lab Case</button></li>
-                    <li><button onClick={() => navigate('/game')}>Space Invaders</button></li>
-                  </ul>
-                  <h4>В разработке</h4>
-                  <ul>
-                    <li><button>Project A</button></li>
-                    <li><button>Project B</button></li>
-                  </ul>
-                </ProjectList>
-              )}
-            </Card>
-            {/* Подставка для предотвращения смещения сетки при фиксировании .is-open */}
-            {openedIndex === index && <CardPlaceholder aria-hidden="true" />}
+                {/* Убрано изображение в хавере "О себе" */}
+                {index === 1 && (
+                  <ProjectList className="project-list">
+                    <h4>Завершенные проекты</h4>
+                    <ul>
+                      <li><button onClick={() => navigate('/project/lightlab')}>Light Lab Case</button></li>
+                      <li><button onClick={() => navigate('/game')}>Space Invaders</button></li>
+                    </ul>
+                    <h4>В разработке</h4>
+                    <ul>
+                      <li><button>Project A</button></li>
+                      <li><button>Project B</button></li>
+                    </ul>
+                  </ProjectList>
+                )}
+              </Card>
+              {/* Подставка для предотвращения смещения сетки при фиксировании .is-open */}
+              {openedIndex === index && <CardPlaceholder aria-hidden="true" />}
             </React.Fragment>
           ))}
         </CardRow>
       </Section>
-        
+
       <MobileNavigation />
     </MenuContainer>
   )

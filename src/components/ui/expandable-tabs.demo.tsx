@@ -1,6 +1,6 @@
 import React from 'react'
 import { Bell, Home, HelpCircle, Settings, Shield, Mail, User, FileText, Lock } from 'lucide-react'
-import ExpandableTabs from './expandable-tabs'
+import { ExpandableTabs } from './expandable-tabs'
 
 export function DefaultDemo() {
   const tabs = [
