@@ -27,6 +27,12 @@ const MenuContainer = styled.div`
   z-index: 1;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+  
+  /* Prevent layout shifts that cause visible seams */
+  * {
+    box-sizing: border-box;
+  }
   
   @media (max-width: 768px) {
     overflow-y: auto;
@@ -143,7 +149,8 @@ const Card = styled.div`
   position: relative;
   width: 25%;
   height: 100%;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  /* remove hard separators between cards to avoid visible seams on dark background */
+  border-right: none;
   cursor: pointer;
   overflow: visible; /* чтобы hover-слои не обрезались */
   display: flex;
@@ -154,6 +161,9 @@ const Card = styled.div`
   flex-direction: column;
   gap: 12px;
   
+  /* Overlap cards slightly to remove visible seams */
+  margin-right: -1px;
+  
   &:hover {
     align-items: center;
     padding-top: 0;
@@ -161,8 +171,10 @@ const Card = styled.div`
   
   &:last-child {
     border-right: none;
+    margin-right: 0;
     @media (max-width: 768px) {
       border-bottom: none;
+      margin-bottom: 0;
     }
   }
   
@@ -175,8 +187,11 @@ const Card = styled.div`
     width: 100%;
     height: 22vh;
     border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    /* no bottom border on mobile to avoid seam artifacts */
+    border-bottom: none;
     padding: 0 8px;
+    margin-right: 0;
+    margin-bottom: -1px;
   }
 
   .profile-img {
@@ -237,7 +252,7 @@ const CardPlaceholder = styled.div`
     width: 100%;
     height: 22vh;
     border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
   }
 `
 
@@ -506,6 +521,14 @@ const TabButton = styled.button`
 const HeadingsRow = styled.div`
   display: inline-flex; gap: 16px; align-items: baseline; justify-content: center; flex-wrap: wrap;
   position: relative; padding-bottom: 8px;
+  
+  @media (min-width: 769px) {
+    display: inline-flex !important;
+  }
+  
+  @media (max-width: 768px) {
+    display: none !important;
+  }
 `
 
 const HeadingTab = styled.h3`
@@ -580,80 +603,330 @@ const MobileProjectsNavigation = styled.div`
   display: none;
   
   @media (max-width: 768px) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0; /* прижать кнопки друг к другу */
+  padding: 12px 4px 18px;
+    position: relative;
+  }
+`
+
+const MobileNavIndicator = styled.div`
+  display: none; /* нижнее подчеркивание скрыто по запросу */
+`
+
+const MobileServicesNavigation = styled.div`
+  display: none;
+  
+  @media (max-width: 768px) {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 4px;
-    padding: 16px 12px 20px;
+    gap: 0; /* прижать кнопки друг к другу */
+    padding: 12px 4px 18px;
     position: relative;
+  }
+`
+
+const ServicesTierNavigation = styled.div`
+  display: none;
+  
+  @media (max-width: 768px) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    padding: 8px 4px 16px;
+    position: relative;
+  }
+`
+
+const TierNavButton = styled.button`
+  position: relative;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.86);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.45s cubic-bezier(0.23, 1, 0.32, 1), 
+              opacity 0.25s ease,
+              transform 0.35s cubic-bezier(0.23, 1, 0.32, 1),
+              box-shadow 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  overflow: hidden;
+  min-width: 90px;
+
+  /* subtle scan gradient similar to NavButton */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -120%;
+    width: 220%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(0, 255, 255, 0.06),
+      rgba(255, 0, 255, 0.05),
+      transparent
+    );
+    pointer-events: none;
+    animation: nav-scan 4s linear infinite;
+    opacity: 0.7;
+  }
+
+  /* pixel flicker overlay */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 1px,
+        rgba(255, 0, 0, 0.02) 1px,
+        rgba(255, 0, 0, 0.02) 2px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 1px,
+        rgba(0, 255, 255, 0.015) 1px,
+        rgba(0, 255, 255, 0.015) 2px
+      );
+    animation: nav-pixel-flicker 0.18s infinite alternate;
+    pointer-events: none;
+    opacity: 0.45;
+  }
+
+  &:hover {
+    color: var(--black);
+    background: var(--primary-red);
+    border: none;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    &::before { animation-duration: 1s; opacity: 0.95; }
+    &::after { opacity: 0.85; animation-duration: 0.12s; }
+  }
+
+  /* transient press coloring */
+  &:active {
+    transform: translateY(0) scale(0.985);
+    background: var(--primary-red);
+    border: none;
+    color: var(--black);
+  }
+
+  /* persistent active state */
+  &.active {
+    color: var(--black);
+    background: var(--primary-red);
+    border: none;
+    box-shadow: 0 6px 18px rgba(209,72,54,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+    z-index: 2;
+    
+    /* Don't lift active button on hover */
+    &:hover {
+      transform: none;
+      border: none;
+      box-shadow: 0 6px 18px rgba(209,72,54,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+  }
+
+  /* when an already-active button is pressed, show the full colored press state */
+  &.active:active {
+    background: var(--primary-red);
+    color: var(--black);
+    transform: translateY(0) scale(0.985);
+    box-shadow: 0 10px 30px rgba(209, 72, 54, 0.32), 0 0 40px rgba(209, 72, 54, 0.18);
+    &::before { opacity: 0.95; animation-duration: 0.9s; }
+    &::after { opacity: 1; animation-duration: 0.08s; }
+  }
+
+  /* visual separator between flush buttons - removed to fix white stripes */
+  /* &:not(:last-child) {
+    box-shadow: inset -1px 0 0 rgba(255,255,255,0.06);
+  } */
+
+  /* Ripple effect */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(0);
+    animation: ripple-animation 0.6s linear;
+    pointer-events: none;
+  }
+  
+  @keyframes ripple-animation {
+    to {
+      transform: scale(4);
+      opacity: 0;
+    }
   }
 `
 
 const NavButton = styled.button`
   position: relative;
-  padding: 12px 20px;
+  padding: 10px 16px;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 16px;
+  color: rgba(255,255,255,0.86);
+  font-size: 15px;
   font-weight: 500;
   cursor: pointer;
-  border-radius: 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0; /* прямые углы у всех кнопок */
+  transition: all 0.45s cubic-bezier(0.23, 1, 0.32, 1), 
+              opacity 0.25s ease,
+              transform 0.35s cubic-bezier(0.23, 1, 0.32, 1),
+              box-shadow 0.4s cubic-bezier(0.23, 1, 0.32, 1);
   overflow: hidden;
   min-width: 90px;
-  
+
+  /* subtle scan gradient similar to EnterButton */
   &::before {
     content: '';
     position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-    border-radius: 12px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    top: 0;
+    left: -120%;
+    width: 220%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(0, 255, 255, 0.06),
+      rgba(255, 0, 255, 0.05),
+      transparent
+    );
+    pointer-events: none;
+    animation: nav-scan 4s linear infinite;
+    opacity: 0.7;
   }
-  
+
+  /* pixel flicker overlay */
   &::after {
     content: '';
     position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #8B5CF6, #A855F7, #C084FC);
-    border-radius: 2px;
-    transform: translateX(-50%);
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: 
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 1px,
+        rgba(255, 0, 0, 0.02) 1px,
+        rgba(255, 0, 0, 0.02) 2px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 1px,
+        rgba(0, 255, 255, 0.015) 1px,
+        rgba(0, 255, 255, 0.015) 2px
+      );
+    animation: nav-pixel-flicker 0.18s infinite alternate;
+    pointer-events: none;
+    opacity: 0.45;
   }
-  
+
   &:hover {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--black);
+    background: var(--primary-red);
+    border: none;
     transform: translateY(-2px);
-    
-    &::before {
-      opacity: 1;
-    }
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    &::before { animation-duration: 1s; opacity: 0.95; }
+    &::after { opacity: 0.85; animation-duration: 0.12s; }
   }
-  
+
+  /* transient press coloring */
   &:active {
-    transform: translateY(0) scale(0.98);
+    transform: translateY(0) scale(0.985);
+    background: var(--primary-red);
+    border: none;
+    color: var(--black);
   }
-  
+
+  /* subtle persistent active state (not filled) */
   &.active {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    /* Filled red like in the screenshot */
+    color: var(--black);
+    background: var(--primary-red);
+    border: none;
+    box-shadow: 0 6px 18px rgba(209,72,54,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+    z-index: 2;
     
-    &::before {
+    /* Don't lift active button on hover */
+    &:hover {
+      transform: none;
+      border: none;
+      box-shadow: 0 6px 18px rgba(209,72,54,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+  }
+  }
+
+  /* when an already-active button is pressed, show the full colored press state */
+  &.active:active {
+  /* keep press state visible but not stronger than base active fill */
+  transform: translateY(0) scale(0.985);
+  box-shadow: 0 12px 36px rgba(209, 72, 54, 0.34), 0 0 50px rgba(209, 72, 54, 0.12);
+  &::before { opacity: 1; animation-duration: 0.85s; }
+  &::after { opacity: 1; animation-duration: 0.08s; }
+  }
+
+  /* visual separator between flush buttons - removed to fix white stripes */
+  /* &:not(:last-child) {
+    box-shadow: inset -1px 0 0 rgba(255,255,255,0.06);
+  } */
+
+  /* Add keyframes for nav effects */
+  @keyframes nav-scan {
+    0% {
+      left: -120%;
+      opacity: 0;
+    }
+    50% {
       opacity: 1;
     }
-    
-    &::after {
-      width: 80%;
+    100% {
+      left: 120%;
+      opacity: 0;
     }
   }
-  
+
+  @keyframes nav-pixel-flicker {
+    0% {
+      opacity: 0.45;
+      transform: translate(0, 0);
+    }
+    25% {
+      opacity: 0.5;
+      transform: translate(0.3px, 0);
+    }
+    50% {
+      opacity: 0.4;
+      transform: translate(-0.3px, 0.3px);
+    }
+    75% {
+      opacity: 0.55;
+      transform: translate(0, -0.3px);
+    }
+    100% {
+      opacity: 0.45;
+      transform: translate(-0.3px, 0);
+    }
+  }
+
   /* Ripple effect */
   .ripple {
     position: absolute;
@@ -699,7 +972,16 @@ const Muted = styled.p`
 const PricingGrid = styled.div`
   display: grid; grid-template-columns: 1fr; gap: 0; width: 100%;
   justify-items: ${props => props.$center ? 'center' : 'stretch'};
-  @media (min-width: 1024px) { grid-template-columns: ${props => props.$center ? '1fr' : 'repeat(3, 1fr)'}; }
+  
+  @media (min-width: 1024px) { 
+    grid-template-columns: ${props => props.$center ? '1fr' : 'repeat(3, 1fr)'}; 
+  }
+  
+  @media (max-width: 768px) {
+    gap: 8px;
+    padding: 0 8px;
+  }
+  
   /* убрать сплошную верхнюю линию из границ карточек */
   & > div:first-child { border-top: none; }
   @media (min-width: 1024px) { & > div:nth-child(-n+3) { border-top: none; } }
@@ -710,20 +992,59 @@ const PricingCard = styled.div`
   background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.12);
   backdrop-filter: blur(2px);
   transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
-  /* прижатые карточки: убираем двойную линию между соседями */
-  & + & { border-left: none; }
-  &:hover { border-color: rgba(255,255,255,0.2); background: rgba(0,0,0,0.36); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
-  &.featured { background: rgba(0,0,0,0.34); border-color: rgba(255,255,255,0.22); box-shadow: 0 10px 28px rgba(0,0,0,0.28); }
   display: flex; flex-direction: column; gap: 8px; height: 100%;
 
+  @media (min-width: 1024px) {
+    /* прижатые карточки: убираем двойную линию между соседями */
+    & + & { border-left: none; }
+  }
+  
   @media (max-width: 768px) {
-    padding: 12px;
-    gap: 6px;
+    padding: 16px 14px;
+    gap: 10px;
+    border-radius: 12px;
+    margin-bottom: 0;
+    border: 1px solid rgba(255,255,255,0.15);
+    
+    /* Restore individual borders on mobile */
+    & + & { 
+      border-left: 1px solid rgba(255,255,255,0.15); 
+      margin-top: 0;
+    }
+  }
+  
+  &:hover { 
+    border-color: rgba(255,255,255,0.2); 
+    background: rgba(0,0,0,0.36); 
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25); 
+  }
+  
+  &.featured { 
+    background: rgba(0,0,0,0.34); 
+    border-color: rgba(255,255,255,0.22); 
+    box-shadow: 0 10px 28px rgba(0,0,0,0.28); 
+  }
+
+  /* Non-selected tiers: show on desktop but subtly, hide on small screens */
+  &.tier-hidden {
+    opacity: 0.7;
+    transform: scale(0.995);
+    filter: saturate(0.9) brightness(0.95);
+  }
+
+  @media (max-width: 1023px) {
+    &.tier-hidden { display: none; }
   }
 `
 
 const CardSectionTitle = styled.div`
   margin-top: 8px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.75);
+  
+  @media (max-width: 768px) {
+    margin-top: 10px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
 `
 
 const SectionBlock = styled.div`
@@ -735,13 +1056,20 @@ const PricingHead = styled.div`
   p { margin: 0; font-size: 13px; opacity: 0.9; }
 
   @media (max-width: 768px) {
-    h4 { font-size: 16px; }
-    p { font-size: 12px; }
+    gap: 6px;
+    h4 { font-size: 17px; }
+    p { font-size: 13px; line-height: 1.4; }
   }
 `
 
 const PricingTop = styled.div`
   display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
 `
 
 const TopPrice = styled.div`
@@ -751,9 +1079,10 @@ const TopPrice = styled.div`
   .period { font-size: 12px; opacity: 0.8; line-height: 1; position: relative; top: 0; }
 
   @media (max-width: 768px) {
-    margin-top: -6px;
-    .amount { font-size: 24px; }
-    .period { font-size: 11px; }
+    margin-top: 0;
+    align-self: flex-start;
+    .amount { font-size: 26px; }
+    .period { font-size: 12px; }
   }
 `
 
@@ -767,6 +1096,20 @@ const Bullets = styled.ul`
   list-style: none; padding: 0; margin: 8px 0 0 0; display: grid; gap: 8px;
   li { font-size: 13px; opacity: 0.95; position: relative; padding-left: 16px; }
   li::before { content: '✓'; position: absolute; left: 0; top: 0; color: rgba(255,255,255,0.9); font-size: 14px; line-height: 1; }
+  
+  @media (max-width: 768px) {
+    gap: 6px;
+    margin: 6px 0 0 0;
+    li { 
+      font-size: 13px; 
+      line-height: 1.4; 
+      padding-left: 18px; 
+    }
+    li::before { 
+      font-size: 13px; 
+    }
+  }
+  
   /* термины с подсказками */
   .term { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; position: relative; }
   .term::after {
@@ -782,6 +1125,14 @@ const Bullets = styled.ul`
     z-index: 5;
   }
   .term:hover::after { opacity: 1; transform: translateY(0); }
+  
+  @media (max-width: 768px) {
+    .term::after {
+      max-width: 280px;
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+  }
 `
 
 const ServiceActions = styled.div`
@@ -789,6 +1140,18 @@ const ServiceActions = styled.div`
   button { font-size: 12px; padding: 6px 10px; border-radius: 10px; cursor: pointer; }
   .primary { color: #fff; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); }
   .secondary { color: #fff; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); }
+  
+  @media (max-width: 768px) {
+    margin-top: 12px;
+    gap: 8px;
+    button { 
+      font-size: 13px; 
+      padding: 8px 14px; 
+      border-radius: 8px;
+      min-height: 40px;
+      flex: 1;
+    }
+  }
 `
 
 const Divider = styled.hr`
@@ -1187,6 +1550,13 @@ const MenuPage = () => {
   const ditherBreatheTlRef = useRef(null)
   const [servicesCategory, setServicesCategory] = useState('web')
   const serviceCategories = ['web', 'bots', 'automation']
+  const [servicesTier, setServicesTier] = useState('optimal')
+  const serviceTiers = ['basic', 'optimal', 'premium']
+  const serviceTierLabels = {
+    basic: 'Базовый',
+    optimal: 'Оптимальный', 
+    premium: 'Премиум'
+  }
   // Projects modal: selected category on mobile and swipe handling
   const [projectsCategory, setProjectsCategory] = useState('web')
   const projectsCategories = ['web', 'bots', 'tools']
@@ -1203,6 +1573,10 @@ const MenuPage = () => {
   const projectsTouchRAFRef = useRef(null)
   const mobileListRef = useRef(null)
   const mobilePaneRef = useRef(null)
+  const navBotsRef = useRef(null)
+  const navWebRef = useRef(null)
+  const navToolsRef = useRef(null)
+  const mobileIndicatorRef = useRef(null)
   const isTouchRef = useRef((() => {
     try {
       return (typeof window !== 'undefined' && (('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)))
@@ -1221,6 +1595,22 @@ const MenuPage = () => {
   const tabAutoRef = useRef(null)
   const indicatorRef = useRef(null)
   const isServicesSwitchingRef = useRef(false)
+  
+  // Services mobile navigation refs
+  const servicesNavWebRef = useRef(null)
+  const servicesNavBotsRef = useRef(null)
+  const servicesNavAutoRef = useRef(null)
+  
+  // Services tier navigation refs
+  const servicesTierBasicRef = useRef(null)
+  const servicesTierOptimalRef = useRef(null)
+  const servicesTierPremiumRef = useRef(null)
+  
+  // Debounce refs for navigation
+  const servicesNavDebounceRef = useRef(null)
+  const tierNavDebounceRef = useRef(null)
+  const pendingServicesCategoryRef = useRef(null)
+  const isServicesUIUpdatingRef = useRef(false)
 
   const onProjectsTouchStart = (e) => {
     if (!e.touches || e.touches.length === 0) return
@@ -1330,105 +1720,152 @@ const MenuPage = () => {
     // Create ripple effect
     createRipple(event, event.currentTarget)
 
-    // Animate category change
-    changeProjectsCategory(category, 0, true)
+    // Add fade animation for nav buttons during transition
+    const navButtons = event.currentTarget.parentElement.querySelectorAll('button')
+    
+    // Fade out all buttons briefly
+    gsap.to(navButtons, {
+      opacity: 0.3,
+      duration: 0.15,
+      ease: 'power2.out',
+      onComplete: () => {
+        // Change category
+        changeProjectsCategory(category, 0, true)
+        
+        // Fade buttons back in
+        gsap.to(navButtons, {
+          opacity: 1,
+          duration: 0.25,
+          ease: 'power2.out'
+        })
+      }
+    })
+  }
+
+  // Handle services navigation button click with animation
+  const handleServicesNavButtonClick = (category, event) => {
+    if (servicesCategory === category) return
+    
+    // Immediately update UI state for instant visual feedback
+    setServicesCategory(category)
+    pendingServicesCategoryRef.current = category
+    
+    // Clear any existing debounce
+    if (servicesNavDebounceRef.current) {
+      clearTimeout(servicesNavDebounceRef.current)
+    }
+    
+    // Prevent UI animation conflicts
+    if (isServicesUIUpdatingRef.current) return
+
+    // Create ripple effect
+    createRipple(event, event.currentTarget)
+
+    // Set UI updating flag
+    isServicesUIUpdatingRef.current = true
+
+    // Add minimal fade animation for nav buttons
+    const navButtons = event.currentTarget.parentElement.querySelectorAll('button')
+    
+    // Quick fade for immediate feedback
+    gsap.to(navButtons, {
+      opacity: 0.7,
+      duration: 0.08,
+      ease: 'power2.out',
+      onComplete: () => {
+        gsap.to(navButtons, {
+          opacity: 1,
+          duration: 0.12,
+          ease: 'power2.out',
+          onComplete: () => {
+            isServicesUIUpdatingRef.current = false
+          }
+        })
+      }
+    })
+
+    // Debounced backend processing (heavy operations)
+    servicesNavDebounceRef.current = setTimeout(() => {
+      // Only process if this is still the pending category
+      if (pendingServicesCategoryRef.current === category) {
+        // Force any backend processing here if needed
+        // Switch category is already called above for immediate UI
+        
+        // Reset switching flag with extra delay to prevent conflicts
+        setTimeout(() => {
+          isServicesSwitchingRef.current = false
+        }, 200)
+        
+        pendingServicesCategoryRef.current = null
+      }
+    }, 150) // Longer delay for backend processing
+  }
+
+  // Handle services tier navigation button click with animation  
+  const handleServicesTierButtonClick = (tier, event) => {
+    if (servicesTier === tier) return
+    
+    // Immediately update tier for instant visual feedback
+    setServicesTier(tier)
+    
+    // Clear any existing debounce
+    if (tierNavDebounceRef.current) {
+      clearTimeout(tierNavDebounceRef.current)
+    }
+
+    // Create ripple effect
+    createRipple(event, event.currentTarget)
+
+    // Quick visual feedback animation
+    const tierButtons = event.currentTarget.parentElement.querySelectorAll('button')
+    
+    gsap.to(tierButtons, {
+      opacity: 0.8,
+      duration: 0.06,
+      ease: 'power2.out',
+      onComplete: () => {
+        gsap.to(tierButtons, {
+          opacity: 1,
+          duration: 0.1,
+          ease: 'power2.out'
+        })
+      }
+    })
+
+    // Minimal debounce for any heavy processing
+    tierNavDebounceRef.current = setTimeout(() => {
+      // Any heavy tier processing here
+    }, 50)
   }
 
   // animate category change: slide out current, swap content, slide in new
   const isProjectsAnimatingRef = useRef(false)
   const changeProjectsCategory = (newCat, dir = 0, animateSlide = true) => {
-    if (isProjectsAnimatingRef.current) return
     if (newCat === projectsCategory) return
-    const el = mobilePaneRef.current || mobileListRef.current
-    if (!el) { setProjectsCategory(newCat); return }
+    if (isProjectsAnimatingRef.current) return
     isProjectsAnimatingRef.current = true
-    const w = window.innerWidth || document.documentElement.clientWidth
-    if (!animateSlide) {
-      // Enhanced crossfade with scale and blur
-      try {
-        gsap.to(el, {
-          opacity: 0,
-          y: 15,
-          scale: 0.98,
-          filter: 'blur(2px)',
-          duration: 0.25,
-          ease: 'power2.inOut',
-          onComplete: () => {
-            setProjectsCategory(newCat)
-            gsap.set(el, { x: 0, y: -15, scale: 0.98, filter: 'blur(2px)' })
-            gsap.to(el, {
-              opacity: 1,
-              y: 0,
-              scale: 1,
-              filter: 'blur(0px)',
-              duration: 0.3,
-              ease: 'power2.out',
-              onComplete: () => {
-                isProjectsAnimatingRef.current = false
-              }
-            })
-          }
-        })
-      } catch (err) {
-        setProjectsCategory(newCat)
-        isProjectsAnimatingRef.current = false
-      }
-      return
-    }
-
-    // if animateSlide true and dir not provided (0) compute shortest circular direction
-    try {
-      if (!dir) {
-        const n = projectsCategories.length
-        const cur = projectsCategories.indexOf(projectsCategory)
-        const next = projectsCategories.indexOf(newCat)
-        const forward = (next - cur + n) % n
-        const backward = (cur - next + n) % n
-        dir = forward <= backward ? -1 : 1
-      }
-    } catch { }
-
-    const outX = dir === -1 ? -w * 0.6 : dir === 1 ? w * 0.6 : -w * 0.6
-    // animate current out
-    try {
-      // clear inline transform to let GSAP control 'x' properly
-      try { if (el && el.style) { el.style.transform = ''; el.style.transition = ''; } } catch { }
+    const el = mobilePaneRef.current || mobileListRef.current
+    try { gsap.killTweensOf(el) } catch { }
+    if (el) {
       gsap.to(el, {
-        x: outX,
-        opacity: 0,
-        scale: 0.95,
-        filter: 'blur(3px)',
-        duration: 0.3,
-        ease: 'power2.in',
-        onComplete: () => {
+        opacity: 0, y: 4, duration: 0.08, ease: 'power2.in', onComplete: () => {
           setProjectsCategory(newCat)
-          const inX = dir === -1 ? w * 0.6 : dir === 1 ? -w * 0.6 : 0
-          try { gsap.set(el, { x: inX, opacity: 0, scale: 0.95, filter: 'blur(3px)' }) } catch { }
-
-          try {
-            gsap.to(el, {
-              x: 0,
-              opacity: 1,
-              scale: 1,
-              filter: 'blur(0px)',
-              duration: 0.4,
-              ease: 'power2.out',
-              onComplete: () => {
-                isProjectsAnimatingRef.current = false
-                try { el.style.willChange = '' } catch { }
-              }
-            })
-          } catch {
-            isProjectsAnimatingRef.current = false
-          }
         }
       })
-    } catch (err) {
-      // fallback
+    } else {
       setProjectsCategory(newCat)
-      isProjectsAnimatingRef.current = false
     }
   }
+
+  useEffect(() => {
+    const el = mobilePaneRef.current || mobileListRef.current
+    if (!el) return
+    // анимация появления карточек проектов при смене категории
+    const children = Array.from(el.children)
+    gsap.set(children, { opacity: 0, y: 4 })
+    gsap.to(el, { opacity: 1, duration: 0.01 })
+    gsap.to(children, { opacity: 1, y: 0, duration: 0.15, ease: 'power2.out', stagger: 0.03, onComplete: () => { isProjectsAnimatingRef.current = false } })
+  }, [projectsCategory])
 
   const positionServicesIndicator = () => {
     const ind = indicatorRef.current
@@ -1442,9 +1879,37 @@ const MenuPage = () => {
     requestAnimationFrame(() => {
       const left = active.offsetLeft
       const width = active.offsetWidth
-      gsap.set(ind, { left, width })
+      gsap.to(ind, { left, width, duration: 0.35, ease: 'power2.out' })
     })
   }
+
+  const positionMobileIndicator = () => {
+    const ind = mobileIndicatorRef.current
+    const tabs = {
+      web: navWebRef.current,
+      bots: navBotsRef.current,
+      tools: navToolsRef.current,
+    }
+    const active = tabs[projectsCategory]
+    if (!(ind && active && active.parentElement)) return
+    requestAnimationFrame(() => {
+      try {
+        const rect = active.getBoundingClientRect()
+        const parentRect = active.parentElement.getBoundingClientRect()
+        const left = Math.round(rect.left - parentRect.left)
+        const width = Math.max(24, Math.round(rect.width))
+        gsap.to(ind, { left, width, duration: 0.35, ease: 'power2.out' })
+      } catch (err) { }
+    })
+  }
+
+  useEffect(() => {
+    // position indicator when category changes or on mount
+    positionMobileIndicator()
+    const onResize = () => positionMobileIndicator()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [projectsCategory])
 
   const switchCategory = (nextCat) => {
     if (nextCat === servicesCategory) return
@@ -1454,7 +1919,7 @@ const MenuPage = () => {
     try { gsap.killTweensOf(grid) } catch { }
     if (grid) {
       gsap.to(grid, {
-        opacity: 0, y: 8, duration: 0.18, ease: 'power2.in', onComplete: () => {
+        opacity: 0, y: 4, duration: 0.08, ease: 'power2.in', onComplete: () => {
           setServicesCategory(nextCat)
         }
       })
@@ -1468,9 +1933,9 @@ const MenuPage = () => {
     if (!grid) return
     // slide/fade анимация появления карточек
     const children = Array.from(grid.children)
-    gsap.set(children, { opacity: 0, y: 8 })
+    gsap.set(children, { opacity: 0, y: 4 })
     gsap.to(grid, { opacity: 1, duration: 0.01 })
-    gsap.to(children, { opacity: 1, y: 0, duration: 0.24, ease: 'power2.out', stagger: 0.06, onComplete: () => { isServicesSwitchingRef.current = false } })
+    gsap.to(children, { opacity: 1, y: 0, duration: 0.15, ease: 'power2.out', stagger: 0.03, onComplete: () => { isServicesSwitchingRef.current = false } })
     // анимация индикатора под активным заголовком
     // Индикатор больше не используется — подчёркивание рисуем через ::after у активного заголовка
   }, [servicesCategory])
@@ -1832,7 +2297,37 @@ const MenuPage = () => {
     return `inset(${top}px ${right}px ${bottom}px ${left}px round 16px)`
   }
 
-  const openCardFullscreen = (index) => {
+  const openCardFullscreen = (index, event) => {
+    // If click event provided, confirm the pointer is actually within the intended card
+    if (event) {
+      let x = undefined, y = undefined
+      if (event.touches && event.touches.length) {
+        x = event.touches[0].clientX
+        y = event.touches[0].clientY
+      } else if (event.changedTouches && event.changedTouches.length) {
+        x = event.changedTouches[0].clientX
+        y = event.changedTouches[0].clientY
+      } else if (event.clientX !== undefined && event.clientY !== undefined) {
+        x = event.clientX
+        y = event.clientY
+      }
+      if (x !== undefined && y !== undefined) {
+        let realIndex = -1
+        for (let i = 0; i < cardRefs.current.length; i++) {
+          const c = cardRefs.current[i]
+          if (!c) continue
+          const r = c.getBoundingClientRect()
+          if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
+            realIndex = i
+            break
+          }
+        }
+        if (realIndex !== -1 && realIndex !== index) {
+          index = realIndex
+        }
+      }
+    }
+
     if (openedIndex !== null) return
     const el = cardRefs.current[index]
     if (!el) return
@@ -1868,9 +2363,16 @@ const MenuPage = () => {
       // Сбрасываем любые зависшие анимации dither, чтобы старт был чистым
       resetGlobalDither()
       if (isTouchRef.current) {
-        // Мобильный UX: простое затемнение фона, без FLIP и дыхания
-        gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', borderRadius: 0, opacity: 0, clipPath: 'none' })
-        gsap.to(gd, { opacity: 0.26, duration: ditherDuration, ease: 'power2.out' })
+  // Мобильный UX: простое затемнение фона, без FLIP и дыхания
+  // Обновляем индекс цвета глобального dither (фиолет/зелёный/красный)
+  try { setGlobalDitherColorIndex(index) } catch {}
+  // делаем фон плотным цветным в зависимости от открытой карточки
+  let bg = 'rgba(6,6,12,0.98)'
+  if (index === 1) bg = 'rgba(139,92,246,0.94)' // фиолетовый для Проектов
+  else if (index === 2) bg = 'rgba(34,197,94,0.92)' // зелёный для Услуг
+  else if (index === 3) bg = 'rgba(186,26,26,0.92)' // красный для Контактов
+  gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', borderRadius: 0, opacity: 0, clipPath: 'none', backgroundColor: bg })
+  gsap.to(gd, { opacity: 1, duration: ditherDuration, ease: 'power2.out' })
       } else {
         // Desktop: FLIP dither до fullscreen
         gd.classList.add('front')
@@ -1965,7 +2467,7 @@ const MenuPage = () => {
           ditherBreatheTlRef.current?.kill()
           if (isTouchRef.current) {
             // На мобилке — просто гасим фон
-            gsap.to(gd, { opacity: 0, duration: 0.18, ease: 'power2.in', onComplete: () => { gd.classList.remove('front') } })
+            gsap.to(gd, { opacity: 0, duration: 0.18, ease: 'power2.in', onComplete: () => { gd.classList.remove('front'); try { gd.style.backgroundColor = ''; } catch {} } })
           } else {
             // Desktop — возвращаем dither к карточке
             const endClip = computeClipFromElement(el)
@@ -2113,13 +2615,30 @@ const MenuPage = () => {
     return () => {
       // Очистка анимаций
       window.removeEventListener('mousemove', onMove)
+      
+      // Очистка debounce таймеров
+      if (servicesNavDebounceRef.current) {
+        clearTimeout(servicesNavDebounceRef.current)
+      }
+      if (tierNavDebounceRef.current) {
+        clearTimeout(tierNavDebounceRef.current)
+      }
+      
+      // Reset pending states
+      pendingServicesCategoryRef.current = null
+      isServicesUIUpdatingRef.current = false
     }
   }, [navigate])
 
   // Центрирование горизонтальных рядов в модалке «Проекты» и блокировка вертикального скролла
   useEffect(() => {
     if (openedIndex === 1) {
-      try { document.body.style.overflow = 'hidden' } catch { }
+      try { 
+        // Compensate for scrollbar width to prevent layout shift that causes visible seams
+        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.overflow = 'hidden';
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      } catch { }
       // Центрируем каждый ряд по ширине контейнера
       requestAnimationFrame(() => {
         stripsRef.current.forEach((el) => {
@@ -2129,10 +2648,18 @@ const MenuPage = () => {
         })
       })
     } else {
-      try { document.body.style.overflow = '' } catch { }
+      try { 
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      } catch { }
     }
 
-    return () => { try { document.body.style.overflow = '' } catch { } }
+    return () => { 
+      try { 
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      } catch { } 
+    }
   }, [openedIndex])
 
   // Защита от layout-съезда после alt-tab/visibilitychange/resize
@@ -2303,7 +2830,10 @@ const MenuPage = () => {
                 className={`card-${index}`}
                 onMouseEnter={() => handleHover(index, true)}
                 onMouseLeave={() => handleHover(index, false)}
-                onClick={() => openCardFullscreen(index)}
+                onClick={(e) => openCardFullscreen(index, e)}
+                tabIndex={0}
+                role="button"
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCardFullscreen(index, e) } }}
               >
                 {/* per-card dither удален, используем глобальный */}
                 <CardContent>
@@ -2354,31 +2884,35 @@ const MenuPage = () => {
                   {openedIndex === index && index === 1 && (
                     <ProjectsModalWrap data-testid="projects-modal" onTouchStart={onProjectsTouchStart} onTouchEnd={onProjectsTouchEnd}>
                       <ProjectsTopTitle>Проекты</ProjectsTopTitle>
-                      <div ref={mobilePaneRef} style={{ display: 'block' }}>
-                        <MobileProjectsNavigation data-testid="mobile-projects-nav">
-                          <NavButton
-                            className={projectsCategory === 'bots' ? 'active' : ''}
-                            onClick={(e) => handleNavButtonClick('bots', e)}
-                            data-testid="nav-button-bots"
-                          >
-                            Боты
-                          </NavButton>
-                          <NavButton
-                            className={projectsCategory === 'web' ? 'active' : ''}
-                            onClick={(e) => handleNavButtonClick('web', e)}
-                            data-testid="nav-button-web"
-                          >
-                            Сайты
-                          </NavButton>
-                          <NavButton
-                            className={projectsCategory === 'tools' ? 'active' : ''}
-                            onClick={(e) => handleNavButtonClick('tools', e)}
-                            data-testid="nav-button-tools"
-                          >
-                            Автоматизация
-                          </NavButton>
-                        </MobileProjectsNavigation>
+                      <MobileProjectsNavigation data-testid="mobile-projects-nav">
+                        <NavButton
+                          ref={navBotsRef}
+                          className={projectsCategory === 'bots' ? 'active' : ''}
+                          onClick={(e) => handleNavButtonClick('bots', e)}
+                          data-testid="nav-button-bots"
+                        >
+                          Боты
+                        </NavButton>
+                        <NavButton
+                          ref={navWebRef}
+                          className={projectsCategory === 'web' ? 'active' : ''}
+                          onClick={(e) => handleNavButtonClick('web', e)}
+                          data-testid="nav-button-web"
+                        >
+                          Сайты
+                        </NavButton>
+                        <NavButton
+                          ref={navToolsRef}
+                          className={projectsCategory === 'tools' ? 'active' : ''}
+                          onClick={(e) => handleNavButtonClick('tools', e)}
+                          data-testid="nav-button-tools"
+                        >
+                          Автоматизация
+                        </NavButton>
+                        <MobileNavIndicator ref={mobileIndicatorRef} />
+                      </MobileProjectsNavigation>
 
+                      <div ref={mobilePaneRef} style={{ display: 'block' }}>
                         <MobileProjectsList ref={mobileListRef} data-testid="projects-list" onTouchMove={onProjectsTouchMove}>
                           {(projectsCategory === 'web' ? projectsRows.web : (projectsCategory === 'bots' ? projectsRows.bots : projectsRows.tools)).map(p => (
                             <div key={p.id} style={{ padding: 12 }} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
@@ -2520,7 +3054,8 @@ const MenuPage = () => {
                     <ServicesModalWrap>
                       <ProjectsTopTitle>Услуги</ProjectsTopTitle>
                       <PricingHeader>
-                        <HeadingsRow style={{ marginBottom: 8, position: 'relative' }} ref={tabsRowRef}>
+                        {/* Desktop navigation */}
+                        <HeadingsRow style={{ marginBottom: 8, position: 'relative', display: 'none' }} className="desktop-only" ref={tabsRowRef}>
                           <HeadingTab ref={tabWebRef} data-active={servicesCategory === 'web'} onClick={(e) => { e.stopPropagation(); switchCategory('web') }}>
                             Сайты / Веб‑приложения
                           </HeadingTab>
@@ -2532,13 +3067,70 @@ const MenuPage = () => {
                           </HeadingTab>
                           <TabIndicator ref={indicatorRef} />
                         </HeadingsRow>
+                        
+                        {/* Mobile navigation */}
+                        <MobileServicesNavigation data-testid="mobile-services-nav">
+                          <NavButton
+                            ref={servicesNavWebRef}
+                            className={servicesCategory === 'web' ? 'active' : ''}
+                            onClick={(e) => handleServicesNavButtonClick('web', e)}
+                            data-testid="services-nav-button-web"
+                          >
+                            Сайты
+                          </NavButton>
+                          <NavButton
+                            ref={servicesNavBotsRef}
+                            className={servicesCategory === 'bots' ? 'active' : ''}
+                            onClick={(e) => handleServicesNavButtonClick('bots', e)}
+                            data-testid="services-nav-button-bots"
+                          >
+                            Боты
+                          </NavButton>
+                          <NavButton
+                            ref={servicesNavAutoRef}
+                            className={servicesCategory === 'automation' ? 'active' : ''}
+                            onClick={(e) => handleServicesNavButtonClick('automation', e)}
+                            data-testid="services-nav-button-auto"
+                          >
+                            Автоматизация
+                          </NavButton>
+                        </MobileServicesNavigation>
+                        
+                        {/* Mobile tier navigation */}
+                        <ServicesTierNavigation data-testid="mobile-services-tier-nav">
+                          <TierNavButton
+                            ref={servicesTierBasicRef}
+                            className={servicesTier === 'basic' ? 'active' : ''}
+                            onClick={(e) => handleServicesTierButtonClick('basic', e)}
+                            data-testid="services-tier-button-basic"
+                          >
+                            Базовый
+                          </TierNavButton>
+                          <TierNavButton
+                            ref={servicesTierOptimalRef}
+                            className={servicesTier === 'optimal' ? 'active' : ''}
+                            onClick={(e) => handleServicesTierButtonClick('optimal', e)}
+                            data-testid="services-tier-button-optimal"
+                          >
+                            Оптимальный
+                          </TierNavButton>
+                          <TierNavButton
+                            ref={servicesTierPremiumRef}
+                            className={servicesTier === 'premium' ? 'active' : ''}
+                            onClick={(e) => handleServicesTierButtonClick('premium', e)}
+                            data-testid="services-tier-button-premium"
+                          >
+                            Премиум
+                          </TierNavButton>
+                        </ServicesTierNavigation>
                       </PricingHeader>
 
                       <PricingGrid ref={servicesGridRef} $center={servicesCategory === 'automation'}>
-                        {(servicesCategory === 'automation'
-                          ? servicesAutomation
-                          : (servicesCategory === 'web' ? servicesWeb : servicesBots)).map((s, i) => (
-                            <PricingCard key={s.id} className={i === 1 ? 'featured' : ''} onClick={(e) => { e.stopPropagation(); navigate('/contact') }}>
+                        {(() => {
+                          const list = servicesCategory === 'automation' ? servicesAutomation : (servicesCategory === 'web' ? servicesWeb : servicesBots)
+                          const sel = servicesTier === 'basic' ? 0 : servicesTier === 'optimal' ? 1 : 2
+                          return list.map((s, i) => (
+                            <PricingCard key={s.id} className={`${servicesTier === 'optimal' ? 'featured' : ''} ${i !== sel ? 'tier-hidden' : ''}`} onClick={(e) => { e.stopPropagation(); navigate('/contact') }}>
                               <PricingTop>
                                 <PricingHead>
                                   <h4>{s.title}</h4>
@@ -2614,7 +3206,8 @@ const MenuPage = () => {
                               ) : null}
 
                             </PricingCard>
-                          ))}
+                          ))
+                        })()}
                       </PricingGrid>
                     </ServicesModalWrap>
                   )}

@@ -29,7 +29,8 @@ export const ParticleProvider = ({ children }) => {
   
   // Устанавливаем начальные свойства частиц в зависимости от страницы
   const getInitialParticleProps = () => {
-    if (location.pathname === '/home') {
+  // Treat /home and /menu the same for initial particle scale (mobile/home parity)
+  if (location.pathname === '/home' || location.pathname === '/menu') {
       return {
         color: "#D14836",
         size: 0.005,

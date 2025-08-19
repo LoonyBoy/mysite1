@@ -60,8 +60,12 @@ const MobileNavigation = () => {
     }
     
     const handleTouchStart = (e) => {
-      // Если открыт модал/оверлей — пропускаем, даём внутреннему контенту обрабатывать жест
-      if (isNavigationBlocked()) {
+      // Проверяем, является ли цель события кнопкой навигации в модале
+      const target = e.target
+      const isNavButton = target?.closest('[data-testid*="nav-button"], [data-testid*="services-nav-button"], [data-testid*="services-tier-button"]')
+      
+      // Если открыт модал/оверлей — пропускаем, но разрешаем кнопки навигации
+      if (isNavigationBlocked() && !isNavButton) {
         logger.touch('Touch start ignored: navigation blocked by modal/overlay', { page: location.pathname })
         return
       }
@@ -90,8 +94,12 @@ const MobileNavigation = () => {
     }
 
     const handleTouchMove = (e) => {
-      // Если открыт модал/оверлей — не блокируем прокрутку, просто выходим
-      if (isNavigationBlocked()) {
+      // Проверяем, является ли цель события кнопкой навигации в модале
+      const target = e.target
+      const isNavButton = target?.closest('[data-testid*="nav-button"], [data-testid*="services-nav-button"], [data-testid*="services-tier-button"]')
+      
+      // Если открыт модал/оверлей — не блокируем прокрутку, просто выходим, но разрешаем кнопки навигации
+      if (isNavigationBlocked() && !isNavButton) {
         return
       }
 
