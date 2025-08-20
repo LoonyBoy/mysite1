@@ -36,6 +36,7 @@ const GameUI = styled.div`
   }
 `
 
+
 const ExitHint = styled.div`
   position: absolute;
   bottom: 2rem;
@@ -265,6 +266,290 @@ const GameOverButton = styled.button`
   }
 `
 
+// Стили для интерфейса выбора корабля
+const ShipSelectionOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+  opacity: 1;
+`
+
+const ShipSelectionTitle = styled.h2`
+  font-size: clamp(2rem, 6vw, 4rem);
+  font-weight: 400;
+  color: var(--primary-red);
+  text-align: center;
+  margin-bottom: 2rem;
+  text-shadow: 
+    0 0 10px rgba(209, 72, 54, 0.5),
+    0 0 20px rgba(209, 72, 54, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+`
+
+const ShipsGrid = styled.div`
+  display: grid;
+  /* фиксированное количество колонок для отображения всех кораблей в одну линию */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  max-width: 1200px;
+  width: calc(100% - 4rem);
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  /* prevent overlay from overflowing the viewport on desktop */
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0 1rem;
+    max-height: calc(100vh - 140px);
+  }
+`
+
+const ShipCard = styled.div`
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid ${props => props.selected ? 'var(--primary-red)' : 'rgba(255, 255, 255, 0.2)'};
+  backdrop-filter: blur(10px);
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &:hover {
+    border-color: var(--primary-red);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(209, 72, 54, 0.3);
+  }
+  
+  ${props => props.selected && `
+    background: rgba(209, 72, 54, 0.1);
+    box-shadow: 0 0 30px rgba(209, 72, 54, 0.5);
+  `}
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(209, 72, 54, 0.1),
+      transparent
+    );
+    animation: ${props => props.selected ? 'ship-scan 2s infinite' : 'none'};
+    pointer-events: none;
+  }
+  
+  @keyframes ship-scan {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.8rem;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    text-align: left;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+`
+
+const ShipIcon = styled.div`
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1rem;
+  background: ${props => props.color || 'var(--primary-red)'};
+  clip-path: ${props => props.shape || 'polygon(0% 50%, 100% 0%, 100% 100%)'};
+  transition: all 0.3s ease;
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+
+  ${ShipCard}:hover & {
+    transform: scale(1.1);
+    box-shadow: 0 0 30px rgba(0,0,0,0.6);
+  }
+
+  @media (max-width: 768px) {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto 0.8rem;
+  }
+`
+
+const ShipLeftSection = styled.div`
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+    text-align: center;
+  }
+`
+
+const ShipRightSection = styled.div`
+  @media (max-width: 768px) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+`
+
+const ShipName = styled.h3`
+  font-size: 1.5rem;
+  color: white;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+    text-align: center;
+  }
+`
+
+const ShipStats = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  @media (max-width: 768px) {
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+  }
+`
+
+const StatBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+
+  @media (max-width: 768px) {
+    font-size: 0.75rem;
+  }
+`
+
+const StatValue = styled.div`
+  display: flex;
+  gap: 6px;
+
+  span {
+    width: 12px;
+    height: 12px;
+    background: ${props => props.filled ? (props.color || 'var(--primary-red)') : 'rgba(255, 255, 255, 0.18)'};
+    transition: all 0.3s ease;
+    border-radius: 2px;
+  }
+
+  @media (max-width: 768px) {
+    gap: 3px;
+    
+    span {
+      width: 8px;
+      height: 8px;
+    }
+  }
+`
+
+const ShipDescription = styled.p`
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+  margin-bottom: 1.5rem;
+
+  @media (max-width: 768px) {
+    font-size: 0.7rem;
+    line-height: 1.2;
+    margin-bottom: 0.6rem;
+  }
+`
+
+const SelectButton = styled.button`
+  padding: 0.8rem 2rem;
+  border: 2px solid var(--primary-red);
+  background: ${props => props.selected ? 'var(--primary-red)' : 'transparent'};
+  color: ${props => props.selected ? 'white' : 'var(--primary-red)'};
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  outline: none;
+  
+  &:hover {
+    background: var(--primary-red);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(209, 72, 54, 0.4);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+    margin-top: auto;
+  }
+`
+
+const StartGameButton = styled.button`
+  margin-top: 3rem;
+  padding: 1rem 3rem;
+  border: 2px solid var(--primary-red);
+  background: var(--primary-red);
+  color: white;
+  font-size: 1.3rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  outline: none;
+  opacity: ${props => props.disabled ? 0.5 : 1};
+  pointer-events: ${props => props.disabled ? 'none' : 'auto'};
+  
+  &:hover {
+    background: rgba(209, 72, 54, 0.8);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(209, 72, 54, 0.4);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+
+  @media (max-width: 768px) {
+    width: 90%;
+    padding: 0.9rem 1rem;
+    font-size: 1.1rem;
+    margin-top: 1.5rem;
+  }
+`
+
 const SpaceInvadersPage = () => {
   const navigate = useNavigate()
   const canvasRef = useRef(null)
@@ -286,21 +571,116 @@ const SpaceInvadersPage = () => {
   const [gameInitialized, setGameInitialized] = useState(false)
   const [shipAnimating, setShipAnimating] = useState(false)
   
+  // Состояния для выбора корабля
+  const [showShipSelection, setShowShipSelection] = useState(true)
+  const [selectedShipType, setSelectedShipType] = useState('interceptor') // По умолчанию перехватчик
+  
+  // Конфигурации кораблей (визуальный порядок: Синий, Фиолетовый, Зеленый, Красный)
+  const shipTypes = {
+    cruiser: {
+      name: 'Крейсер',
+      description: 'Прочный корабль, но со слабым вооружением',
+      shape: 'polygon(0% 50%, 90% 20%, 100% 35%, 100% 65%, 90% 80%)',
+      stats: { health: 4, fireRate: 1 },
+      color: '#4169E1', // Синий
+      trail: { length: 8, width: 4 }
+    },
+    stealth: {
+      name: 'Хардкор',
+      description: 'Экстремальный вызов для опытных игроков',
+      shape: 'polygon(0% 50%, 80% 30%, 100% 40%, 100% 60%, 80% 70%)',
+      stats: { health: 1, fireRate: 1 },
+      color: '#8A2BE2', // Фиолетовый
+      trail: { length: 10, width: 2 },
+      special: 'stealth'
+    },
+    scout: {
+      name: 'Разведчик',
+      description: 'Лучшее вооружение, но слабая броня',
+      shape: 'polygon(0% 50%, 100% 0%, 80% 50%, 100% 100%)',
+      stats: { health: 1, fireRate: 5 },
+      color: '#32CD32', // Зеленый
+      trail: { length: 15, width: 2 }
+    },
+    interceptor: {
+      name: 'Перехватчик',
+      description: 'Сбалансированный корабль',
+      shape: 'polygon(0% 50%, 100% 0%, 100% 100%)',
+      stats: { health: 2, fireRate: 3 },
+      color: '#D14836', // Красный
+      trail: { length: 12, width: 3 }
+    }
+  }
+  
   // Игровые объекты
   const gameObjects = useRef({
     player: {
       x: 0,
       y: 0,
-      width: 16, // Синхронизировано с курсором
-      height: 24, // Синхронизировано с курсором
-      speed: 5
+      width: 16, // Будет обновлен при выборе корабля
+      height: 24, // Будет обновлен при выборе корабля
+      speed: 15, // Увеличена скорость для более быстрого следования за мышкой
+      type: null, // Тип корабля
+      fireRate: 3, // Скорострельность
+      bulletSpeed: 3, // Скорость пуль
+      bulletDamage: 1, // Урон пуль
+      lastShot: 0, // Время последнего выстрела
+      stealthMode: false, // Режим невидимости
+      stealthCooldown: 0 // Перезарядка стелса
     },
     bullets: [],
     enemies: [],
     particles: [],
-    shipTrail: [], // Массив точек трейла корабля
-    explosionWaves: [] // Массив волн деформации от взрывов
+    shipTrail: [] // Массив точек трейла корабля
   })
+
+  // Функция выбора корабля
+  const selectShip = (shipType) => {
+    console.log('🚢 Selecting ship:', shipType)
+    setSelectedShipType(shipType)
+  }
+
+  // Функция начала игры с выбранным кораблем
+  const startGameWithShip = () => {
+    const shipType = selectedShipType || 'interceptor' // По умолчанию перехватчик
+    const shipConfig = shipTypes[shipType]
+    const stats = shipConfig.stats
+    
+    // Получаем размеры канваса для правильного позиционирования
+    const canvas = canvasRef.current
+    const playerX = canvas ? canvas.width / 2 : 400
+    const playerY = canvas ? canvas.height - 80 : 500
+    
+    // Обновляем характеристики игрока (только скорострельность и цвет)
+    gameObjects.current.player = {
+      ...gameObjects.current.player,
+      x: playerX,
+      y: playerY,
+      type: shipType,
+      fireRate: stats.fireRate,
+      color: shipConfig.color,
+      width: 24,
+      height: 32,
+      speed: 15 // Убеждаемся, что скорость остается правильной
+    }
+
+    console.log('🚀 Ship selected:', shipType, shipConfig, 'Position:', { x: playerX, y: playerY })
+
+    // Устанавливаем жизни игрока из конфигурации выбранного корабля
+    setLives(stats.health || 2)
+
+    setShowShipSelection(false)
+    setGameInitialized(true)
+
+    // Запускаем игру
+    initializeGame()
+  }
+
+  // Функция инициализации игры (вынесем отдельно)
+  const initializeGame = () => {
+    console.log('🎮 Initializing game with ship:', selectedShipType)
+    // Инициализация canvas и игрового цикла будет здесь
+  }
 
   // Инициализация игры
   useEffect(() => {
@@ -358,11 +738,14 @@ const SpaceInvadersPage = () => {
         console.error('❌ SpaceInvadersPage: Error parsing cursor animation data:', error)
       }
     } else {
-      console.log('ℹ️ SpaceInvadersPage: No animation data found, normal game start')
+      console.log('ℹ️ SpaceInvadersPage: No animation data found - showing ship selection')
       // Инициализируем визуальные свойства для обычного режима
       // rotation: 90 - для обычной игры корабль направлен вверх
       gameObjects.current.player.visualProps = { scale: 1, opacity: 1, rotation: 90 }
-      setGameInitialized(true)
+
+      // Показываем выбор корабля перед стартом
+      setShowShipSelection(true)
+      setGameInitialized(false)
     }
 
     const canvas = canvasRef.current
@@ -388,16 +771,17 @@ const SpaceInvadersPage = () => {
       playerPosition: gameObjects.current.player
     })
 
-    // Запускаем игровой цикл только если игра инициализирована
+    // Запускаем игровой цикл только если игра инициализирована и корабль выбран
     // (может быть задержано из-за анимации курсора)
-    if (gameInitialized && !shipAnimating) {
+    if (gameInitialized && !shipAnimating && !showShipSelection) {
       console.log('🎮 SpaceInvadersPage: Starting game loop immediately')
       startGameLoop(ctx)
       spawnEnemies()
     } else {
-      console.log('⏳ SpaceInvadersPage: Game loop delayed, waiting for animation completion', {
+      console.log('⏳ SpaceInvadersPage: Game loop delayed', {
         gameInitialized,
-        shipAnimating
+        shipAnimating,
+        showShipSelection
       })
     }
 
@@ -426,7 +810,7 @@ const SpaceInvadersPage = () => {
 
       // Запуск игрового цикла после завершения анимации
   useEffect(() => {
-    if (gameInitialized && !shipAnimating && canvasRef.current) {
+    if (gameInitialized && !shipAnimating && !showShipSelection && canvasRef.current) {
       const canvas = canvasRef.current
       const ctx = canvas.getContext('2d')
       
@@ -434,7 +818,7 @@ const SpaceInvadersPage = () => {
       startGameLoop(ctx)
       spawnEnemies()
     }
-  }, [gameInitialized, shipAnimating])
+  }, [gameInitialized, shipAnimating, showShipSelection])
 
   // Анимация корабля от позиции курсора до игровой позиции
   useEffect(() => {
@@ -602,10 +986,26 @@ const SpaceInvadersPage = () => {
       
       const canvas = canvasRef.current
       if (canvas) {
-        const playerWidth = gameObjects.current.player.width
+        const player = gameObjects.current.player
+        const playerWidth = player.width || 16
         const minX = playerWidth / 2
         const maxX = canvas.width - playerWidth / 2
-        gameObjects.current.player.x = Math.max(minX, Math.min(maxX, e.clientX))
+        
+        // Более быстрое и плавное движение за мышкой
+        const targetX = Math.max(minX, Math.min(maxX, e.clientX))
+        const speed = player.speed || 15
+        const diff = targetX - player.x
+        
+        // Увеличена чувствительность и плавность движения
+        const lerpFactor = 0.3 // Фактор интерполяции для плавности
+        const maxMoveDistance = speed * 2 // Максимальное расстояние за кадр
+        
+        if (Math.abs(diff) > maxMoveDistance) {
+          player.x += Math.sign(diff) * maxMoveDistance
+        } else {
+          // Плавная интерполяция к целевой позиции
+          player.x += diff * lerpFactor
+        }
       }
     }
 
@@ -624,6 +1024,16 @@ const SpaceInvadersPage = () => {
       if (e.key === 'Escape') {
         logger.navigation('Escape key pressed, exiting game')
         exitGame()
+      }
+      
+      // Активация стелс-режима для стелс-корабля
+      if (e.key === ' ' || e.code === 'Space') {
+        const player = gameObjects.current.player
+        if (player.type === 'stealth' && !player.stealthMode && player.stealthCooldown <= 0) {
+          player.stealthMode = true
+          player.stealthCooldown = 180 // 3 секунды при 60 FPS
+          console.log('🫥 Stealth mode activated!')
+        }
       }
     }
 
@@ -684,6 +1094,11 @@ const SpaceInvadersPage = () => {
   const updateShipTrail = () => {
     const { player, shipTrail } = gameObjects.current
     
+    // Получаем настройки трейла для текущего корабля
+    const shipConfig = player.type ? shipTypes[player.type] : null
+    const trailLength = shipConfig?.trail?.length || 12
+    const trailFadeSpeed = 20 // Скорость исчезновения
+    
     // Добавляем новую точку трейла в текущую позицию игрока
     shipTrail.push({
       x: player.x,
@@ -696,7 +1111,7 @@ const SpaceInvadersPage = () => {
     for (let i = shipTrail.length - 1; i >= 0; i--) {
       const point = shipTrail[i]
       point.age++
-      point.opacity = Math.max(0, 1.0 - point.age / 20) // Исчезает за 20 кадров
+      point.opacity = Math.max(0, 1.0 - point.age / trailFadeSpeed)
       
       // Удаляем старые точки
       if (point.opacity <= 0) {
@@ -704,9 +1119,9 @@ const SpaceInvadersPage = () => {
       }
     }
     
-    // Ограничиваем количество точек трейла для производительности
-    if (shipTrail.length > 20) {
-      shipTrail.splice(0, shipTrail.length - 20)
+    // Ограничиваем количество точек трейла в зависимости от корабля
+    if (shipTrail.length > trailLength + 5) {
+      shipTrail.splice(0, shipTrail.length - (trailLength + 5))
     }
   }
 
@@ -724,15 +1139,36 @@ const SpaceInvadersPage = () => {
     // Обновляем трейл корабля
     updateShipTrail()
     
-    // Автоматическая стрельба
-    if (Math.random() < 0.1) { // 10% шанс выстрела каждый кадр
+    // Стрельба с учетом характеристик корабля
+    const currentTime = Date.now()
+    const timeSinceLastShot = currentTime - player.lastShot
+    const fireInterval = 1000 / (player.fireRate || 3) // Интервал между выстрелами
+    
+    // Автоматическая стрельба: корабль стреляет сам с интервалом, зависящим от характеристики fireRate
+    if (timeSinceLastShot >= fireInterval) {
+      // Создаем пулю с характеристиками корабля
+      const bulletSpeed = player.bulletSpeed || 8
+      const bulletDamage = player.bulletDamage || 1
+
       bullets.push({
         x: player.x,
         y: player.y - 10,
         width: 3,
         height: 10,
-        speed: 8
+        speed: bulletSpeed,
+        damage: bulletDamage,
+        color: player.color || '#FFD700' // Цвет пули соответствует кораблю
       })
+
+      player.lastShot = currentTime
+    }
+    
+    // Особые способности
+    if (player.type === 'stealth' && player.stealthCooldown > 0) {
+      player.stealthCooldown--
+      if (player.stealthCooldown <= 0) {
+        player.stealthMode = false
+      }
     }
     
     // Обновляем пули
@@ -758,16 +1194,19 @@ const SpaceInvadersPage = () => {
           break
           
         case 'zigzag':
-          // Зигзаг движение
+          // Зигзаг движение (сглаженное и замедленное)
           enemy.zigzagTimer++
           if (enemy.zigzagTimer >= enemy.zigzagChangeInterval) {
             enemy.zigzagDirection *= -1 // Меняем направление
             enemy.zigzagTimer = 0
-            enemy.zigzagChangeInterval = 20 + Math.random() * 40 // Новый интервал
+            // Увеличен интервал смены направления для меньшей резкости
+            enemy.zigzagChangeInterval = 45 + Math.random() * 60 // 45-105 кадров
           }
-          
-          enemy.x += enemy.speedX * enemy.zigzagDirection
-          
+
+          // Плавное горизонтальное движение: применяем демпфирование
+          const zigzagDamping = 0.6
+          enemy.x += enemy.speedX * enemy.zigzagDirection * zigzagDamping
+
           // Отражаем от границ экрана для зигзага
           if (enemy.x <= enemy.width/2 || enemy.x >= canvas.width - enemy.width/2) {
             enemy.zigzagDirection *= -1
@@ -823,20 +1262,6 @@ const SpaceInvadersPage = () => {
       return particle.life > 0
     })
     
-    // Обновляем волны деформации
-    gameObjects.current.explosionWaves = gameObjects.current.explosionWaves.filter(wave => {
-      wave.age++
-      const progress = wave.age / wave.maxAge
-      
-      // Радиус расширяется с замедлением
-      wave.radius = wave.maxRadius * (1 - Math.pow(1 - progress, 2))
-      
-      // Сила уменьшается со временем
-      wave.currentStrength = wave.strength * (1 - progress)
-      
-      return wave.age < wave.maxAge
-    })
-    
     // Проверяем коллизии
     checkCollisions()
     
@@ -863,7 +1288,7 @@ const SpaceInvadersPage = () => {
   const drawPlayer = (ctx) => {
     const { player } = gameObjects.current
     
-    // Рисуем игрока только если он видим (треугольник фирменного цвета)
+    // Рисуем игрока только если он видим
     if (playerVisible) {
       // Сохраняем текущий контекст для применения трансформаций
       ctx.save()
@@ -871,16 +1296,6 @@ const SpaceInvadersPage = () => {
       // Применяем визуальные свойства анимации если они есть
       const visualProps = player.visualProps
       if (visualProps) {
-        // Логируем визуальные свойства только при изменениях
-        if (Math.random() < 0.1) { // 10% шанс логирования
-          console.log('🎨 Drawing player with visual props:', {
-            scale: visualProps.scale,
-            opacity: visualProps.opacity,
-            rotation: visualProps.rotation || 0,
-            position: { x: player.x, y: player.y }
-          })
-        }
-        
         // Устанавливаем прозрачность
         ctx.globalAlpha = visualProps.opacity || 1
         
@@ -902,19 +1317,34 @@ const SpaceInvadersPage = () => {
         ctx.shadowOffsetY = 0
       }
       
-      ctx.fillStyle = '#D14836' // Фирменный оранжево-красный
+      // Режим невидимости для стелс-корабля
+      if (player.stealthMode) {
+        ctx.globalAlpha *= 0.3 // Полупрозрачность
+        ctx.shadowColor = player.color || '#8A2BE2'
+        ctx.shadowBlur = 20
+      }
+      
+      // Цвет корабля зависит от типа
+      const shipColor = player.color || '#D14836'
+      ctx.fillStyle = shipColor
       ctx.beginPath()
       
-      // Рисуем треугольник направленный влево (как курсор) - синхронизируем размеры
-      // Курсор: border-right: 16px, border-top/bottom: 12px
-      const width = 16
-      const height = 24 // 12px + 12px
+      // Размеры корабля
+      const width = player.width || 16
+      const height = player.height || 24
       
-      // Треугольник направлен влево (вершина слева)
-      ctx.moveTo(player.x - width/2, player.y) // Левая вершина
-      ctx.lineTo(player.x + width/2, player.y - height/2) // Правый верх
-      ctx.lineTo(player.x + width/2, player.y + height/2) // Правый низ
-      ctx.closePath()
+      // Рисуем корабль в зависимости от типа
+      if (player.type && shipTypes[player.type]) {
+        const shipConfig = shipTypes[player.type]
+        drawShipShape(ctx, player.x, player.y, width, height, player.type)
+      } else {
+        // Стандартный треугольник (как курсор)
+        ctx.moveTo(player.x - width/2, player.y) // Левая вершина
+        ctx.lineTo(player.x + width/2, player.y - height/2) // Правый верх
+        ctx.lineTo(player.x + width/2, player.y + height/2) // Правый низ
+        ctx.closePath()
+      }
+      
       ctx.fill()
       
       // Сбрасываем тень
@@ -923,21 +1353,65 @@ const SpaceInvadersPage = () => {
       
       // Восстанавливаем контекст
       ctx.restore()
-    } else {
-      // Логируем только первые несколько раз, чтобы не спамить консоль
-      if (Math.random() < 0.01) { // 1% шанс логирования
-        console.log('👻 SpaceInvadersPage: Player ship hidden (waiting for animation)')
-      }
     }
+  }
+
+  // Функция для рисования разных форм кораблей
+  const drawShipShape = (ctx, x, y, width, height, shipType) => {
+    const halfWidth = width / 2
+    const halfHeight = height / 2
+    
+    switch (shipType) {
+      case 'scout': // Стрела
+        ctx.moveTo(x - halfWidth, y)
+        ctx.lineTo(x + halfWidth * 0.6, y - halfHeight * 0.6)
+        ctx.lineTo(x + halfWidth * 0.8, y)
+        ctx.lineTo(x + halfWidth * 0.6, y + halfHeight * 0.6)
+        break
+        
+      case 'interceptor': // Классический треугольник
+        ctx.moveTo(x - halfWidth, y)
+        ctx.lineTo(x + halfWidth, y - halfHeight)
+        ctx.lineTo(x + halfWidth, y + halfHeight)
+        break
+        
+      case 'cruiser': // Крупный корабль
+        ctx.moveTo(x - halfWidth, y)
+        ctx.lineTo(x + halfWidth * 0.9, y - halfHeight * 0.4)
+        ctx.lineTo(x + halfWidth, y - halfHeight * 0.7)
+        ctx.lineTo(x + halfWidth, y + halfHeight * 0.7)
+        ctx.lineTo(x + halfWidth * 0.9, y + halfHeight * 0.4)
+        break
+        
+      case 'stealth': // Угловатый корабль
+        ctx.moveTo(x - halfWidth, y)
+        ctx.lineTo(x + halfWidth * 0.6, y - halfHeight * 0.6)
+        ctx.lineTo(x + halfWidth, y - halfHeight * 0.4)
+        ctx.lineTo(x + halfWidth, y + halfHeight * 0.4)
+        ctx.lineTo(x + halfWidth * 0.6, y + halfHeight * 0.6)
+        break
+        
+      default: // Стандартный треугольник
+        ctx.moveTo(x - halfWidth, y)
+        ctx.lineTo(x + halfWidth, y - halfHeight)
+        ctx.lineTo(x + halfWidth, y + halfHeight)
+    }
+    
+    ctx.closePath()
   }
 
   // Отрисовка трейла корабля
   const drawShipTrail = (ctx) => {
-    const { shipTrail } = gameObjects.current
+    const { shipTrail, player } = gameObjects.current
     
     if (shipTrail.length < 2) return // Нужно минимум 2 точки для линии
     
     ctx.save()
+    
+    // Получаем настройки трейла для текущего корабля
+    const shipConfig = player.type ? shipTypes[player.type] : null
+    const trailConfig = shipConfig?.trail || { length: 12, width: 3 }
+    const trailColor = player.color || '#D14836'
     
     // Рисуем трейл как градиентную линию
     for (let i = 1; i < shipTrail.length; i++) {
@@ -950,13 +1424,22 @@ const SpaceInvadersPage = () => {
         currentPoint.x, currentPoint.y
       )
       
-      // Фирменный красный цвет с прозрачностью
-      gradient.addColorStop(0, `rgba(209, 72, 54, ${prevPoint.opacity * 0.8})`)
-      gradient.addColorStop(1, `rgba(209, 72, 54, ${currentPoint.opacity * 0.8})`)
+      // Парсим цвет корабля для трейла
+      let r = 209, g = 72, b = 54 // По умолчанию красный
+      if (trailColor.startsWith('#')) {
+        const hex = trailColor.slice(1)
+        r = parseInt(hex.substr(0, 2), 16)
+        g = parseInt(hex.substr(2, 2), 16)
+        b = parseInt(hex.substr(4, 2), 16)
+      }
+      
+      // Цвет трейла с прозрачностью
+      gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${prevPoint.opacity * 0.8})`)
+      gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${currentPoint.opacity * 0.8})`)
       
       // Рисуем линию
       ctx.strokeStyle = gradient
-      ctx.lineWidth = 3 + (currentPoint.opacity * 2) // Толщина зависит от прозрачности
+      ctx.lineWidth = trailConfig.width + (currentPoint.opacity * 2) // Толщина зависит от прозрачности
       ctx.lineCap = 'round'
       ctx.beginPath()
       ctx.moveTo(prevPoint.x, prevPoint.y)
@@ -973,69 +1456,9 @@ const SpaceInvadersPage = () => {
     ctx.restore()
   }
 
-  // Отрисовка волн деформации пространства
-  const drawExplosionWaves = (ctx) => {
-    const { explosionWaves } = gameObjects.current
-    
-    explosionWaves.forEach(wave => {
-      ctx.save()
-      
-      // Создаем цветовую схему в зависимости от типа врага
-      let waveColor
-      switch (wave.type) {
-        case 'fast':
-          waveColor = 'rgba(255, 68, 68, ' // Красный
-          break
-        case 'tank':
-          waveColor = 'rgba(65, 105, 225, ' // Синий
-          break
-        case 'zigzag':
-          waveColor = 'rgba(50, 205, 50, ' // Зеленый
-          break
-        default:
-          waveColor = 'rgba(255, 255, 255, '
-      }
-      
-      // Рисуем несколько концентрических кругов для эффекта волны
-      const ringCount = 3
-      for (let i = 0; i < ringCount; i++) {
-        const ringProgress = (i + 1) / ringCount
-        const ringRadius = wave.radius * ringProgress
-        const ringOpacity = (wave.currentStrength / wave.strength) * (1 - ringProgress * 0.7)
-        
-        if (ringOpacity > 0.01) {
-          // Внешняя светящаяся обводка
-          ctx.strokeStyle = waveColor + (ringOpacity * 0.8) + ')'
-          ctx.lineWidth = 3 + (wave.currentStrength * 0.3)
-          ctx.beginPath()
-          ctx.arc(wave.x, wave.y, ringRadius, 0, Math.PI * 2)
-          ctx.stroke()
-          
-          // Внутренняя более слабая обводка
-          ctx.strokeStyle = waveColor + (ringOpacity * 0.4) + ')'
-          ctx.lineWidth = 1 + (wave.currentStrength * 0.1)
-          ctx.beginPath()
-          ctx.arc(wave.x, wave.y, ringRadius - 2, 0, Math.PI * 2)
-          ctx.stroke()
-        }
-      }
-      
-      // Добавляем центральную вспышку на раннем этапе волны
-      if (wave.age < wave.maxAge * 0.3) {
-        const flashOpacity = (1 - wave.age / (wave.maxAge * 0.3)) * 0.6
-        ctx.fillStyle = waveColor + flashOpacity + ')'
-        ctx.beginPath()
-        ctx.arc(wave.x, wave.y, wave.currentStrength * 2, 0, Math.PI * 2)
-        ctx.fill()
-      }
-      
-      ctx.restore()
-    })
-  }
-
   // Отрисовка игры
   const drawGame = (ctx) => {
-    const { bullets, enemies, particles, shipTrail, explosionWaves } = gameObjects.current
+    const { bullets, enemies, particles, shipTrail } = gameObjects.current
     
     // Рисуем трейл корабля (до игрока, чтобы был позади)
     drawShipTrail(ctx)
@@ -1043,10 +1466,18 @@ const SpaceInvadersPage = () => {
     // Рисуем игрока
     drawPlayer(ctx)
     
-    // Рисуем пули
-    ctx.fillStyle = '#FFD700' // Золотые пули
+    // Рисуем пули с цветами кораблей
     bullets.forEach(bullet => {
+      ctx.fillStyle = bullet.color || '#FFD700' // Используем цвет пули или золотой по умолчанию
+      
+      // Рисуем пулю с небольшим свечением
+      ctx.shadowColor = bullet.color || '#FFD700'
+      ctx.shadowBlur = 5
       ctx.fillRect(bullet.x - bullet.width/2, bullet.y, bullet.width, bullet.height)
+      
+      // Сбрасываем тень
+      ctx.shadowColor = 'transparent'
+      ctx.shadowBlur = 0
     })
     
     // Рисуем врагов с новыми типами
@@ -1106,9 +1537,6 @@ const SpaceInvadersPage = () => {
       ctx.fill()
       ctx.restore()
     })
-    
-    // Рисуем волны деформации пространства
-    drawExplosionWaves(ctx)
   }
 
   // Создание врагов
@@ -1146,15 +1574,15 @@ const SpaceInvadersPage = () => {
         height: 35,
         speed: 1,
         speedX: 0,
-        health: 5,
+    health: 3,
         color: '#4169E1', // Синий
         points: 50
       },
       zigzag: {
         width: 20,
         height: 20,
-        speed: 2,
-        speedX: 3, // Начальная скорость зигзага
+  speed: 1.6,
+  speedX: 1.6, // Чуть побыстрее зигзага
         health: 2,
         color: '#32CD32', // Зеленый
         points: 25
@@ -1198,22 +1626,27 @@ const SpaceInvadersPage = () => {
   const checkCollisions = () => {
     const { bullets, enemies } = gameObjects.current
     
-    bullets.forEach((bullet, bulletIndex) => {
-      enemies.forEach((enemy, enemyIndex) => {
+    // Используем обратный цикл для безопасного удаления элементов
+    for (let bulletIndex = bullets.length - 1; bulletIndex >= 0; bulletIndex--) {
+      const bullet = bullets[bulletIndex]
+      
+      for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex--) {
+        const enemy = enemies[enemyIndex]
+        
         if (
           bullet.x < enemy.x + enemy.width/2 &&
           bullet.x + bullet.width > enemy.x - enemy.width/2 &&
           bullet.y < enemy.y + enemy.height/2 &&
           bullet.y + bullet.height > enemy.y - enemy.height/2
         ) {
-          // Попадание!
-          enemy.health -= 1
+          // Попадание! Используем урон пули
+          const damage = bullet.damage || 1
+          enemy.health -= damage
           bullets.splice(bulletIndex, 1)
           
           if (enemy.health <= 0) {
-            // Создаем частицы взрыва и волну деформации
+            // Создаем частицы взрыва
             createExplosionParticles(enemy.x, enemy.y, enemy.type)
-            createExplosionWave(enemy.x, enemy.y, enemy.type)
             
             enemies.splice(enemyIndex, 1)
             // Используем очки из конфигурации врага
@@ -1221,19 +1654,30 @@ const SpaceInvadersPage = () => {
             
             logger.particles('Enemy destroyed', { 
               type: enemy.type, 
-              scoreGained: enemy.points
+              scoreGained: enemy.points,
+              damage: damage
             })
           }
+          
+          break // Выходим из цикла врагов, так как пуля уже попала
         }
-      })
-    })
+      }
+    }
   }
 
   // Проверка коллизий врагов с игроком
   const checkPlayerCollisions = () => {
     const { player, enemies } = gameObjects.current
     
-    enemies.forEach((enemy, enemyIndex) => {
+    // Стелс-корабль в режиме невидимости не получает урон
+    if (player.stealthMode) {
+      return
+    }
+    
+    // Используем обратный цикл для безопасного удаления элементов
+    for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex--) {
+      const enemy = enemies[enemyIndex]
+      
       if (
         player.x < enemy.x + enemy.width/2 &&
         player.x + player.width/2 > enemy.x - enemy.width/2 &&
@@ -1241,9 +1685,8 @@ const SpaceInvadersPage = () => {
         player.y + player.height/2 > enemy.y - enemy.height/2
       ) {
         // Столкновение с игроком!
-        // Создаем частицы взрыва врага и волну деформации
+        // Создаем частицы взрыва врага
         createExplosionParticles(enemy.x, enemy.y, enemy.type)
-        createExplosionWave(enemy.x, enemy.y, enemy.type)
         
         enemies.splice(enemyIndex, 1) // Убираем врага
         setLives(prev => {
@@ -1269,7 +1712,7 @@ const SpaceInvadersPage = () => {
           return newLives
         })
       }
-    })
+    }
   }
 
   // Рестарт игры
@@ -1282,7 +1725,12 @@ const SpaceInvadersPage = () => {
     setScore(0)
     setLives(3)
     
-    console.log('🔄 Restarting game, gameState set to:', gameStateRef.current)
+    // Возвращаемся к выбору корабля
+    setShowShipSelection(true)
+    setSelectedShipType(null)
+    setGameInitialized(false)
+    
+    console.log('🔄 Restarting game, returning to ship selection')
     
     // Сбрасываем эффекты экрана
     setScreenShake({ active: false, intensity: 0 })
@@ -1299,17 +1747,26 @@ const SpaceInvadersPage = () => {
     gameObjects.current.enemies = []
     gameObjects.current.particles = []
     gameObjects.current.shipTrail = [] // Очищаем трейл корабля
-    gameObjects.current.explosionWaves = [] // Очищаем волны деформации
     
-    // Сброс позиции игрока
+    // Сброс игрока к базовым настройкам
+    gameObjects.current.player = {
+      x: 0,
+      y: 0,
+      width: 16,
+      height: 24,
+      speed: 15, // Увеличенная скорость как в оригинале
+      type: null,
+      fireRate: 3,
+      bulletSpeed: 3,
+      bulletDamage: 1,
+      lastShot: 0,
+      stealthMode: false,
+      stealthCooldown: 0
+    }
+    
+    // Очищаем канвас
     const canvas = canvasRef.current
     if (canvas) {
-      gameObjects.current.player.x = canvas.width / 2
-      gameObjects.current.player.y = canvas.height - 80
-      // Инициализируем визуальные свойства
-      gameObjects.current.player.visualProps = { scale: 1, opacity: 1, rotation: 90 }
-      
-      // Очищаем канвас
       const ctx = canvas.getContext('2d')
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -1434,29 +1891,6 @@ const SpaceInvadersPage = () => {
     }
   }
 
-  // Создание волны деформации пространства при взрыве
-  const createExplosionWave = (x, y, enemyType) => {
-    // Конфигурация волны для каждого типа врага
-    const waveConfigs = {
-      fast: { maxRadius: 80, strength: 5, duration: 30 },     // Маленькая быстрая волна
-      tank: { maxRadius: 150, strength: 12, duration: 60 },   // Большая мощная волна
-      zigzag: { maxRadius: 100, strength: 8, duration: 45 }   // Средняя волна
-    }
-    
-    const config = waveConfigs[enemyType] || waveConfigs.fast
-    
-    gameObjects.current.explosionWaves.push({
-      x: x,
-      y: y,
-      radius: 0,
-      maxRadius: config.maxRadius,
-      strength: config.strength,
-      age: 0,
-      maxAge: config.duration,
-      type: enemyType
-    })
-  }
-
   // Эффект тряски экрана и покраснения
   const triggerScreenEffects = () => {
     // Тряска экрана
@@ -1514,8 +1948,39 @@ const SpaceInvadersPage = () => {
         }}>
           Жизни: {lives}
         </div>
+        {gameObjects.current.player.type && (
+          <div style={{ 
+            fontSize: '0.9em', 
+            marginTop: '0.3rem',
+            color: gameObjects.current.player.color || '#D14836',
+            textShadow: `0 0 10px ${gameObjects.current.player.color || '#D14836'}`
+          }}>
+            {shipTypes[gameObjects.current.player.type]?.name}
+          </div>
+        )}
+        {gameObjects.current.player.stealthMode && (
+          <div style={{ 
+            fontSize: '0.8em', 
+            marginTop: '0.3rem',
+            color: '#8A2BE2',
+            textShadow: '0 0 10px #8A2BE2',
+            animation: 'pulse 1s ease-in-out infinite'
+          }}>
+            🫥 НЕВИДИМОСТЬ
+          </div>
+        )}
+        {gameObjects.current.player.type === 'stealth' && !gameObjects.current.player.stealthMode && gameObjects.current.player.stealthCooldown > 0 && (
+          <div style={{ 
+            fontSize: '0.8em', 
+            marginTop: '0.3rem',
+            color: 'rgba(138, 43, 226, 0.5)',
+            textShadow: '0 0 5px rgba(138, 43, 226, 0.5)'
+          }}>
+            Перезарядка: {Math.ceil(gameObjects.current.player.stealthCooldown / 60)}с
+          </div>
+        )}
         <div style={{ fontSize: '0.8em', marginTop: '0.5rem', opacity: 0.7 }}>
-          Зажми и двигай для управления
+          {gameObjects.current.player.type === 'stealth' ? 'ПРОБЕЛ - невидимость' : 'Зажми и двигай для управления'}
         </div>
       </GameUI>
       
@@ -1553,6 +2018,74 @@ const SpaceInvadersPage = () => {
         </ExitButton>
       )}
       
+      {/* Временно отключен интерфейс выбора корабля */}
+      {showShipSelection && (
+        <ShipSelectionOverlay>
+          <ShipSelectionTitle>Выберите корабль</ShipSelectionTitle>
+          <ShipsGrid>
+            {Object.keys(shipTypes).map(key => {
+              const s = shipTypes[key]
+              return (
+                <ShipCard
+                  key={key}
+                  selected={selectedShipType === key}
+                  onClick={(e) => {
+                    // Проверяем, что клик не был по кнопке
+                    if (e.target.tagName !== 'BUTTON') {
+                      selectShip(key);
+                    }
+                  }}
+                  data-card-index={key}
+                >
+                  <ShipLeftSection>
+                    <ShipIcon shape={s.shape} color={s.color} />
+                    <ShipName>{s.name}</ShipName>
+                  </ShipLeftSection>
+                  <ShipRightSection>
+                    <ShipDescription>{s.description}</ShipDescription>
+                    <ShipStats>
+                      <StatBar>Жизни <StatValue color={s.color}>{Array.from({length: Math.max(1, s.stats.health)}).map((_, i) => <span key={i} />)}</StatValue></StatBar>
+                      <StatBar>Оружие <StatValue color={s.color}>{Array.from({length: Math.max(1, s.stats.fireRate)}).map((_, i) => <span key={i} />)}</StatValue></StatBar>
+                    </ShipStats>
+                    <SelectButton 
+                      selected={selectedShipType === key} 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        selectShip(key);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        selectShip(key);
+                      }}
+                    >
+                      {selectedShipType === key ? 'ВЫБРАН' : 'ВЫБРАТЬ'}
+                    </SelectButton>
+                  </ShipRightSection>
+                </ShipCard>
+              )
+            })}
+          </ShipsGrid>
+          <StartGameButton 
+            onClick={(e) => {
+              e.preventDefault();
+              console.log('🎮 Start game button clicked, selected ship:', selectedShipType);
+              startGameWithShip();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🎮 Start game button touched, selected ship:', selectedShipType);
+              if (selectedShipType) {
+                startGameWithShip();
+              }
+            }}
+            disabled={!selectedShipType}
+          >
+            Начать
+          </StartGameButton>
+        </ShipSelectionOverlay>
+      )}
       {gameState === 'gameOver' && (
         <GameOverOverlay>
           <GameOverTitle>GAME OVER</GameOverTitle>
@@ -1597,4 +2130,4 @@ const SpaceInvadersPage = () => {
   )
 }
 
-export default SpaceInvadersPage 
+export default SpaceInvadersPage

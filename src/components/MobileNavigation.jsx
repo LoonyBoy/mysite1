@@ -215,36 +215,12 @@ const MobileNavigation = () => {
           const velocity = Math.abs(diffX) / swipeTime
           
           if (isDragging && (Math.abs(currentX) > threshold || velocity > 0.5)) {
-            if (diffX < 0 && location.pathname === '/home') {
-              // Свайп вправо на /home → запуск игры
-              logger.touch('Swipe right: home->game', { 
-                velocity, 
-                distance: Math.abs(currentX),
-                swipeTime 
-              })
-              
-              // Устанавливаем контекст перехода
-              setTransitionContext({
-                from: 'home',
-                to: 'game',
-                method: 'swipeRight',
-                velocity,
-                timestamp: Date.now()
-              })
-              
-              // Momentum анимация выхода
-              contentElement.style.transform = `translateX(${window.innerWidth}px)`
-              contentElement.style.opacity = '0'
-              contentElement.style.filter = 'blur(1px)'
-              setTimeout(() => handleNavigateToGame(), 150)
-              
-            } else {
-              // Возвращаем на место
-              logger.touch('Horizontal swipe cancelled - returning to position')
-              contentElement.style.transform = 'translateX(0) translateY(0)'
-              contentElement.style.opacity = '1'
-              contentElement.style.filter = 'none'
-            }
+            // Убран переход в игру свайпом вправо
+            // Возвращаем на место
+            logger.touch('Horizontal swipe cancelled - returning to position')
+            contentElement.style.transform = 'translateX(0) translateY(0)'
+            contentElement.style.opacity = '1'
+            contentElement.style.filter = 'none'
           } else {
             // Возвращаем на место
             logger.touch('Horizontal swipe too weak - returning to position', { velocity, distance: Math.abs(currentX) })
@@ -389,24 +365,6 @@ const MobileNavigation = () => {
       sessionStorage.setItem('returning-to-home', 'true')
       logger.navigation('Navigating to home page')
       navigate('/home')
-    }, 200)
-  }
-
-  const handleNavigateToGame = () => {
-    logger.navigation('Navigate to game initiated', { trigger: 'mobile-swipe' })
-    
-    // Специальная анимация частиц для игры
-    setTransitionContext({
-      from: 'home',
-      to: 'game',
-      method: 'swipeRight',
-      timestamp: Date.now()
-    })
-    
-    setTimeout(() => {
-      sessionStorage.setItem('entering-game', 'true')
-      logger.navigation('Launching Space Invaders game')
-      navigate('/game')
     }, 200)
   }
 

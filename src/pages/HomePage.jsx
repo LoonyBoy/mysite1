@@ -59,7 +59,7 @@ const HeroSection = styled.section`
 const MainHeading = styled.h1`
   font-size: clamp(2.5rem, 6vw, 6rem);
   font-weight: 400;
-  line-height: 0.8;
+  line-height: 1;
   letter-spacing: -0.02em;
   margin-bottom: 32px;
   opacity: 0;
@@ -67,13 +67,20 @@ const MainHeading = styled.h1`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0;
+  gap: 8px;
 
   .text-line {
     display: flex;
     align-items: baseline;
     gap: 16px;
     min-height: 1em;
+    overflow: visible;
+    
+    &:last-child {
+      min-height: 2em;
+      align-items: flex-start;
+      flex-wrap: nowrap;
+    }
   }
 
   .highlight {
@@ -89,6 +96,23 @@ const MainHeading = styled.h1`
       height: 4px;
       background: var(--primary-red);
       transition: width 1s ease;
+    }
+  }
+
+  @media (max-width: 768px) {
+    gap: 8px;
+    line-height: 1;
+    margin-bottom: 24px;
+    
+    .text-line {
+      gap: 12px;
+      min-height: 1em;
+      overflow: visible;
+      
+      &:last-child {
+        min-height: 2.5em;
+        align-items: flex-start;
+      }
     }
   }
 `
@@ -227,50 +251,6 @@ const NavigationHint = styled.div`
   &.visible {
     opacity: 1;
     transform: translateY(-50%) translateX(-16px);
-  }
-  
-  @media (max-width: 768px) {
-    display: none;
-  }
-`
-
-const GameEdge = styled.div`
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 352px;
-  height: 100vh;
-  z-index: 5;
-  cursor: none;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    background: linear-gradient(to right, rgba(209, 72, 54, 0.15), transparent);
-    backdrop-filter: blur(10px);
-  }
-  
-  @media (max-width: 768px) {
-    display: none;
-  }
-`
-
-const GameHint = styled.div`
-  position: fixed;
-  bottom: 50%;
-  left: 80px;
-  transform: translateY(50%);
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 16px;
-  font-weight: 500;
-  opacity: 0;
-  transition: all 0.3s ease;
-  z-index: 6;
-  pointer-events: none;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-  
-  &.visible {
-    opacity: 1;
-    transform: translateY(50%) translateX(16px);
   }
   
   @media (max-width: 768px) {
@@ -484,8 +464,9 @@ const HomePage = () => {
 
     // Проверяем, возвращаемся ли мы с другой страницы
     const isReturning = sessionStorage.getItem('returning-to-home')
+    const comingFromProjects = sessionStorage.getItem('coming-from-projects')
     
-    if (isReturning) {
+    if (isReturning && comingFromProjects) {
       // Анимация появления текста при возвращении с /projects
       const h1Element = heroRef.current?.querySelector('h1')
       const pElement = heroRef.current?.querySelector('p')
@@ -503,6 +484,7 @@ const HomePage = () => {
         const tl = gsap.timeline({
           onComplete: () => {
             sessionStorage.removeItem('returning-to-home')
+            sessionStorage.removeItem('coming-from-projects')
           }
         })
         
@@ -529,6 +511,9 @@ const HomePage = () => {
           }, "-=0.2")
         }
       }
+    } else if (isReturning) {
+      // Просто убираем флаг, если возвращаемся с других страниц (например, с /menu)
+      sessionStorage.removeItem('returning-to-home')
     } else {
       // Обычная анимация входа (первое посещение)
       const h1Element = heroRef.current?.querySelector('h1')
@@ -565,10 +550,6 @@ const HomePage = () => {
     // Обработка наведения на правый край (проекты)
     const navigationEdge = document.querySelector('.navigation-edge')
     const navigationHint = document.querySelector('.navigation-hint')
-    
-    // Обработка наведения на левый край (игра)
-    const gameEdge = document.querySelector('.game-edge')
-    const gameHint = document.querySelector('.game-hint')
     
     if (navigationEdge && navigationHint && !isMobile) {
       const handleMouseEnter = () => {
@@ -620,29 +601,6 @@ const HomePage = () => {
       }
     }
     
-    if (gameEdge && gameHint && !isMobile) {
-      const handleGameMouseEnter = () => {
-        gameHint.classList.add('visible')
-        document.body.style.cursor = 'none'
-      }
-      
-      const handleGameMouseLeave = () => {
-        gameHint.classList.remove('visible')
-        document.body.style.cursor = 'auto'
-      }
-      
-      gameEdge.addEventListener('mouseenter', handleGameMouseEnter)
-      gameEdge.addEventListener('mouseleave', handleGameMouseLeave)
-      gameEdge.addEventListener('click', handleGameClick)
-
-      // cleanup для этих конкретных колбэков
-      return () => {
-        gameEdge.removeEventListener('mouseenter', handleGameMouseEnter)
-        gameEdge.removeEventListener('mouseleave', handleGameMouseLeave)
-        gameEdge.removeEventListener('click', handleGameClick)
-      }
-    }
-    
     return () => {
       ScrollTrigger.getAll().forEach(trigger => trigger.kill())
     }
@@ -682,11 +640,6 @@ const HomePage = () => {
       
       {/* Удалён правый edge перехода в меню */}
       
-      <GameEdge className="game-edge" role="button" aria-label="Запустить игру Space Invaders" />
-      <GameHint className="game-hint">
-        ← Space Invaders
-      </GameHint>
-      
       <HeroSection ref={heroRef} id="hero">
         <MainHeading>
           <div className="text-line">
@@ -696,18 +649,19 @@ const HomePage = () => {
             <RotatingText 
               texts={[
                 'цифровые',
-                'крутые', 
-                'красивые', 
-                'быстрые', 
-                'смелые', 
-                'эффективные', 
-                'уникальные', 
-                'продуманные', 
-                'стильные', 
+                'крутые',
+                'прибыльные',
+                'адаптивные',
+                'доступные',
+                'комфортные',
+                'персональные',
+                'понятные',
+                'продуманные',
+                'простые',
                 'креативные'
               ]}
               rotationInterval={3000}
-              splitBy="characters"
+              splitBy="words"
               staggerDuration={0.03}
               transition={{ type: "spring", damping: 20, stiffness: 200 }}
             />
@@ -720,16 +674,18 @@ const HomePage = () => {
               texts={[
                 'будущего',
                 'которые работают',
-                'без шаблонов',
-                'на заказ',
-                'без воды и лишних слов',
-                'не как у всех',
-                'которые продают',
-                'с душой, но по ТЗ',
-                'так, чтобы клиент сказал: "Вау!"'
+                'для роста бизнеса',
+                'для всех устройств',
+                'для всех',
+                'приятные в использовании',
+                'под ваши потребности',
+                'для любой аудитории',
+                'до мелочей',
+                'для сложных проблем',
+                'которые выделяют вас'
               ]}
               rotationInterval={3000}
-              splitBy="characters"
+              splitBy="words"
               staggerDuration={0.03}
               transition={{ type: "spring", damping: 20, stiffness: 200 }}
             />

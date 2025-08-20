@@ -3,8 +3,14 @@
   display: inline-block;
   color: var(--primary-red);
   min-height: 1em;
-  min-width: 200px;
-  overflow: hidden;
+  min-width: 300px;
+  overflow: visible;
+  line-height: 1.2;
+  max-width: 800px;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  hyphens: none;
+  text-wrap: balance;
 }
 
 .text-rotate-sr-only {
@@ -21,12 +27,19 @@
 
 .text-rotate-lines {
   display: block;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  hyphens: none;
 }
 
 .text-rotate-word {
   display: inline-block;
-  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  hyphens: none;
+  max-width: 100%;
+  text-wrap: balance;
 }
 
 .text-rotate-element {
@@ -36,6 +49,7 @@
   -webkit-backface-visibility: hidden;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  white-space: nowrap;
 }
 
 .text-rotate-space {
@@ -46,8 +60,26 @@
 /* Мобильные оптимизации */
 @media (max-width: 768px) {
   .text-rotate {
-    min-width: 150px;
-    min-height: 1.5em;
+    min-width: 200px;
+    min-height: 1.2em;
+    overflow: visible;
+    line-height: 1.2;
+    max-width: 400px;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: none;
+    text-wrap: balance;
+  }
+  
+  .text-rotate-element {
+    line-height: 1.2;
+  }
+  
+  .text-rotate-word {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: none;
+    text-wrap: balance;
   }
 }
 

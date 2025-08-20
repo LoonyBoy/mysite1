@@ -278,8 +278,9 @@ const ProjectsPage = () => {
           duration: 0.3,
           ease: "power2.out",
           onComplete: () => {
-            // Устанавливаем флаг возвращения на домашнюю страницу
+            // Устанавливаем флаги возвращения на домашнюю страницу
             sessionStorage.setItem('returning-to-home', 'true')
+            sessionStorage.setItem('coming-from-projects', 'true')
             navigate('/home')
           }
         })
