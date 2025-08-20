@@ -57,7 +57,7 @@ const HeroSection = styled.section`
 `
 
 const MainHeading = styled.h1`
-  font-size: clamp(3rem, 8vw, 8rem);
+  font-size: clamp(2.5rem, 6vw, 6rem);
   font-weight: 400;
   line-height: 0.8;
   letter-spacing: -0.02em;
@@ -93,13 +93,101 @@ const MainHeading = styled.h1`
   }
 `
 
-const Description = styled.p`
-  font-size: clamp(1rem, 2.5vw, 2rem);
-  line-height: 1.5;
-  max-width: 600px;
+const DescriptionContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  max-width: 100%;
   margin-bottom: 24px;
   opacity: 0;
   transform: translateY(50px);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+  }
+`
+
+const Description = styled.p`
+  font-size: clamp(0.9rem, 2vw, 1.6rem);
+  line-height: 1.5;
+  max-width: 600px;
+  margin: 0;
+  flex: 1;
+`
+
+const ButtonsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex-shrink: 0;
+`
+
+const CreateProjectButton = styled.a`
+  display: inline-grid;
+  place-items: center;
+  padding: 16px 32px;
+  min-width: 200px;
+  border: 2px solid var(--primary-red);
+  border-bottom: 1px solid var(--primary-red);
+  color: var(--primary-red);
+  background: transparent;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  border-radius: 0;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--primary-red);
+    color: var(--black);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+    z-index: 1;
+    position: relative;
+  }
+
+  @media (max-width: 768px) {
+    padding: 12px 20px;
+    min-width: 160px;
+    font-size: 1rem;
+  }
+`
+
+const LaunchEnginesButton = styled.a`
+  display: inline-grid;
+  place-items: center;
+  padding: 16px 32px;
+  min-width: 200px;
+  border: 2px solid var(--primary-red);
+  border-top: 1px solid var(--primary-red);
+  color: var(--primary-red);
+  background: transparent;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  border-radius: 0;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--primary-red);
+    color: var(--black);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+    z-index: 1;
+    position: relative;
+  }
+
+  @media (max-width: 768px) {
+    padding: 12px 20px;
+    min-width: 160px;
+    font-size: 1rem;
+  }
 `
 
 const NavigationEdge = styled.div`
@@ -248,6 +336,148 @@ const HomePage = () => {
     }, 200)
   }
 
+  // Обработчик кнопки "Запустить двигатели!" - красивый переход с эффектами
+  const handleEngineClick = (e) => {
+    e.preventDefault()
+    console.log('🚀 HomePage: Engine launch initiated!')
+    
+    const button = e.currentTarget
+    
+    // Устанавливаем контекст перехода
+    setTransitionContext('home->game')
+    
+    // 1. Анимация кнопки - пульсация и свечение
+    gsap.timeline()
+      .to(button, {
+        scale: 1.05,
+        boxShadow: '0 0 30px rgba(209, 72, 54, 0.8), 0 0 60px rgba(209, 72, 54, 0.4)',
+        duration: 0.2,
+        ease: "power2.out"
+      })
+      .to(button, {
+        scale: 0.95,
+        duration: 0.1,
+        ease: "power2.in"
+      })
+      .to(button, {
+        scale: 1,
+        duration: 0.1,
+        ease: "power2.out"
+      })
+    
+    // 2. Создаем эффект взрыва от кнопки
+    const createExplosionEffect = () => {
+      const buttonRect = button.getBoundingClientRect()
+      const centerX = buttonRect.left + buttonRect.width / 2
+      const centerY = buttonRect.top + buttonRect.height / 2
+      
+      // Создаем частицы взрыва
+      for (let i = 0; i < 12; i++) {
+        const particle = document.createElement('div')
+        particle.style.cssText = `
+          position: fixed;
+          width: 4px;
+          height: 4px;
+          background: var(--primary-red);
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 9999;
+          left: ${centerX}px;
+          top: ${centerY}px;
+        `
+        document.body.appendChild(particle)
+        
+        const angle = (i / 12) * Math.PI * 2
+        const distance = 100 + Math.random() * 50
+        const endX = centerX + Math.cos(angle) * distance
+        const endY = centerY + Math.sin(angle) * distance
+        
+        gsap.to(particle, {
+          x: endX - centerX,
+          y: endY - centerY,
+          opacity: 0,
+          scale: 0,
+          duration: 0.8,
+          ease: "power2.out",
+          onComplete: () => particle.remove()
+        })
+      }
+    }
+    
+    // 3. Эффект экрана с красной вспышкой
+    const createScreenFlash = () => {
+      const flash = document.createElement('div')
+      flash.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(circle, rgba(209, 72, 54, 0.3) 0%, rgba(209, 72, 54, 0.1) 50%, transparent 100%);
+        pointer-events: none;
+        z-index: 9998;
+        opacity: 0;
+      `
+      document.body.appendChild(flash)
+      
+      gsap.timeline()
+        .to(flash, {
+          opacity: 1,
+          duration: 0.1,
+          ease: "power2.out"
+        })
+        .to(flash, {
+          opacity: 0,
+          duration: 0.5,
+          ease: "power2.out",
+          onComplete: () => flash.remove()
+        })
+    }
+    
+    // Запускаем эффекты с небольшой задержкой
+    setTimeout(() => {
+      createExplosionEffect()
+      createScreenFlash()
+    }, 300)
+    
+    // 4. Запускаем анимацию превращения курсора в корабль
+    setTimeout(() => {
+      if (window.startShipAnimation) {
+        console.log('🚀 HomePage: Starting cursor to ship animation')
+        const animationData = window.startShipAnimation()
+        console.log('📋 HomePage: Animation data received', animationData)
+      }
+    }, 500)
+    
+    // 5. Анимация затухания контента
+    setTimeout(() => {
+      const heroSection = heroRef.current
+      console.log('🌅 HomePage: Starting hero section fade out')
+      gsap.to(heroSection, {
+        opacity: 0,
+        scale: 1.1,
+        duration: 0.6,
+        ease: "power2.out",
+        onComplete: () => console.log('✅ HomePage: Hero section fade out complete')
+      })
+      
+      // Анимация затухания подсказки
+      const hint = document.querySelector('.game-hint')
+      if (hint) {
+        gsap.to(hint, {
+          opacity: 0,
+          duration: 0.3
+        })
+      }
+    }, 600)
+    
+    // 6. Переход на страницу игры
+    setTimeout(() => {
+      console.log('🎯 HomePage: Navigating to /game')
+      navigate('/game')
+    }, 1200)
+  }
+
   useEffect(() => {
     const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
     // (перенесено в отдельный эффект ниже)
@@ -282,7 +512,7 @@ const HomePage = () => {
           duration: 0.6,
           ease: "power2.out"
         })
-        .to(pElement, {
+        .to(heroRef.current?.querySelector('.description-container'), {
           opacity: 1,
           y: 0,
           duration: 0.5,
@@ -302,9 +532,9 @@ const HomePage = () => {
     } else {
       // Обычная анимация входа (первое посещение)
       const h1Element = heroRef.current?.querySelector('h1')
-      const pElement = heroRef.current?.querySelector('p')
+      const descriptionContainer = heroRef.current?.querySelector('.description-container')
       
-      if (h1Element && pElement) {
+      if (h1Element && descriptionContainer) {
         const tl = gsap.timeline()
         
         tl.to(h1Element, {
@@ -313,7 +543,7 @@ const HomePage = () => {
           duration: 1,
           ease: "power3.out"
         })
-        .to(pElement, {
+        .to(descriptionContainer, {
           opacity: 1,
           y: 0,
           duration: 0.8,
@@ -505,10 +735,20 @@ const HomePage = () => {
             />
           </div>
         </MainHeading>
-        <Description>
-          Веб-разработчик, специализирующийся на создании современных 
-          интерактивных сайтов и приложений с фокусом на UX/UI и производительность.
-        </Description>
+        <DescriptionContainer className="description-container">
+          <Description>
+            Веб-разработчик, специализирующийся на создании современных 
+            интерактивных сайтов и приложений с фокусом на UX/UI и производительность.
+          </Description>
+          <ButtonsContainer>
+            <CreateProjectButton href="https://t.me/loony_boss" target="_blank" rel="noopener noreferrer">
+              Создать проект
+            </CreateProjectButton>
+            <LaunchEnginesButton href="/game" onClick={handleEngineClick}>
+              Запустить двигатели!
+            </LaunchEnginesButton>
+          </ButtonsContainer>
+        </DescriptionContainer>
       </HeroSection>
       
       <MobileHints />

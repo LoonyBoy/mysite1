@@ -96,33 +96,49 @@ const NavigationEdge = styled.div`
 `
 
 const CloseButton = styled.button`
+  /* square cyberpunk close icon button */
   position: fixed;
   top: calc(16px + env(safe-area-inset-top, 0px));
   right: 16px;
   z-index: 1102; /* поверх модалки и dither */
-  color: #fff;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.2);
-  backdrop-filter: blur(6px);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 14px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--primary-red);
+  background: transparent;
+  border: 2px solid var(--primary-red);
+  border-radius: 0; /* прямые углы */
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease;
+  transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
 
   &:hover {
-    background: rgba(255,255,255,0.18);
+    background: var(--primary-red);
+    color: var(--black);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    transform: translateY(-2px);
   }
 
   &:active {
-    transform: translateY(1px);
+    transform: translateY(0) scale(0.985);
+  }
+
+  /* make icon visually similar to nav buttons */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
   }
 `
 
 const CardRow = styled.div`
   display: flex;
   flex-direction: row;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
   margin: 0;
   gap: 0; /* избегаем тонкой линии между карточками при анимации */
@@ -163,6 +179,22 @@ const Card = styled.div`
   
   /* Overlap cards slightly to remove visible seams */
   margin-right: -1px;
+
+  /* thin red separator between cards (vertical on desktop, horizontal on mobile)
+     Use pseudo-element so it doesn't affect layout; hidden for the last child. */
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    /* span full height on desktop so separator reaches screen edges */
+    top: 0;
+    bottom: 0;
+    right: -1px; /* sits between overlapping cards */
+    width: 1px;
+    background: var(--primary-red);
+    opacity: 0.95;
+    pointer-events: none;
+    z-index: 2;
+  }
   
   &:hover {
     align-items: center;
@@ -192,6 +224,15 @@ const Card = styled.div`
     padding: 0 8px;
     margin-right: 0;
     margin-bottom: -1px;
+    /* mobile: make separator horizontal between stacked cards */
+    &:not(:last-child)::after {
+      left: 8px;
+      right: 8px;
+      top: auto;
+      bottom: -1px;
+      height: 1px;
+      width: auto;
+    }
   }
 
   .profile-img {
@@ -216,7 +257,7 @@ const Card = styled.div`
   &.is-open {
     position: fixed;
     inset: 0;
-    width: 100vw;
+    width: 100%;
     height: 100dvh;
     z-index: 1001; /* выше GlobalDither */
     border-right: none;
@@ -224,14 +265,22 @@ const Card = styled.div`
     background: transparent; /* фон дает GlobalDither на полном экране */
     backdrop-filter: none;
     cursor: default;
-   /* Позиционируем содержимое модалки у верхнего края
-     и разрешаем вертикальный скролл при переполнении. */
-   display: flex;
-   align-items: flex-start;
-   justify-content: flex-start;
-   overflow-y: auto;
-   -webkit-overflow-scrolling: touch;
-   padding-top: env(safe-area-inset-top, 0px);
+  /* Позиционируем содержимое модалки у верхнего края. На десктопе не показываем внутренние скроллы (модалка должна занимать весь экран).
+    На мобильных разрешаем вертикальный скролл внутри карточки. */
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: env(safe-area-inset-top, 0px);
+
+  /* По умолчанию (desktop): скрываем внутренние скроллы */
+  overflow-y: hidden;
+  /* Prevent horizontal overflow introduced by scrollbars on desktop */
+  overflow-x: hidden;
+
+  @media (max-width: 768px) {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   }
 
 `
@@ -478,19 +527,22 @@ const ProjectsSubtitle = styled.div`
 const ServicesModalWrap = styled.div`
   position: relative;
   width: 100%;
-  height: calc(100vh - 80px);
+  /* Desktop: occupy full viewport and avoid internal scrollbars */
+  height: 100vh;
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 16px 16px 16px;
-  overflow: auto;
+  overflow: hidden;
   -webkit-overflow-scrolling: touch;
 
   @media (max-width: 768px) {
+    /* Mobile: allow content to scroll inside modal */
     height: auto;
     min-height: 100dvh;
     padding: 12px 12px calc(16px + env(safe-area-inset-bottom, 0px));
     gap: 12px;
+    overflow: auto;
   }
 `
 
@@ -1206,7 +1258,7 @@ const CardsStrip = styled.div`
     display: grid;
   grid-auto-flow: column;
   /* allow cards to grow to most of the viewport on small screens */
-  grid-auto-columns: minmax(220px, 92vw);
+  grid-auto-columns: minmax(220px, 90%);
     gap: 12px;
     overflow-x: auto;
     scroll-snap-type: x proximity;
@@ -1554,7 +1606,7 @@ const MenuPage = () => {
   const serviceTiers = ['basic', 'optimal', 'premium']
   const serviceTierLabels = {
     basic: 'Базовый',
-    optimal: 'Оптимальный', 
+    optimal: 'Стандарт', 
     premium: 'Премиум'
   }
   // Projects modal: selected category on mobile and swipe handling
@@ -1563,9 +1615,81 @@ const MenuPage = () => {
   const projectsCategoryLabels = {
     web: 'Сайты',
     bots: 'Боты',
-    tools: 'Автоматизации'
+    tools: 'Софт'
   }
   const projectsTouchStartXRef = useRef(null)
+  // Cleanup any leftover runtime elements (red dither edge bars) on mount
+  useEffect(() => {
+    try {
+      const top = document.querySelector('.__dither-edge-top')
+      const bottom = document.querySelector('.__dither-edge-bottom')
+      if (top && top.parentNode) top.parentNode.removeChild(top)
+      if (bottom && bottom.parentNode) bottom.parentNode.removeChild(bottom)
+      // also ensure global dither isn't stuck visible
+      const gd = globalDitherRef.current || document.querySelector('.global-dither')
+      if (gd) {
+        try { gd.style.opacity = ''; gd.style.clipPath = 'inset(0 100% 100% 0 round 16px)'; gd.classList.remove('front') } catch (e) {}
+      }
+    } catch (e) { }
+  }, [])
+
+  // runtime helper: detect thin red hairline elements near bottom of viewport and hide them
+  const removeBottomHairlines = () => {
+    try {
+      const winH = window.innerHeight || document.documentElement.clientHeight
+      const els = Array.from(document.querySelectorAll('body *'))
+      const candidates = []
+      els.forEach((el) => {
+        try {
+          const r = el.getBoundingClientRect()
+          if (!r || r.width === 0 || r.height === 0) return
+          // thin element and near bottom
+          if (r.height <= 6 && Math.abs(r.bottom - winH) <= 4) {
+            const s = getComputedStyle(el)
+            const bg = (s.backgroundColor || '').toLowerCase()
+            const btop = (s.borderTopColor || '').toLowerCase()
+            const bbot = (s.borderBottomColor || '').toLowerCase()
+            if (bg.indexOf('var(--primary-red)') !== -1 || btop.indexOf('var(--primary-red)') !== -1 || bbot.indexOf('var(--primary-red)') !== -1) {
+              candidates.push(el)
+            } else {
+              // try rgb heuristic: red channel significantly larger than others
+              const parseRgb = (str) => {
+                const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(str)
+                if (!m) return null
+                return [Number(m[1]), Number(m[2]), Number(m[3])]
+              }
+              const c = parseRgb(bg) || parseRgb(btop) || parseRgb(bbot)
+              if (c && c[0] > 120 && c[1] < 100 && c[2] < 100) candidates.push(el)
+            }
+          }
+        } catch (e) { }
+      })
+      if (candidates.length) {
+        candidates.forEach((el) => {
+          try {
+            // log for debugging and briefly highlight the element so the user can inspect it in DevTools
+            console.log('Detected thin bottom hairline candidate', el, el.getBoundingClientRect(), getComputedStyle(el).backgroundColor, getComputedStyle(el).borderTopColor)
+            // temporary visual highlight so it's obvious on device: bright outline + bring to front
+            const prevOutline = el.style.outline || ''
+            const prevZ = el.style.zIndex || ''
+            el.style.outline = '3px solid lime'
+            el.style.zIndex = '2147483647'
+            el.setAttribute('data-hairline-highlight', '1')
+            // after a short delay, hide the element and clear highlight (so we don't leave artifacts)
+            setTimeout(() => {
+              try {
+                el.style.display = 'none'
+                el.style.outline = prevOutline
+                el.style.zIndex = prevZ
+                el.removeAttribute('data-hairline-highlight')
+                console.log('Removed/hid thin hairline element', el)
+              } catch (e) {}
+            }, 3000)
+          } catch (e) {}
+        })
+      }
+    } catch (e) { }
+  }
   const projectsTouchingRef = useRef(false)
   const projectsTouchLastTimeRef = useRef(0)
   const projectsTouchLastXRef = useRef(0)
@@ -1577,6 +1701,10 @@ const MenuPage = () => {
   const navWebRef = useRef(null)
   const navToolsRef = useRef(null)
   const mobileIndicatorRef = useRef(null)
+  // Projects mobile navigation refs / debounce
+  const projectsNavDebounceRef = useRef(null)
+  const pendingProjectsCategoryRef = useRef(null)
+  const isProjectsUIUpdatingRef = useRef(false)
   const isTouchRef = useRef((() => {
     try {
       return (typeof window !== 'undefined' && (('ontouchstart' in window) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)))
@@ -1740,6 +1868,57 @@ const MenuPage = () => {
         })
       }
     })
+  }
+
+  // Projects navigation button click with services-like animations
+  const handleProjectsNavButtonClick = (category, event) => {
+    if (projectsCategory === category) return
+
+    // Immediately update UI state for instant visual feedback
+    setProjectsCategory(category)
+    pendingProjectsCategoryRef.current = category
+
+    // Clear any existing debounce
+    if (projectsNavDebounceRef.current) {
+      clearTimeout(projectsNavDebounceRef.current)
+    }
+
+    // Prevent UI animation conflicts
+    if (isProjectsUIUpdatingRef.current) return
+
+    // Create ripple effect
+    createRipple(event, event.currentTarget)
+
+    // Set UI updating flag
+    isProjectsUIUpdatingRef.current = true
+
+    // Add minimal fade animation for nav buttons
+    const navButtons = event.currentTarget.parentElement.querySelectorAll('button')
+    
+    // Quick fade for immediate feedback
+    gsap.to(navButtons, {
+      opacity: 0.7,
+      duration: 0.08,
+      ease: 'power2.out',
+      onComplete: () => {
+        gsap.to(navButtons, {
+          opacity: 1,
+          duration: 0.12,
+          ease: 'power2.out',
+          onComplete: () => {
+            isProjectsUIUpdatingRef.current = false
+          }
+        })
+      }
+    })
+
+    // Debounced processing (if any heavy work needed)
+    projectsNavDebounceRef.current = setTimeout(() => {
+      if (pendingProjectsCategoryRef.current === category) {
+        // placeholder for any async/backend work
+        pendingProjectsCategoryRef.current = null
+      }
+    }, 150)
   }
 
   // Handle services navigation button click with animation
@@ -2006,7 +2185,7 @@ const MenuPage = () => {
       tech: 'Технологии: HTML, CSS, JavaScript, React'
     },
     {
-      id: 'optimal', title: 'Оптимальный',
+      id: 'optimal', title: 'Стандарт',
       desc: 'Многостраничный сайт с интеграциями и анимациями',
       price: 'от 130 000 ₽',
       features: [
@@ -2037,7 +2216,7 @@ const MenuPage = () => {
       desc: 'Сложное веб‑приложение с продвинутой логикой',
       price: 'от 250 000 ₽',
       features: [
-        'Всё из «Оптимальный»',
+        'Всё из «Стандарт»',
         'Сложная логика: WebSockets/AI',
         'Полная SEO‑оптимизация',
         'Мультиязычность (2+ языка)',
@@ -2082,7 +2261,7 @@ const MenuPage = () => {
       tech: 'Технологии: Python/Node.js, aiogram/grammY, Google Sheets/CRM'
     },
     {
-      id: 'bot-optimal', title: 'Оптимальный',
+      id: 'bot-optimal', title: 'Стандарт',
       desc: 'Продажи/записи, оплаты, админ‑панель',
       price: 'от 90 000 ₽',
       features: [
@@ -2356,13 +2535,13 @@ const MenuPage = () => {
     } catch { }
     // Снижаем активность частиц в фоне под модалкой для чистоты текста
     try { setParticleSpeed?.(0.4) } catch { }
-    // Глобальный dither: раскрываем до фуллскриновского состояния
+  // Глобальный dither: раскрываем до фуллскриновкого состояния
     const gd = globalDitherRef.current
-    let ditherDuration = isTouchRef.current ? 0.24 : 0.6
-    if (gd) {
+  let ditherDuration = isTouchRef.current ? 0.28 : 0.7
+  if (gd) {
       // Сбрасываем любые зависшие анимации dither, чтобы старт был чистым
       resetGlobalDither()
-      if (isTouchRef.current) {
+  if (isTouchRef.current) {
   // Мобильный UX: простое затемнение фона, без FLIP и дыхания
   // Обновляем индекс цвета глобального dither (фиолет/зелёный/красный)
   try { setGlobalDitherColorIndex(index) } catch {}
@@ -2371,7 +2550,7 @@ const MenuPage = () => {
   if (index === 1) bg = 'rgba(139,92,246,0.94)' // фиолетовый для Проектов
   else if (index === 2) bg = 'rgba(34,197,94,0.92)' // зелёный для Услуг
   else if (index === 3) bg = 'rgba(186,26,26,0.92)' // красный для Контактов
-  gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', borderRadius: 0, opacity: 0, clipPath: 'none', backgroundColor: bg })
+  gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100dvh', borderRadius: 0, opacity: 0, clipPath: 'none', backgroundColor: bg })
   gsap.to(gd, { opacity: 1, duration: ditherDuration, ease: 'power2.out' })
       } else {
         // Desktop: FLIP dither до fullscreen
@@ -2380,16 +2559,16 @@ const MenuPage = () => {
         gsap.set(gd, { opacity: 1, clipPath: 'none', position: 'fixed' })
         gsap.set(gd, { top: rect.top, left: rect.left, right: 'auto', bottom: 'auto', width: rect.width, height: rect.height, borderRadius: 16 })
         const ditherState = Flip.getState(gd)
-        gsap.set(gd, { top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', borderRadius: 0 })
+  gsap.set(gd, { top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100dvh', borderRadius: 0 })
         Flip.from(ditherState, {
-          duration: ditherDuration, ease: 'power2.inOut', absolute: true, onComplete: () => {
+          duration: ditherDuration, ease: 'power3.inOut', absolute: true, onComplete: () => {
             gd.classList.remove('front')
             // Дышащая анимация dither в модалке — только desktop
             ditherBreatheTlRef.current?.kill()
             if (!isTouchRef.current) {
               ditherBreatheTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
-                .to(gd, { opacity: 0.32, duration: 2.8, ease: 'sine.inOut' })
-                .to(gd, { opacity: 0.25, duration: 2.8, ease: 'sine.inOut' })
+                .to(gd, { opacity: 0.32, duration: 3.2, ease: 'sine.inOut' })
+                .to(gd, { opacity: 0.25, duration: 3.2, ease: 'sine.inOut' })
             }
           }
         })
@@ -2397,10 +2576,10 @@ const MenuPage = () => {
     }
 
     // Прячем соседние карточки с лёгкой задержкой, чтобы dither начал закрывать их первым
-    cardRefs.current.forEach((card, i) => {
+  cardRefs.current.forEach((card, i) => {
       if (!card) return
       if (i !== index) {
-        gsap.to(card, { opacity: 0, duration: 0.25, delay: 0.12, ease: 'power2.out', pointerEvents: 'none' })
+    gsap.to(card, { opacity: 0, duration: 0.36, delay: 0.08, ease: 'power1.out', pointerEvents: 'none' })
       }
     })
     const state = Flip.getState(el)
@@ -2408,12 +2587,12 @@ const MenuPage = () => {
     setOpenedIndex(index)
     // Никакого текста не осталось, поэтому Flip только для карточки
     Flip.from(state, {
-      duration: isTouchRef.current ? 0.28 : 0.5,
-      ease: isTouchRef.current ? 'power2.out' : 'power2.inOut',
+      duration: isTouchRef.current ? 0.36 : 0.6,
+      ease: isTouchRef.current ? 'power2.out' : 'power3.inOut',
       absolute: true,
       scale: false,
       nested: true,
-      delay: isTouchRef.current ? 0 : 0.2
+      delay: isTouchRef.current ? 0 : 0.16
     })
 
     // Появление контента модалки на мобильных: лёгкий fade/slide
@@ -2429,7 +2608,123 @@ const MenuPage = () => {
         })
       })
     }
-  }
+    }
+
+    // Mobile: cloned-card expansion animation (stretch top to top, bottom to bottom)
+    if (isTouchRef.current) {
+      try {
+        const rect = el.getBoundingClientRect()
+        const clone = el.cloneNode(true)
+        clone.style.position = 'fixed'
+        clone.style.top = rect.top + 'px'
+        clone.style.left = rect.left + 'px'
+        clone.style.width = rect.width + 'px'
+        clone.style.height = rect.height + 'px'
+        clone.style.margin = '0'
+        clone.style.zIndex = 99999
+        clone.style.transform = 'none'
+        clone.style.transition = 'none'
+        clone.setAttribute('aria-hidden', 'true')
+        // prevent pointer events on clone during animation
+        clone.style.pointerEvents = 'none'
+
+        document.body.appendChild(clone)
+
+        // animate dither/overlay and clone together for a smoother expansion
+        try {
+          const startClip = computeClipFromElement(el) // inset(top right bottom left round 16px)
+          const fullClip = 'inset(0px 0px 0px 0px)'
+          gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100dvh', borderRadius: 0, clipPath: startClip, opacity: 0, backgroundColor: gd.style.backgroundColor || '' })
+
+          // create thin red bars at top and bottom of the card to animate during expansion
+          const existingTop = document.querySelector('.__dither-edge-top')
+          const existingBottom = document.querySelector('.__dither-edge-bottom')
+          if (existingTop) existingTop.remove()
+          if (existingBottom) existingBottom.remove()
+          const topBar = document.createElement('div')
+          const bottomBar = document.createElement('div')
+          topBar.className = '__dither-edge-top'
+          bottomBar.className = '__dither-edge-bottom'
+          const vw = document.documentElement.clientWidth || window.innerWidth
+          const vh = document.documentElement.clientHeight || window.innerHeight
+          const rectTop = Math.round(rect.top)
+          const rectBottom = Math.round(rect.bottom)
+          // compute coordinates relative to the GlobalDither element so bars follow it
+          let gdRect = { top: 0, bottom: vh }
+          try { if (gd && gd.getBoundingClientRect) gdRect = gd.getBoundingClientRect() } catch (e) {}
+          const topRel = Math.round(rectTop - gdRect.top)
+          const bottomRel = Math.round(gdRect.bottom - rectBottom)
+          const barHeight = 3
+          Object.assign(topBar.style, {
+            position: 'fixed',
+            left: '0px',
+            right: '0px',
+            height: barHeight + 'px',
+            background: 'var(--primary-red)',
+            zIndex: 100001,
+            pointerEvents: 'none',
+            top: rectTop + 'px',
+            opacity: '1'
+          })
+          Object.assign(bottomBar.style, {
+            position: 'fixed',
+            left: '0px',
+            right: '0px',
+            height: barHeight + 'px',
+            background: 'var(--primary-red)',
+            zIndex: 100001,
+            pointerEvents: 'none',
+            bottom: (vh - rectBottom) + 'px',
+            opacity: '1'
+          })
+          // append bars into the global dither element so they move/clip with it
+          try {
+            if (gd && gd.appendChild) {
+              // make bars positioned relative to gd
+              topBar.style.position = 'absolute'
+              bottomBar.style.position = 'absolute'
+              // place bars using coordinates relative to gd
+              topBar.style.top = topRel + 'px'
+              bottomBar.style.bottom = bottomRel + 'px'
+              gd.appendChild(topBar)
+              gd.appendChild(bottomBar)
+            } else {
+              document.body.appendChild(topBar)
+              document.body.appendChild(bottomBar)
+            }
+          } catch (e) {
+            document.body.appendChild(topBar)
+            document.body.appendChild(bottomBar)
+          }
+
+          // animate clone to full screen bounds (respect safe-area-inset)
+          const targetTop = 0
+          const targetLeft = 0
+          const targetWidth = vw
+          const targetHeight = vh
+          const tl = gsap.timeline({ defaults: { ease: 'power3.inOut' } })
+          tl.to(clone, { top: targetTop, left: targetLeft, width: targetWidth, height: targetHeight, duration: 0.68 }, 0)
+          // animate dither clipPath to full
+          tl.to(gd, { clipPath: fullClip, opacity: 1, duration: 0.64, ease: 'sine.inOut' }, 0)
+          // animate top and bottom bars to screen edges
+          tl.to(topBar, { top: 0, duration: 0.56, ease: 'power3.inOut' }, 0)
+          tl.to(bottomBar, { bottom: 0, duration: 0.56, ease: 'power3.inOut' }, 0)
+          // fade in internal modal content slightly after start
+          tl.to(clone, { opacity: 1, duration: 0.26 }, '-=0.38')
+
+          // when animation completes, remove clone and immediately remove transient bars
+          tl.call(() => {
+            try {
+              try { if (topBar && topBar.parentNode) topBar.parentNode.removeChild(topBar) } catch (e) {}
+              try { if (bottomBar && bottomBar.parentNode) bottomBar.parentNode.removeChild(bottomBar) } catch (e) {}
+            } catch (e) { }
+            try { if (clone && clone.parentNode) clone.parentNode.removeChild(clone) } catch (e) {}
+            // run a final pass to hide any thin hairlines left at bottom
+            try { removeBottomHairlines() } catch (e) {}
+          })
+        } catch (err) { /* non-fatal */ }
+      } catch (err) { /* non-fatal */ }
+    }
 
   const closeCardFullscreen = (index) => {
     const el = cardRefs.current[index]
@@ -2447,85 +2742,113 @@ const MenuPage = () => {
     const titleEl = el.querySelector(`.title-${index}`)
     if (titleEl) {
       gsap.set(titleEl, { willChange: 'opacity' })
-      gsap.to(titleEl, { opacity: 0, duration: isTouchRef.current ? 0.12 : 0.18, ease: 'power2.out' })
+      gsap.to(titleEl, { opacity: 0, duration: isTouchRef.current ? 0.18 : 0.26, ease: 'power2.out' })
     }
-    el.classList.remove('is-open')
-    setOpenedIndex(null)
-    lastOpenModalIndexRef.current = null
-    Flip.from(state, {
-      duration: isTouchRef.current ? 0.24 : 0.5,
-      ease: isTouchRef.current ? 'power2.in' : 'power2.inOut',
-      absolute: true,
-      scale: false,
-      nested: true,
-      onComplete: () => {
-        if (titleEl) {
-          gsap.set(titleEl, { opacity: 1 })
-        }
-        if (gd) {
-          // Останавливаем дыхание dither
-          ditherBreatheTlRef.current?.kill()
-          if (isTouchRef.current) {
-            // На мобилке — просто гасим фон
-            gsap.to(gd, { opacity: 0, duration: 0.18, ease: 'power2.in', onComplete: () => { gd.classList.remove('front'); try { gd.style.backgroundColor = ''; } catch {} } })
-          } else {
-            // Desktop — возвращаем dither к карточке
+    // don't remove the .is-open class or reset opened index until after FLIP animation completes
+    // Run Flip and dither/bars animation concurrently on mobile to avoid sequential delay
+    const runCloseAnimations = async () => {
+      const flipPromise = new Promise((resolve) => {
+        Flip.from(state, {
+          duration: isTouchRef.current ? 0.18 : 0.44,
+          ease: isTouchRef.current ? 'power2.in' : 'power2.inOut',
+          absolute: true,
+          scale: false,
+          nested: true,
+          onComplete: resolve
+        })
+      })
+
+      const gdAnimPromise = new Promise((resolve) => {
+        if (!gd) return resolve()
+        // Останавливаем дыхание dither
+        ditherBreatheTlRef.current?.kill()
+        if (isTouchRef.current) {
+          try {
+            const topBar = (gd && gd.querySelector) ? gd.querySelector('.__dither-edge-top') : document.querySelector('.__dither-edge-top')
+            const bottomBar = (gd && gd.querySelector) ? gd.querySelector('.__dither-edge-bottom') : document.querySelector('.__dither-edge-bottom')
+            const rect = el.getBoundingClientRect()
+            let gdRectNow = { top: 0, bottom: (document.documentElement.clientHeight || window.innerHeight) }
+            try { if (gd && gd.getBoundingClientRect) gdRectNow = gd.getBoundingClientRect() } catch (e) {}
+            const topTarget = Math.round(rect.top - gdRectNow.top)
+            const bottomTarget = Math.round(gdRectNow.bottom - rect.bottom)
+            const tlBars = gsap.timeline({ defaults: { ease: 'power3.inOut' }, onComplete: resolve })
+            const barDur = isTouchRef.current ? 0.22 : 0.44
+            const clipDur = isTouchRef.current ? 0.26 : 0.48
+            if (topBar) tlBars.to(topBar, { top: topTarget + 'px', duration: barDur, ease: 'power3.inOut' }, 0)
+            if (bottomBar) tlBars.to(bottomBar, { bottom: bottomTarget + 'px', duration: barDur, ease: 'power3.inOut' }, 0)
             const endClip = computeClipFromElement(el)
-            const { x, y } = mousePosRef.current
-            const elAtPoint = document.elementFromPoint(x, y)
-            const stillHover = !!(elAtPoint && el.contains(elAtPoint))
-            const shouldHoverAfterClose = stillHover || lastHoveredBeforeOpenRef.current === index
-            gsap.to(gd, {
-              clipPath: endClip,
-              duration: 0.35,
-              ease: 'power2.inOut',
-              onComplete: () => {
-                if (shouldHoverAfterClose) {
-                  gsap.set(gd, { opacity: 1, clipPath: endClip })
-                } else {
-                  gsap.set(gd, { opacity: 0, clipPath: 'inset(0 100% 100% 0 round 16px)' })
-                }
-                gd.classList.remove('front')
-              }
+            tlBars.to(gd, { clipPath: endClip, opacity: 0, duration: clipDur, ease: 'sine.inOut' }, 0)
+            tlBars.call(() => {
+              try { if (topBar && topBar.parentNode) topBar.parentNode.removeChild(topBar) } catch {}
+              try { if (bottomBar && bottomBar.parentNode) bottomBar.parentNode.removeChild(bottomBar) } catch {}
+              gd.classList.remove('front')
+              try { gd.style.backgroundColor = ''; } catch {}
             })
+          } catch (err) {
+            gsap.to(gd, { opacity: 0, duration: 0.12, ease: 'power2.in', onComplete: () => { try { gd.classList.remove('front'); gd.style.backgroundColor = '' } catch {} ; resolve() } })
           }
-        }
-        // Возвращаем видимость остальных карточек
-        cardRefs.current.forEach((card) => {
-          if (!card) return
-          gsap.to(card, { opacity: 1, duration: 0.2, ease: 'power2.out', pointerEvents: 'auto' })
-        })
-        // После того как карточки снова кликабельны — активируем hover на карточке под курсором
-        // Разрешаем обработку hover после закрытия
-        isModalOpenRef.current = false
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const { x, y } = mousePosRef.current
-            let targetIndex = -1
-            for (let i = 0; i < cardRefs.current.length; i++) {
-              const c = cardRefs.current[i]
-              if (!c) continue
-              const r = c.getBoundingClientRect()
-              if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
-                targetIndex = i
-                break
-              }
+        } else {
+          const endClip = computeClipFromElement(el)
+          gsap.to(gd, {
+            clipPath: endClip,
+            duration: 0.28,
+            ease: 'power2.inOut',
+            onComplete: () => {
+              try { gd.classList.remove('front') } catch {}
+              resolve()
             }
-            if (targetIndex === -1) {
-              cardRefs.current.forEach((c) => c && c.classList.remove('force-hover'))
-            } else {
-              cardRefs.current.forEach((c, i) => {
-                if (!c) return
-                if (i === targetIndex) c.classList.add('force-hover')
-                else c.classList.remove('force-hover')
-              })
-              handleHover(targetIndex, true)
-            }
-            lastHoveredBeforeOpenRef.current = null
           })
-        })
+        }
+      })
+
+      // wait for both animations to finish
+      await Promise.all([flipPromise, gdAnimPromise])
+
+      // cleanup & restore UI state
+      try { el.classList.remove('is-open') } catch (e) {}
+      try { setOpenedIndex(null) } catch (e) {}
+      try { lastOpenModalIndexRef.current = null } catch (e) {}
+      if (titleEl) {
+        gsap.set(titleEl, { opacity: 1 })
       }
-    })
+
+      // Возвращаем видимость остальных карточек
+      cardRefs.current.forEach((card) => {
+        if (!card) return
+        gsap.to(card, { opacity: 1, duration: 0.2, ease: 'power2.out', pointerEvents: 'auto' })
+      })
+
+      // Разрешаем обработку hover после закрытия
+      isModalOpenRef.current = false
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const { x, y } = mousePosRef.current
+          let targetIndex = -1
+          for (let i = 0; i < cardRefs.current.length; i++) {
+            const c = cardRefs.current[i]
+            if (!c) continue
+            const r = c.getBoundingClientRect()
+            if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
+              targetIndex = i
+              break
+            }
+          }
+          if (targetIndex === -1) {
+            cardRefs.current.forEach((c) => c && c.classList.remove('force-hover'))
+          } else {
+            cardRefs.current.forEach((c, i) => {
+              if (!c) return
+              if (i === targetIndex) c.classList.add('force-hover')
+              else c.classList.remove('force-hover')
+            })
+            handleHover(targetIndex, true)
+          }
+          lastHoveredBeforeOpenRef.current = null
+        })
+      })
+    }
+
+    runCloseAnimations()
   }
 
   // Подключаем интерактивное управление частицами
@@ -2637,7 +2960,9 @@ const MenuPage = () => {
         // Compensate for scrollbar width to prevent layout shift that causes visible seams
         const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
         document.body.style.overflow = 'hidden';
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
+  document.body.style.paddingRight = `${scrollbarWidth}px`;
+  // Also prevent any horizontal overflow on the root element while modal is open
+  try { document.documentElement.style.overflowX = 'hidden' } catch (e) {}
       } catch { }
       // Центрируем каждый ряд по ширине контейнера
       requestAnimationFrame(() => {
@@ -2650,14 +2975,16 @@ const MenuPage = () => {
     } else {
       try { 
         document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
+  document.body.style.paddingRight = '';
+  try { document.documentElement.style.overflowX = '' } catch (e) {}
       } catch { }
     }
 
     return () => { 
       try { 
         document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
+  document.body.style.paddingRight = '';
+  try { document.documentElement.style.overflowX = '' } catch (e) {}
       } catch { } 
     }
   }, [openedIndex])
@@ -2698,7 +3025,7 @@ const MenuPage = () => {
           const gd = globalDitherRef.current
           if (gd) {
             resetGlobalDither()
-            gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', borderRadius: 0, clipPath: 'none', opacity: 0.28 })
+            gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100dvh', borderRadius: 0, clipPath: 'none', opacity: 0.28 })
           }
           try { setParticleSpeed?.(0.4) } catch { }
         } else {
@@ -2888,7 +3215,7 @@ const MenuPage = () => {
                         <NavButton
                           ref={navBotsRef}
                           className={projectsCategory === 'bots' ? 'active' : ''}
-                          onClick={(e) => handleNavButtonClick('bots', e)}
+                          onClick={(e) => handleProjectsNavButtonClick('bots', e)}
                           data-testid="nav-button-bots"
                         >
                           Боты
@@ -2896,7 +3223,7 @@ const MenuPage = () => {
                         <NavButton
                           ref={navWebRef}
                           className={projectsCategory === 'web' ? 'active' : ''}
-                          onClick={(e) => handleNavButtonClick('web', e)}
+                          onClick={(e) => handleProjectsNavButtonClick('web', e)}
                           data-testid="nav-button-web"
                         >
                           Сайты
@@ -2904,10 +3231,10 @@ const MenuPage = () => {
                         <NavButton
                           ref={navToolsRef}
                           className={projectsCategory === 'tools' ? 'active' : ''}
-                          onClick={(e) => handleNavButtonClick('tools', e)}
+                          onClick={(e) => handleProjectsNavButtonClick('tools', e)}
                           data-testid="nav-button-tools"
                         >
-                          Автоматизация
+                          Софт
                         </NavButton>
                         <MobileNavIndicator ref={mobileIndicatorRef} />
                       </MobileProjectsNavigation>
@@ -3063,7 +3390,7 @@ const MenuPage = () => {
                             Боты
                           </HeadingTab>
                           <HeadingTab ref={tabAutoRef} data-active={servicesCategory === 'automation'} onClick={(e) => { e.stopPropagation(); switchCategory('automation') }}>
-                            Программы / Автоматизация
+                            Программы / Софт
                           </HeadingTab>
                           <TabIndicator ref={indicatorRef} />
                         </HeadingsRow>
@@ -3092,7 +3419,7 @@ const MenuPage = () => {
                             onClick={(e) => handleServicesNavButtonClick('automation', e)}
                             data-testid="services-nav-button-auto"
                           >
-                            Автоматизация
+                            Софт
                           </NavButton>
                         </MobileServicesNavigation>
                         
@@ -3112,7 +3439,7 @@ const MenuPage = () => {
                             onClick={(e) => handleServicesTierButtonClick('optimal', e)}
                             data-testid="services-tier-button-optimal"
                           >
-                            Оптимальный
+                            Стандарт
                           </TierNavButton>
                           <TierNavButton
                             ref={servicesTierPremiumRef}
@@ -3219,7 +3546,7 @@ const MenuPage = () => {
                     onClick={(e) => { e.stopPropagation(); closeCardFullscreen(index) }}
                     aria-label="Закрыть"
                   >
-                    Закрыть ✕
+                    ✕
                   </CloseButton>
                 )}
                 {/* Убрано изображение в хавере "О себе" */}

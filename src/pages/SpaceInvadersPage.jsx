@@ -112,6 +112,29 @@ const ScreenFlashOverlay = styled.div`
   transition: opacity 0.1s ease;
 `
 
+const LowHealthOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, transparent 40%, rgba(255, 68, 68, 0.1) 100%);
+  pointer-events: none;
+  z-index: 998;
+  opacity: ${props => props.visible ? 1 : 0};
+  transition: opacity 0.3s ease;
+  animation: ${props => props.visible ? 'pulse' : 'none'} 2s ease-in-out infinite;
+  
+  @keyframes pulse {
+    0%, 100% { 
+      background: radial-gradient(circle, transparent 40%, rgba(255, 68, 68, 0.1) 100%);
+    }
+    50% { 
+      background: radial-gradient(circle, transparent 40%, rgba(255, 68, 68, 0.2) 100%);
+    }
+  }
+`
+
 const GameOverOverlay = styled.div`
   position: absolute;
   top: 0;
@@ -274,7 +297,9 @@ const SpaceInvadersPage = () => {
     },
     bullets: [],
     enemies: [],
-    particles: []
+    particles: [],
+    shipTrail: [], // Массив точек трейла корабля
+    explosionWaves: [] // Массив волн деформации от взрывов
   })
 
   // Инициализация игры
@@ -655,6 +680,36 @@ const SpaceInvadersPage = () => {
     gameLoop()
   }
 
+  // Обновление трейла корабля
+  const updateShipTrail = () => {
+    const { player, shipTrail } = gameObjects.current
+    
+    // Добавляем новую точку трейла в текущую позицию игрока
+    shipTrail.push({
+      x: player.x,
+      y: player.y + 8, // Немного позади корабля
+      opacity: 1.0,
+      age: 0
+    })
+    
+    // Обновляем существующие точки трейла
+    for (let i = shipTrail.length - 1; i >= 0; i--) {
+      const point = shipTrail[i]
+      point.age++
+      point.opacity = Math.max(0, 1.0 - point.age / 20) // Исчезает за 20 кадров
+      
+      // Удаляем старые точки
+      if (point.opacity <= 0) {
+        shipTrail.splice(i, 1)
+      }
+    }
+    
+    // Ограничиваем количество точек трейла для производительности
+    if (shipTrail.length > 20) {
+      shipTrail.splice(0, shipTrail.length - 20)
+    }
+  }
+
   // Обновление игровой логики
   const updateGame = () => {
     if (gameStateRef.current !== 'playing') {
@@ -662,9 +717,12 @@ const SpaceInvadersPage = () => {
       return
     }
     
-    const { player, bullets, enemies } = gameObjects.current
+    const { player, bullets, enemies, shipTrail } = gameObjects.current
     const canvas = canvasRef.current
     if (!canvas) return
+    
+    // Обновляем трейл корабля
+    updateShipTrail()
     
     // Автоматическая стрельба
     if (Math.random() < 0.1) { // 10% шанс выстрела каждый кадр
@@ -683,22 +741,42 @@ const SpaceInvadersPage = () => {
       return bullet.y > -10
     })
     
-    // Обновляем врагов
+    // Обновляем врагов с уникальным поведением для каждого типа
     enemies.forEach(enemy => {
+      // Базовое движение вниз
       enemy.y += enemy.speed
-      enemy.x += enemy.speedX
       
-      // Отражаем от границ экрана
-      if (enemy.x <= enemy.width/2 || enemy.x >= canvas.width - enemy.width/2) {
-        enemy.speedX *= -0.8 // Отражаем и немного замедляем
+      // Уникальное поведение для каждого типа
+      switch (enemy.type) {
+        case 'fast':
+          // Быстрые враги просто движутся прямо вниз
+          break
+          
+        case 'tank':
+          // Медленные танки слегка покачиваются
+          enemy.x += Math.sin(enemy.y * 0.02) * 0.5
+          break
+          
+        case 'zigzag':
+          // Зигзаг движение
+          enemy.zigzagTimer++
+          if (enemy.zigzagTimer >= enemy.zigzagChangeInterval) {
+            enemy.zigzagDirection *= -1 // Меняем направление
+            enemy.zigzagTimer = 0
+            enemy.zigzagChangeInterval = 20 + Math.random() * 40 // Новый интервал
+          }
+          
+          enemy.x += enemy.speedX * enemy.zigzagDirection
+          
+          // Отражаем от границ экрана для зигзага
+          if (enemy.x <= enemy.width/2 || enemy.x >= canvas.width - enemy.width/2) {
+            enemy.zigzagDirection *= -1
+          }
+          break
       }
       
-      // Меняем направление случайно
-      enemy.directionChangeTimer--
-      if (enemy.directionChangeTimer <= 0) {
-        enemy.speedX = (Math.random() - 0.5) * 3
-        enemy.directionChangeTimer = Math.random() * 60 + 30
-      }
+      // Ограничиваем всех врагов границами экрана
+      enemy.x = Math.max(enemy.width/2, Math.min(canvas.width - enemy.width/2, enemy.x))
     })
     
     // Проверяем врагов, которые ушли за нижний край экрана
@@ -743,6 +821,20 @@ const SpaceInvadersPage = () => {
       particle.alpha = particle.life / 60 // Плавное исчезновение
       
       return particle.life > 0
+    })
+    
+    // Обновляем волны деформации
+    gameObjects.current.explosionWaves = gameObjects.current.explosionWaves.filter(wave => {
+      wave.age++
+      const progress = wave.age / wave.maxAge
+      
+      // Радиус расширяется с замедлением
+      wave.radius = wave.maxRadius * (1 - Math.pow(1 - progress, 2))
+      
+      // Сила уменьшается со временем
+      wave.currentStrength = wave.strength * (1 - progress)
+      
+      return wave.age < wave.maxAge
     })
     
     // Проверяем коллизии
@@ -802,6 +894,14 @@ const SpaceInvadersPage = () => {
         ctx.translate(-player.x, -player.y)
       }
       
+      // Добавляем красное свечение при низких жизнях
+      if (lives <= 1) {
+        ctx.shadowColor = '#FF4444'
+        ctx.shadowBlur = 15
+        ctx.shadowOffsetX = 0
+        ctx.shadowOffsetY = 0
+      }
+      
       ctx.fillStyle = '#D14836' // Фирменный оранжево-красный
       ctx.beginPath()
       
@@ -817,6 +917,10 @@ const SpaceInvadersPage = () => {
       ctx.closePath()
       ctx.fill()
       
+      // Сбрасываем тень
+      ctx.shadowColor = 'transparent'
+      ctx.shadowBlur = 0
+      
       // Восстанавливаем контекст
       ctx.restore()
     } else {
@@ -827,9 +931,114 @@ const SpaceInvadersPage = () => {
     }
   }
 
+  // Отрисовка трейла корабля
+  const drawShipTrail = (ctx) => {
+    const { shipTrail } = gameObjects.current
+    
+    if (shipTrail.length < 2) return // Нужно минимум 2 точки для линии
+    
+    ctx.save()
+    
+    // Рисуем трейл как градиентную линию
+    for (let i = 1; i < shipTrail.length; i++) {
+      const currentPoint = shipTrail[i]
+      const prevPoint = shipTrail[i - 1]
+      
+      // Создаем градиент от предыдущей точки к текущей
+      const gradient = ctx.createLinearGradient(
+        prevPoint.x, prevPoint.y,
+        currentPoint.x, currentPoint.y
+      )
+      
+      // Фирменный красный цвет с прозрачностью
+      gradient.addColorStop(0, `rgba(209, 72, 54, ${prevPoint.opacity * 0.8})`)
+      gradient.addColorStop(1, `rgba(209, 72, 54, ${currentPoint.opacity * 0.8})`)
+      
+      // Рисуем линию
+      ctx.strokeStyle = gradient
+      ctx.lineWidth = 3 + (currentPoint.opacity * 2) // Толщина зависит от прозрачности
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(prevPoint.x, prevPoint.y)
+      ctx.lineTo(currentPoint.x, currentPoint.y)
+      ctx.stroke()
+      
+      // Добавляем светящиеся точки для большего эффекта
+      ctx.fillStyle = `rgba(255, 255, 255, ${currentPoint.opacity * 0.6})`
+      ctx.beginPath()
+      ctx.arc(currentPoint.x, currentPoint.y, 1 + currentPoint.opacity, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    
+    ctx.restore()
+  }
+
+  // Отрисовка волн деформации пространства
+  const drawExplosionWaves = (ctx) => {
+    const { explosionWaves } = gameObjects.current
+    
+    explosionWaves.forEach(wave => {
+      ctx.save()
+      
+      // Создаем цветовую схему в зависимости от типа врага
+      let waveColor
+      switch (wave.type) {
+        case 'fast':
+          waveColor = 'rgba(255, 68, 68, ' // Красный
+          break
+        case 'tank':
+          waveColor = 'rgba(65, 105, 225, ' // Синий
+          break
+        case 'zigzag':
+          waveColor = 'rgba(50, 205, 50, ' // Зеленый
+          break
+        default:
+          waveColor = 'rgba(255, 255, 255, '
+      }
+      
+      // Рисуем несколько концентрических кругов для эффекта волны
+      const ringCount = 3
+      for (let i = 0; i < ringCount; i++) {
+        const ringProgress = (i + 1) / ringCount
+        const ringRadius = wave.radius * ringProgress
+        const ringOpacity = (wave.currentStrength / wave.strength) * (1 - ringProgress * 0.7)
+        
+        if (ringOpacity > 0.01) {
+          // Внешняя светящаяся обводка
+          ctx.strokeStyle = waveColor + (ringOpacity * 0.8) + ')'
+          ctx.lineWidth = 3 + (wave.currentStrength * 0.3)
+          ctx.beginPath()
+          ctx.arc(wave.x, wave.y, ringRadius, 0, Math.PI * 2)
+          ctx.stroke()
+          
+          // Внутренняя более слабая обводка
+          ctx.strokeStyle = waveColor + (ringOpacity * 0.4) + ')'
+          ctx.lineWidth = 1 + (wave.currentStrength * 0.1)
+          ctx.beginPath()
+          ctx.arc(wave.x, wave.y, ringRadius - 2, 0, Math.PI * 2)
+          ctx.stroke()
+        }
+      }
+      
+      // Добавляем центральную вспышку на раннем этапе волны
+      if (wave.age < wave.maxAge * 0.3) {
+        const flashOpacity = (1 - wave.age / (wave.maxAge * 0.3)) * 0.6
+        ctx.fillStyle = waveColor + flashOpacity + ')'
+        ctx.beginPath()
+        ctx.arc(wave.x, wave.y, wave.currentStrength * 2, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      
+      ctx.restore()
+    })
+  }
+
   // Отрисовка игры
   const drawGame = (ctx) => {
-    const { bullets, enemies, particles } = gameObjects.current
+    const { bullets, enemies, particles, shipTrail, explosionWaves } = gameObjects.current
+    
+    // Рисуем трейл корабля (до игрока, чтобы был позади)
+    drawShipTrail(ctx)
     
     // Рисуем игрока
     drawPlayer(ctx)
@@ -840,17 +1049,50 @@ const SpaceInvadersPage = () => {
       ctx.fillRect(bullet.x - bullet.width/2, bullet.y, bullet.width, bullet.height)
     })
     
-    // Рисуем врагов
+    // Рисуем врагов с новыми типами
     enemies.forEach(enemy => {
-      ctx.fillStyle = enemy.type === 'weak' ? '#87CEEB' : '#4169E1' // Светло-голубой или синий
-      ctx.fillRect(enemy.x - enemy.width/2, enemy.y - enemy.height/2, enemy.width, enemy.height)
+      // Используем цвет врага из его конфигурации
+      ctx.fillStyle = enemy.color
       
-      // Показываем здоровье для сильных врагов
-      if (enemy.type === 'strong' && enemy.health < 3) {
-        ctx.fillStyle = '#FF4444'
-        ctx.font = '12px Arial'
+      // Рисуем врага в зависимости от типа
+      switch (enemy.type) {
+        case 'fast':
+          // Быстрые враги - маленькие треугольники
+          ctx.save()
+          ctx.translate(enemy.x, enemy.y)
+          ctx.beginPath()
+          ctx.moveTo(0, -enemy.height/2)
+          ctx.lineTo(-enemy.width/2, enemy.height/2)
+          ctx.lineTo(enemy.width/2, enemy.height/2)
+          ctx.closePath()
+          ctx.fill()
+          ctx.restore()
+          break
+          
+        case 'tank':
+          // Танки - большие квадраты с рамкой
+          ctx.fillRect(enemy.x - enemy.width/2, enemy.y - enemy.height/2, enemy.width, enemy.height)
+          ctx.strokeStyle = '#FFFFFF'
+          ctx.lineWidth = 2
+          ctx.strokeRect(enemy.x - enemy.width/2, enemy.y - enemy.height/2, enemy.width, enemy.height)
+          break
+          
+        case 'zigzag':
+          // Зигзаг враги - ромбы
+          ctx.save()
+          ctx.translate(enemy.x, enemy.y)
+          ctx.rotate(Math.PI / 4) // Поворачиваем на 45 градусов
+          ctx.fillRect(-enemy.width/2, -enemy.height/2, enemy.width, enemy.height)
+          ctx.restore()
+          break
+      }
+      
+      // Показываем здоровье для врагов с несколькими HP
+      if (enemy.health > 1 && enemy.health < enemy.maxHealth) {
+        ctx.fillStyle = '#FFFFFF'
+        ctx.font = '10px Arial'
         ctx.textAlign = 'center'
-        ctx.fillText(enemy.health.toString(), enemy.x, enemy.y - 20)
+        ctx.fillText(enemy.health.toString(), enemy.x, enemy.y - enemy.height/2 - 5)
       }
     })
     
@@ -864,6 +1106,9 @@ const SpaceInvadersPage = () => {
       ctx.fill()
       ctx.restore()
     })
+    
+    // Рисуем волны деформации пространства
+    drawExplosionWaves(ctx)
   }
 
   // Создание врагов
@@ -874,25 +1119,74 @@ const SpaceInvadersPage = () => {
       return
     }
     
-    const enemyType = Math.random() < 0.7 ? 'weak' : 'strong' // 70% слабых, 30% сильных
+    // Выбираем тип врага: 60% Tank, 20% Fast, 20% Zigzag
+    const rand = Math.random()
+    let enemyType
+    if (rand < 0.6) {
+      enemyType = 'tank'
+    } else if (rand < 0.8) {
+      enemyType = 'fast'
+    } else {
+      enemyType = 'zigzag'
+    }
+    
+    // Конфигурация для каждого типа врага
+    const enemyConfigs = {
+      fast: {
+        width: 20,        // Увеличено с 15 до 20
+        height: 20,       // Увеличено с 15 до 20
+        speed: 3,         // Уменьшено с 4 до 3
+        speedX: 0,
+        health: 1,
+        color: '#FF4444', // Красный
+        points: 15
+      },
+      tank: {
+        width: 35,
+        height: 35,
+        speed: 1,
+        speedX: 0,
+        health: 5,
+        color: '#4169E1', // Синий
+        points: 50
+      },
+      zigzag: {
+        width: 20,
+        height: 20,
+        speed: 2,
+        speedX: 3, // Начальная скорость зигзага
+        health: 2,
+        color: '#32CD32', // Зеленый
+        points: 25
+      }
+    }
+    
+    const config = enemyConfigs[enemyType]
     
     const enemy = {
-      x: Math.random() * (canvas.width - 40) + 20,
-      y: -30,
-      width: 25,
-      height: 25,
-      speed: enemyType === 'weak' ? 2 : 1.5,
-      speedX: (Math.random() - 0.5) * 3, // Хаотичное движение влево/вправо
+      x: Math.random() * (canvas.width - config.width) + config.width / 2,
+      y: -config.height,
+      width: config.width,
+      height: config.height,
+      speed: config.speed,
+      speedX: config.speedX,
       type: enemyType,
-      health: enemyType === 'weak' ? 1 : 3,
-      directionChangeTimer: Math.random() * 60 + 30 // Смена направления каждые 30-90 кадров
+      health: config.health,
+      maxHealth: config.health,
+      color: config.color,
+      points: config.points,
+      // Специальные свойства для зигзага
+      zigzagDirection: Math.random() > 0.5 ? 1 : -1,
+      zigzagTimer: 0,
+      zigzagChangeInterval: 30 + Math.random() * 30 // 30-60 кадров до смены направления
     }
     
     gameObjects.current.enemies.push(enemy)
     
-    console.log('✅ Enemy spawned:', { 
+    console.log('✅ New enemy spawned:', { 
       type: enemyType, 
       position: { x: enemy.x, y: enemy.y },
+      health: enemy.health,
       totalEnemies: gameObjects.current.enemies.length,
       gameState: gameStateRef.current
     })
@@ -917,15 +1211,17 @@ const SpaceInvadersPage = () => {
           bullets.splice(bulletIndex, 1)
           
           if (enemy.health <= 0) {
-            // Создаем частицы взрыва
+            // Создаем частицы взрыва и волну деформации
             createExplosionParticles(enemy.x, enemy.y, enemy.type)
+            createExplosionWave(enemy.x, enemy.y, enemy.type)
             
             enemies.splice(enemyIndex, 1)
-            setScore(prev => prev + (enemy.type === 'weak' ? 10 : 30))
+            // Используем очки из конфигурации врага
+            setScore(prev => prev + enemy.points)
             
             logger.particles('Enemy destroyed', { 
               type: enemy.type, 
-              scoreGained: enemy.type === 'weak' ? 10 : 30 
+              scoreGained: enemy.points
             })
           }
         }
@@ -945,8 +1241,9 @@ const SpaceInvadersPage = () => {
         player.y + player.height/2 > enemy.y - enemy.height/2
       ) {
         // Столкновение с игроком!
-        // Создаем частицы взрыва врага
+        // Создаем частицы взрыва врага и волну деформации
         createExplosionParticles(enemy.x, enemy.y, enemy.type)
+        createExplosionWave(enemy.x, enemy.y, enemy.type)
         
         enemies.splice(enemyIndex, 1) // Убираем врага
         setLives(prev => {
@@ -1001,6 +1298,8 @@ const SpaceInvadersPage = () => {
     gameObjects.current.bullets = []
     gameObjects.current.enemies = []
     gameObjects.current.particles = []
+    gameObjects.current.shipTrail = [] // Очищаем трейл корабля
+    gameObjects.current.explosionWaves = [] // Очищаем волны деформации
     
     // Сброс позиции игрока
     const canvas = canvasRef.current
@@ -1107,13 +1406,19 @@ const SpaceInvadersPage = () => {
     }
   }
 
-  // Создание частиц взрыва
+  // Создание частиц взрыва для новых типов врагов
   const createExplosionParticles = (x, y, enemyType) => {
-    const particleCount = enemyType === 'weak' ? 8 : 12
-    const color = enemyType === 'weak' ? '#87CEEB' : '#4169E1'
+    // Конфигурация частиц для каждого типа врага
+    const particleConfigs = {
+      fast: { count: 6, color: '#FF4444', size: 1.5 },    // Мало красных частиц
+      tank: { count: 15, color: '#4169E1', size: 3 },     // Много больших синих частиц
+      zigzag: { count: 10, color: '#32CD32', size: 2 }    // Средне зеленых частиц
+    }
     
-    for (let i = 0; i < particleCount; i++) {
-      const angle = (Math.PI * 2 / particleCount) * i + Math.random() * 0.5
+    const config = particleConfigs[enemyType] || particleConfigs.fast
+    
+    for (let i = 0; i < config.count; i++) {
+      const angle = (Math.PI * 2 / config.count) * i + Math.random() * 0.5
       const speed = 2 + Math.random() * 3
       
       gameObjects.current.particles.push({
@@ -1121,12 +1426,35 @@ const SpaceInvadersPage = () => {
         y: y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: 2 + Math.random() * 3,
-        color: color,
+        size: config.size + Math.random() * 2,
+        color: config.color,
         alpha: 1,
         life: 60 + Math.random() * 30 // жизнь частицы в кадрах
       })
     }
+  }
+
+  // Создание волны деформации пространства при взрыве
+  const createExplosionWave = (x, y, enemyType) => {
+    // Конфигурация волны для каждого типа врага
+    const waveConfigs = {
+      fast: { maxRadius: 80, strength: 5, duration: 30 },     // Маленькая быстрая волна
+      tank: { maxRadius: 150, strength: 12, duration: 60 },   // Большая мощная волна
+      zigzag: { maxRadius: 100, strength: 8, duration: 45 }   // Средняя волна
+    }
+    
+    const config = waveConfigs[enemyType] || waveConfigs.fast
+    
+    gameObjects.current.explosionWaves.push({
+      x: x,
+      y: y,
+      radius: 0,
+      maxRadius: config.maxRadius,
+      strength: config.strength,
+      age: 0,
+      maxAge: config.duration,
+      type: enemyType
+    })
   }
 
   // Эффект тряски экрана и покраснения
@@ -1159,6 +1487,9 @@ const SpaceInvadersPage = () => {
         <ScreenFlashOverlay opacity={screenFlash.opacity} />
       )}
       
+      {/* Красный overlay при критично низких жизнях */}
+      <LowHealthOverlay visible={lives <= 1 && gameState === 'playing'} />
+      
       <canvas
         data-testid="game-canvas"
         ref={canvasRef}
@@ -1176,7 +1507,13 @@ const SpaceInvadersPage = () => {
       
       <GameUI>
         <div>Счет: {score}</div>
-        <div>Жизни: {lives}</div>
+        <div style={{ 
+          color: lives <= 1 ? '#FF4444' : 'white',
+          textShadow: lives <= 1 ? '0 0 10px #FF4444, 0 0 20px #FF4444' : '0 2px 10px rgba(0, 0, 0, 0.8)',
+          fontWeight: lives <= 1 ? 'bold' : 'normal'
+        }}>
+          Жизни: {lives}
+        </div>
         <div style={{ fontSize: '0.8em', marginTop: '0.5rem', opacity: 0.7 }}>
           Зажми и двигай для управления
         </div>
