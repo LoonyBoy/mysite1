@@ -270,6 +270,7 @@ const HomePage = () => {
   const navigate = useNavigate()
   const { camera, setTransitionContext } = useParticles()
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
+  const [isProjectModalAnimationReady, setIsProjectModalAnimationReady] = useState(false)
   
   // Детекция мобильного устройства для оптимизации анимаций
   const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
@@ -302,16 +303,64 @@ const HomePage = () => {
   })
 
   // Блокируем скролл body когда модальное окно открыто
+  // Блокируем скролл body когда модальное окно открыто — более надёжный метод для мобильных
+  // Используем position: fixed и сохраняем scrollY, чтобы избежать «прыжков» из-за изменения viewport
+  const bodyLockRef = useRef({ scrollY: 0, prevStyles: {} })
+
   useEffect(() => {
-    if (isProjectModalOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
+    const lockBody = () => {
+      const scrollY = window.scrollY || window.pageYOffset || 0
+      const body = document.body
+      // Сохраняем инлайн-стили, чтобы восстановить их позже
+      bodyLockRef.current.prevStyles = {
+        position: body.style.position || '',
+        top: body.style.top || '',
+        left: body.style.left || '',
+        right: body.style.right || '',
+        width: body.style.width || '',
+        overflow: body.style.overflow || '',
+        overscrollBehavior: body.style.overscrollBehavior || ''
+      }
+      bodyLockRef.current.scrollY = scrollY
+
+      body.style.position = 'fixed'
+      body.style.top = `-${scrollY}px`
+      body.style.left = '0'
+      body.style.right = '0'
+      body.style.width = '100%'
+      body.style.overflow = 'hidden'
+      body.style.overscrollBehavior = 'none'
     }
 
-    // Cleanup при размонтировании компонента
+    const unlockBody = () => {
+      const body = document.body
+      const { scrollY, prevStyles } = bodyLockRef.current
+
+      // Восстанавливаем предыдущие инлайн-стили
+      body.style.position = prevStyles.position
+      body.style.top = prevStyles.top
+      body.style.left = prevStyles.left
+      body.style.right = prevStyles.right
+      body.style.width = prevStyles.width
+      body.style.overflow = prevStyles.overflow
+      body.style.overscrollBehavior = prevStyles.overscrollBehavior
+
+      // Восстанавливаем позицию прокрутки
+      window.scrollTo(0, scrollY || 0)
+    }
+
+    if (isProjectModalOpen) {
+      lockBody()
+    } else {
+      // Небольшая отложенная очистка чтобы избежать layout-thrashing если close вызывается сразу
+      unlockBody()
+    }
+
     return () => {
-      document.body.style.overflow = ''
+      // Cleanup на размонтировании
+      if (isProjectModalOpen) {
+        unlockBody()
+      }
     }
   }, [isProjectModalOpen])
 
@@ -754,8 +803,9 @@ const HomePage = () => {
           <ButtonsContainer>
             <CreateProjectButton 
               onClick={() => {
-                // Мгновенно устанавливаем состояние для предотвращения мигания
+                // НИКАКИХ БЛЯДСКИХ ЗАДЕРЖЕК - ВСЁ СРАЗУ
                 setIsProjectModalOpen(true)
+                setIsProjectModalAnimationReady(true)
               }}
             >
               Создать проект
@@ -769,7 +819,12 @@ const HomePage = () => {
       
       <ProjectModal 
         isOpen={isProjectModalOpen} 
-        onClose={() => setIsProjectModalOpen(false)} 
+        // trigger the internal entry animation slightly after mount to avoid animation races on mobile
+        startAnimation={isProjectModalAnimationReady}
+        onClose={() => {
+          setIsProjectModalAnimationReady(false)
+          setIsProjectModalOpen(false)
+        }} 
       />
       
       <MobileHints />

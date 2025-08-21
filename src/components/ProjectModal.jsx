@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 import { motion, AnimatePresence } from 'framer-motion'
+import { gsap } from 'gsap'
+import AnimatedInput from './AnimatedInput'
+import telegramIcon from '../images/telegram.svg'
+import whatsappIcon from '../images/whatsapp.svg'
+import emailIcon from '../images/email.svg'
 
 const ModalOverlay = styled(motion.div)`
   position: fixed;
@@ -40,11 +45,13 @@ const ModalContent = styled(motion.div)`
   @media (max-width: 768px) {
     max-width: 100%;
     height: auto;
-    max-height: 80vh;
+  max-height: 95vh; /* Увеличили до 95vh */
     border-radius: 12px 12px 0 0;
     width: 100vw;
     display: flex;
     flex-direction: column;
+  /* Use safe-area inset instead of translate to avoid visual overflow on notch/status bars */
+  padding-top: calc(env(safe-area-inset-top, 8px) + 8px);
   }
 `
 
@@ -54,7 +61,7 @@ const ModalHeader = styled.div`
   flex-shrink: 0;
 
   @media (max-width: 768px) {
-    padding: 20px 20px 15px;
+  padding: 20px 20px 12px; /* Увеличили верхний отступ, чтобы крестик находился внутри рамки */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 `
@@ -69,72 +76,80 @@ const ModalTitle = styled.h2`
 
   @media (max-width: 768px) {
     font-size: 1.4rem;
-    text-align: center;
+    text-align: left; /* Изменили с center на left */
     padding-right: 40px;
   }
 `
 
 const CloseButton = styled.button`
-  position: absolute;
-  top: 20px;
-  right: 25px;
+  /* same visual style as MenuPage close, but positioned inside modal */
+  position: absolute; /* inside ModalContent */
+  top: 16px;
+  right: 16px;
+  z-index: 20; /* above modal content */
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--primary-red);
   background: transparent;
-  border: none;
-  color: #999;
-  font-size: 28px;
-  cursor: pointer;
-  padding: 5px;
-  transition: color 0.2s ease;
+  border: 2px solid var(--primary-red);
+  border-radius: 0; /* match 'О себе' */
+  padding: 0;
+  font-size: 18px;
   line-height: 1;
-  z-index: 10;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
 
   &:hover {
-    color: #fff;
+    background: var(--primary-red);
+    color: var(--black);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.35);
   }
 
   @media (max-width: 768px) {
-    top: 15px;
-    right: 15px;
-    font-size: 24px;
-    padding: 8px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 50%;
+  top: calc(env(safe-area-inset-top, 6px) + 2px); /* ещё чуть выше */
+  right: 12px;
     width: 40px;
     height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 16px;
   }
 `
 
 const BackButton = styled.button`
+  /* positioned to the left of CloseButton */
   position: absolute;
-  bottom: 25px;
-  left: 40px;
+  top: 16px;
+  right: 76px; /* sits left of the close button */
+  z-index: 20;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--primary-red);
   background: transparent;
-  border: none;
-  color: #999;
-  font-size: 16px;
+  border: 2px solid var(--primary-red);
+  border-radius: 0;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
-  padding: 8px 12px;
-  transition: color 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 6px;
+  transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
 
   &:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--primary-red);
+    color: var(--black);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.35);
   }
 
   @media (max-width: 768px) {
-    position: static;
-    padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    margin-bottom: 15px;
-    align-self: flex-start;
+    top: calc(env(safe-area-inset-top, 6px) + 2px);
+    right: 64px; /* leave a gap from the close button */
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
   }
 `
 
@@ -162,10 +177,11 @@ const ModalBody = styled.div`
   }
 
   @media (max-width: 768px) {
-    padding: 0 20px 20px;
+    padding: 0 20px 16px; /* Уменьшили нижний padding с 20px до 16px */
     max-height: none;
     overflow-y: auto;
     flex: 1;
+    min-height: 0; /* Позволяет сжиматься */
     
     &::-webkit-scrollbar {
       width: 3px;
@@ -291,39 +307,16 @@ const ContinueContainer = styled.div`
 
   @media (max-width: 768px) {
     flex-direction: column;
-    gap: 15px;
+    gap: 8px; /* Уменьшили gap */
     align-items: stretch;
-    margin-top: 20px;
-    padding: 15px 0 0;
+    margin-top: 12px; /* Уменьшили margin-top */
+    padding: 8px 0 0; /* Уменьшили padding */
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
   }
 `
 
-const BackButtonInline = styled(motion.button)`
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #999;
-  padding: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 50px;
-
-  &:hover {
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.5);
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  @media (max-width: 768px) {
-    padding: 16px;
-    border-radius: 8px;
-    min-width: 56px;
-  }
-`
+/* BackButtonInline removed: desktop inline "Back" button left of Continue is deleted per UX change */
 
 const ButtonGroup = styled.div`
   display: flex;
@@ -333,12 +326,6 @@ const ButtonGroup = styled.div`
   @media (max-width: 768px) {
     width: 100%;
     order: 2;
-    
-    ${BackButtonInline} {
-      flex-shrink: 0;
-      width: auto;
-    }
-    
     ${ContinueButton} {
       flex: 1;
     }
@@ -352,8 +339,8 @@ const ProgressIndicator = styled.div`
 
   @media (max-width: 768px) {
     justify-content: center;
-    order: 1;
-    margin-bottom: 5px;
+    order: 2; /* Перемещаем вниз в ButtonGroup */
+    margin-top: 8px; /* Небольшой отступ сверху */
   }
 `
 
@@ -391,7 +378,7 @@ const FormContainer = styled.div`
   gap: 24px;
 
   @media (max-width: 768px) {
-    gap: 20px;
+    gap: 12px; /* Уменьшили еще больше для мобильных */
   }
 `
 
@@ -405,6 +392,9 @@ const Label = styled.label`
   color: #fff;
   font-weight: 500;
   font-size: 1rem;
+  @media (max-width: 768px) {
+    display: none; /* hide labels on mobile, inputs will use placeholders */
+  }
 `
 
 const Input = styled.input`
@@ -429,6 +419,8 @@ const Input = styled.input`
     padding: 16px;
     font-size: 16px; /* Предотвращает зум на iOS */
     border-radius: 12px;
+  height: 48px;
+  line-height: 48px;
   }
 `
 
@@ -456,20 +448,147 @@ const TextArea = styled.textarea`
     padding: 16px;
     font-size: 16px; /* Предотвращает зум на iOS */
     border-radius: 12px;
-    min-height: 120px;
+  min-height: 48px;
+  height: 48px;
+  line-height: 48px;
+  resize: none;
   }
 `
 
 const ContactButtonsContainer = styled.div`
-  display: flex;
+  display: none; /* hide text buttons by default (icons used instead) */
   flex-direction: column;
   gap: 12px;
   margin-top: 30px;
 
   @media (max-width: 768px) {
-    gap: 10px;
-    margin-top: 20px;
-    padding-bottom: 20px;
+    /* keep hidden on mobile as well (mobile uses icon row) */
+    display: none;
+  }
+`
+
+const MobileContactWrapper = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
+    margin-top: 12px;
+    padding: 8px 0 0;
+  /* removed top border per design */
+  }
+`
+
+const DesktopContactWrapper = styled.div`
+  display: block;
+  margin-top: 12px;
+  padding: 8px 0 0;
+  /* removed top border to match design */
+
+  @media (max-width: 768px) {
+    display: none; /* hide on mobile */
+  }
+`
+
+const MobileContactHeader = styled.div`
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: center;
+  margin-bottom: 10px;
+`
+
+const MobileIconGroup = styled.div`
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+`
+
+const MobileIconButton = styled(motion.button)`
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none; /* remove frame */
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease, opacity 0.12s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  
+  img {
+    display: block;
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    transition: filter 120ms ease, opacity 120ms ease;
+    /* default: white-ish when disabled */
+    filter: invert(1) brightness(1.2) saturate(0);
+  }
+
+  /* when button is enabled, tint icon to primary red */
+  &:not(:disabled) img {
+    /* approximate red tint via filter */
+    filter: invert(21%) sepia(93%) saturate(5200%) hue-rotate(-6deg) brightness(0.95) contrast(1);
+  }
+
+  &:disabled img {
+    opacity: 0.45;
+  }
+
+  /* prefer mask-based coloring (useful when using imported SVGs) */
+  img { display: none; }
+
+  &[data-icon="telegram"] {
+    -webkit-mask-image: url(${telegramIcon});
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: 36px 36px;
+    mask-image: url(${telegramIcon});
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: 36px 36px;
+    background-color: #ffffff; /* default (disabled look) */
+  }
+
+  &[data-icon="whatsapp"] {
+    -webkit-mask-image: url(${whatsappIcon});
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: 36px 36px;
+    mask-image: url(${whatsappIcon});
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: 36px 36px;
+    background-color: #ffffff;
+  }
+
+  &[data-icon="email"] {
+    -webkit-mask-image: url(${emailIcon});
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: 36px 36px;
+    mask-image: url(${emailIcon});
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: 36px 36px;
+    background-color: #ffffff;
+  }
+
+  /* enabled -> primary red fill */
+  &:not(:disabled)[data-icon="telegram"],
+  &:not(:disabled)[data-icon="whatsapp"],
+  &:not(:disabled)[data-icon="email"] {
+    background-color: var(--primary-red);
   }
 `
 
@@ -562,7 +681,7 @@ const subcategories = {
   ]
 }
 
-const ProjectModal = ({ isOpen, onClose }) => {
+const ProjectModal = ({ isOpen, onClose, startAnimation = true }) => {
   const [step, setStep] = useState('main') // 'main', 'subcategory', 'contact'
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [selectedSubcategories, setSelectedSubcategories] = useState([])
@@ -572,6 +691,19 @@ const ProjectModal = ({ isOpen, onClose }) => {
     description: ''
   })
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight)
+
+  const isMobile = typeof window !== 'undefined' && (window.innerWidth <= 768 || 'ontouchstart' in window)
+
+  // Убираем все блядские переходы - мгновенное появление
+  const overlayVariants = {
+    hidden: { opacity: 1, backdropFilter: 'none' },
+    visible: { opacity: 1, backdropFilter: 'blur(16px)' }
+  }
+
+  const modalVariants = {
+    hidden: { y: 0, opacity: 1, scale: 1 },
+    visible: { y: 0, opacity: 1, scale: 1 }
+  }
 
   // Обновляем высоту viewport для мобильных устройств
   useEffect(() => {
@@ -595,23 +727,12 @@ const ProjectModal = ({ isOpen, onClose }) => {
       setSelectedCategory(null)
       setSelectedSubcategories([])
       setFormData({ name: '', phone: '', description: '' })
-      
-      // Блокируем скролл body
-      document.body.style.overflow = 'hidden'
     } else {
       // Сброс состояния при закрытии модального окна для полной очистки
       setStep('main')
       setSelectedCategory(null)
       setSelectedSubcategories([])
       setFormData({ name: '', phone: '', description: '' })
-      
-      // Восстанавливаем скролл body при закрытии
-      document.body.style.overflow = ''
-    }
-    
-    // Cleanup при размонтировании
-    return () => {
-      document.body.style.overflow = ''
     }
   }, [isOpen])
 
@@ -717,48 +838,24 @@ const ProjectModal = ({ isOpen, onClose }) => {
   }
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
+        // Убираем блядский blocker - модалка появляется мгновенно
         <ModalOverlay
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
+          variants={overlayVariants}
+          initial="visible"
+          animate="visible"
+          exit="hidden"
           onClick={onClose}
         >
         <ModalContent
-          initial={{ 
-            scale: window.innerWidth <= 768 ? 1 : 0.95, 
-            opacity: 0,
-            y: window.innerWidth <= 768 ? 30 : 0
-          }}
-          animate={{ 
-            scale: 1, 
-            opacity: 1,
-            y: 0
-          }}
-          exit={{ 
-            scale: window.innerWidth <= 768 ? 1 : 0.95, 
-            opacity: 0,
-            y: window.innerWidth <= 768 ? 30 : 0
-          }}
-          transition={{
-            duration: 0.25,
-            ease: "easeOut",
-            delay: 0.05
-          }}
+          variants={modalVariants}
+          initial="visible"
+          animate="visible"
+          exit="hidden"
           onClick={(e) => e.stopPropagation()}
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 300 }}
-          dragElastic={{ top: 0, bottom: 0.5 }}
-          onDragEnd={(e, { offset, velocity }) => {
-            if (offset.y > 100 || velocity.y > 500) {
-              onClose()
-            }
-          }}
         >
           <ModalHeader>
-            <SwipeIndicator />
             {step !== 'main' && (
               <BackButton onClick={handleBack}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -768,8 +865,8 @@ const ProjectModal = ({ isOpen, onClose }) => {
             )}
             <ModalTitle>
               {step === 'main' && 'Мне нужно...'}
-              {step === 'subcategory' && 'Дополнительные опции'}
-              {step === 'contact' && 'Свяжитесь со мной'}
+              {step === 'subcategory' && 'Доп.опции'}
+              {step === 'contact' && 'Финишная прямая'}
             </ModalTitle>
             <CloseButton onClick={onClose}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -778,6 +875,7 @@ const ProjectModal = ({ isOpen, onClose }) => {
             </CloseButton>
           </ModalHeader>
 
+          {/* Убираем условный рендер - показываем всё сразу */}
           <ModalBody>
             {step === 'main' && (
               <>
@@ -826,17 +924,7 @@ const ProjectModal = ({ isOpen, onClose }) => {
                   ))}
                 </OptionsList>
                 <ContinueContainer>
-                  {renderProgressIndicator()}
                   <ButtonGroup>
-                    <BackButtonInline
-                      onClick={handleBack}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
-                      </svg>
-                    </BackButtonInline>
                     <ContinueButton
                       onClick={handleContinueToContact}
                       whileHover={{ scale: 1.02 }}
@@ -845,54 +933,40 @@ const ProjectModal = ({ isOpen, onClose }) => {
                       Продолжить
                     </ContinueButton>
                   </ButtonGroup>
+                  {renderProgressIndicator()}
                 </ContinueContainer>
               </>
             )}
 
             {step === 'contact' && (
               <>
-                <ContinueContainer>
-                  {renderProgressIndicator()}
-                  <BackButtonInline
-                    onClick={handleBack}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
-                    </svg>
-                  </BackButtonInline>
-                </ContinueContainer>
-                
                 <FormContainer>
                   <FormGroup>
-                    <Label>Имя *</Label>
-                    <Input
-                      type="text"
-                      placeholder="Ваше имя"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                    />
-                  </FormGroup>
+                      <AnimatedInput
+                        label="Имя"
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                      />
+                    </FormGroup>
 
-                  <FormGroup>
-                    <Label>Номер телефона *</Label>
-                    <Input
-                      type="tel"
-                      placeholder="+7 (xxx) xxx-xx-xx"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                    />
-                  </FormGroup>
+                    <FormGroup>
+                      <AnimatedInput
+                        label="Телефон"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                      />
+                    </FormGroup>
 
-                  <FormGroup>
-                    <Label>Дополнительная информация о проекте</Label>
-                    <TextArea
-                      placeholder="Расскажите подробнее о вашем проекте, сроках, бюджете..."
-                      value={formData.description}
-                      onChange={(e) => handleInputChange('description', e.target.value)}
-                    />
-                  </FormGroup>
+                    <FormGroup>
+                      <AnimatedInput
+                        label="Коротко о проекте"
+                        multiline
+                        value={formData.description}
+                        onChange={(e) => handleInputChange('description', e.target.value)}
+                      />
+                    </FormGroup>
 
                   <ContactButtonsContainer>
                     <ContactButton
@@ -922,6 +996,77 @@ const ProjectModal = ({ isOpen, onClose }) => {
                       💬 Отправить в WhatsApp
                     </ContactButton>
                   </ContactButtonsContainer>
+
+                  {/* Desktop: show icon buttons similar to mobile */}
+                  <DesktopContactWrapper>
+                    <MobileContactHeader>Отправить в...</MobileContactHeader>
+                    <MobileIconGroup>
+                      <MobileIconButton
+                        data-icon="telegram"
+                        onClick={handleSendTelegram}
+                        disabled={!isFormValid}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        aria-label="Telegram"
+                      />
+
+                      <MobileIconButton
+                        data-icon="whatsapp"
+                        onClick={handleSendWhatsApp}
+                        disabled={!isFormValid}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        aria-label="WhatsApp"
+                      />
+
+                      <MobileIconButton
+                        data-icon="email"
+                        onClick={handleSendEmail}
+                        disabled={!isFormValid}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        aria-label="Email"
+                      />
+                    </MobileIconGroup>
+                  </DesktopContactWrapper>
+
+                  {/* Mobile: compact icon buttons with header */}
+                  <MobileContactWrapper>
+                    <MobileContactHeader>Отправить в...</MobileContactHeader>
+                    <MobileIconGroup>
+                      <MobileIconButton
+                        data-icon="telegram"
+                        onClick={handleSendTelegram}
+                        disabled={!isFormValid}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        aria-label="Telegram"
+                      />
+
+                      <MobileIconButton
+                        data-icon="whatsapp"
+                        onClick={handleSendWhatsApp}
+                        disabled={!isFormValid}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        aria-label="WhatsApp"
+                      />
+
+                      <MobileIconButton
+                        data-icon="email"
+                        onClick={handleSendEmail}
+                        disabled={!isFormValid}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        aria-label="Email"
+                      />
+                    </MobileIconGroup>
+                  </MobileContactWrapper>
+                  
+                  {/* Добавляем индикатор прогресса под кнопками */}
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+                    {renderProgressIndicator()}
+                  </div>
                 </FormContainer>
               </>
             )}
@@ -929,7 +1074,7 @@ const ProjectModal = ({ isOpen, onClose }) => {
         </ModalContent>
       </ModalOverlay>
       )}
-    </AnimatePresence>
+    </>
   )
 }
 
