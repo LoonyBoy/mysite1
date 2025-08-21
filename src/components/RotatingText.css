@@ -4,25 +4,32 @@
   color: var(--primary-red);
   min-height: 1em;
   min-width: 300px;
-  overflow: visible;
+  overflow: hidden; /* Скрываем выходящие элементы */
   line-height: 1.2;
   max-width: 800px;
   word-break: keep-all;
   overflow-wrap: break-word;
   hyphens: none;
   text-wrap: balance;
+  /* Предотвращаем мигание */
+  isolation: isolate;
+  contain: layout style paint;
 }
 
 .text-rotate-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  display: none !important; /* Полностью скрываем элемент */
 }
 
 .text-rotate-lines {
@@ -52,6 +59,10 @@
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   white-space: nowrap;
+  /* Предотвращаем мигание */
+  opacity: 1;
+  visibility: visible;
+  transition: none; /* Убираем CSS transitions, оставляем только framer-motion */
 }
 
 .text-rotate-space {
@@ -64,30 +75,42 @@
   .text-rotate {
     min-width: 200px;
     min-height: 1.2em;
-    overflow: visible;
+    overflow: hidden; /* Скрываем выходящие элементы на мобильных */
     line-height: 1.2;
-    max-width: 400px;
-    word-break: keep-all;
-    overflow-wrap: break-word;
+    max-width: 90vw; /* allow more width for long text */
+    word-break: normal; /* disable keep-all for simpler breaking */
+    overflow-wrap: break-word; /* allow breaking long words */
     hyphens: none;
-    text-wrap: balance;
+    text-wrap: nowrap; /* disable balance, but allow natural wrapping */
+    white-space: normal; /* allow text wrapping for long content */
+    position: relative; /* establish stacking context for transforms */
   }
   
   .text-rotate-element {
-  line-height: 1.0; /* tighter line-height for mobile to control gap */
-  margin-bottom: 8px; /* enforce 8px gap when elements stack */
+    line-height: 1.0; /* tighter line-height for mobile to control gap */
+    margin-bottom: 0; /* remove margin that could cause gaps */
+    white-space: normal; /* allow breaking for long words */
+    /* Hardware acceleration for smooth animations */
+    will-change: transform, opacity;
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    /* Стабильность при анимации */
+    opacity: 1;
+    visibility: visible;
+    transition: none;
   }
   
   .text-rotate-word {
-    word-break: keep-all;
-    overflow-wrap: break-word;
+    word-break: normal; /* simpler breaking */
+    overflow-wrap: break-word; /* allow breaking long words */
     hyphens: none;
-    text-wrap: balance;
-  margin-bottom: 0; /* avoid double spacing */
+    text-wrap: nowrap; /* no balance */
+    margin-bottom: 0; /* avoid double spacing */
+    white-space: normal; /* allow natural wrapping */
   }
-}
-
-/* Специальные стили для iOS Safari */
+}/* Специальные стили для iOS Safari */
 @supports (-webkit-touch-callout: none) {
   .text-rotate-element {
   -webkit-font-smoothing: antialiased;

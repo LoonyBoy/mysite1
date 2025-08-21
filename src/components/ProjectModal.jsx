@@ -8,16 +8,22 @@ const ModalOverlay = styled(motion.div)`
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.9);
-  z-index: 1000;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 9999; /* Повышаем z-index для гарантии перекрытия */
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 20px;
+  /* Размытие вместо черного фона */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 
   @media (max-width: 768px) {
     padding: 0;
     align-items: flex-end;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    background: rgba(0, 0, 0, 0.2);
   }
 `
 
@@ -710,21 +716,21 @@ const ProjectModal = ({ isOpen, onClose }) => {
     window.open(`https://wa.me/79123456789?text=${message}`)
   }
 
-  if (!isOpen) return null
-
   return (
     <AnimatePresence>
-      <ModalOverlay
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      >
+      {isOpen && (
+        <ModalOverlay
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          onClick={onClose}
+        >
         <ModalContent
           initial={{ 
-            scale: window.innerWidth <= 768 ? 1 : 0.8, 
+            scale: window.innerWidth <= 768 ? 1 : 0.95, 
             opacity: 0,
-            y: window.innerWidth <= 768 ? 100 : 0
+            y: window.innerWidth <= 768 ? 30 : 0
           }}
           animate={{ 
             scale: 1, 
@@ -732,9 +738,14 @@ const ProjectModal = ({ isOpen, onClose }) => {
             y: 0
           }}
           exit={{ 
-            scale: window.innerWidth <= 768 ? 1 : 0.8, 
+            scale: window.innerWidth <= 768 ? 1 : 0.95, 
             opacity: 0,
-            y: window.innerWidth <= 768 ? 100 : 0
+            y: window.innerWidth <= 768 ? 30 : 0
+          }}
+          transition={{
+            duration: 0.25,
+            ease: "easeOut",
+            delay: 0.05
           }}
           onClick={(e) => e.stopPropagation()}
           drag="y"
@@ -917,6 +928,7 @@ const ProjectModal = ({ isOpen, onClose }) => {
           </ModalBody>
         </ModalContent>
       </ModalOverlay>
+      )}
     </AnimatePresence>
   )
 }

@@ -19,11 +19,11 @@ function cn(...classes) {
 const RotatingText = forwardRef((props, ref) => {
   const {
     texts,
-    transition = { type: "spring", damping: 30, stiffness: 400 },
+    transition = { type: "spring", damping: 25, stiffness: 300 },
     initial = { y: "100%", opacity: 0 },
     animate = { y: 0, opacity: 1 },
-    exit = { y: "-120%", opacity: 0 },
-    animatePresenceMode = "wait",
+    exit = { y: "-100%", opacity: 0 },
+    animatePresenceMode = "popLayout",
     animatePresenceInitial = false,
     rotationInterval = 2000,
     staggerDuration = 0,
@@ -163,18 +163,17 @@ const RotatingText = forwardRef((props, ref) => {
     <motion.span
       className={cn("text-rotate", mainClassName)}
       {...rest}
-      layout
       transition={transition}
     >
       <span className="text-rotate-sr-only">{texts[currentTextIndex]}</span>
-      <AnimatePresence mode={animatePresenceMode} initial={animatePresenceInitial}>
+      <AnimatePresence mode="wait" initial={false}>
         <motion.span
           key={currentTextIndex}
           className={cn(
             splitBy === "lines" ? "text-rotate-lines" : "text-rotate"
           )}
-          layout
           aria-hidden="true"
+          style={{ position: 'relative', display: 'inline-block' }}
         >
           {elements.map((wordObj, wordIndex, array) => {
             const previousCharsCount = array

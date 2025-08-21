@@ -41,6 +41,7 @@ const HeroSection = styled.section`
   margin: 0 auto;
   position: relative;
   z-index: 2;
+  transition: opacity 0.2s ease;
 
   @media (max-width: 768px) {
     padding: 32px 16px;
@@ -109,10 +110,14 @@ const MainHeading = styled.h1`
       gap: 8px; /* keep 8px spacing on mobile */
       min-height: 1em;
       overflow: visible;
+      /* Remove conflicting layout rules that interfere with animations */
       
       &:last-child {
         min-height: 2em; /* match desktop to avoid extra vertical space */
         align-items: flex-start;
+        /* Allow natural text flow for long content */
+        white-space: normal;
+        flex-wrap: wrap;
       }
     }
   }
@@ -265,6 +270,30 @@ const HomePage = () => {
   const navigate = useNavigate()
   const { camera, setTransitionContext } = useParticles()
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
+  
+  // Детекция мобильного устройства для оптимизации анимаций
+  const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
+  
+  // Настройки анимации в зависимости от устройства
+  const animationConfig = isMobile ? {
+    // Более мягкие настройки для мобильных
+    rotationInterval: 3500,
+    staggerDuration: 0.01,
+    transition: { type: "spring", damping: 40, stiffness: 260 },
+    initial: { y: "100%", opacity: 0 },
+    animate: { y: 0, opacity: 1 },
+    exit: { y: "-100%", opacity: 0 },
+    mode: "wait" // Ждем завершения анимации выхода
+  } : {
+    // Стандартные настройки для десктопа
+    rotationInterval: 3000,
+    staggerDuration: 0.02,
+    transition: { type: "spring", damping: 35, stiffness: 300 },
+    initial: { y: "100%", opacity: 0 },
+    animate: { y: 0, opacity: 1 },
+    exit: { y: "-100%", opacity: 0 },
+    mode: "wait" // Ждем завершения анимации выхода
+  }
   
   // Подключаем интерактивное управление частицами
   const { resetRotation } = useParticleControl(camera, true, {
@@ -656,7 +685,9 @@ const HomePage = () => {
       
       {/* Удалён правый edge перехода в меню */}
       
-      <HeroSection ref={heroRef} id="hero">
+      <HeroSection ref={heroRef} id="hero" style={{
+        pointerEvents: isProjectModalOpen ? 'none' : 'auto'
+      }}>
         <MainHeading>
           <div className="text-line">
             Создаю
@@ -676,10 +707,14 @@ const HomePage = () => {
                 'простые',
                 'креативные'
               ]}
-              rotationInterval={3000}
+              rotationInterval={animationConfig.rotationInterval}
               splitBy="words"
-              staggerDuration={0.03}
-              transition={{ type: "spring", damping: 20, stiffness: 200 }}
+              staggerDuration={animationConfig.staggerDuration}
+              transition={animationConfig.transition}
+              animatePresenceMode={animationConfig.mode}
+              initial={animationConfig.initial}
+              animate={animationConfig.animate}
+              exit={animationConfig.exit}
             />
           </div>
           <div className="text-line">
@@ -700,10 +735,14 @@ const HomePage = () => {
                 'для сложных проблем',
                 'которые выделяют вас'
               ]}
-              rotationInterval={3000}
+              rotationInterval={animationConfig.rotationInterval}
               splitBy="words"
-              staggerDuration={0.03}
-              transition={{ type: "spring", damping: 20, stiffness: 200 }}
+              staggerDuration={animationConfig.staggerDuration}
+              transition={animationConfig.transition}
+              animatePresenceMode={animationConfig.mode}
+              initial={animationConfig.initial}
+              animate={animationConfig.animate}
+              exit={animationConfig.exit}
             />
           </div>
         </MainHeading>
@@ -713,7 +752,12 @@ const HomePage = () => {
             интерактивных сайтов и приложений с фокусом на UX/UI и производительность.
           </Description>
           <ButtonsContainer>
-            <CreateProjectButton onClick={() => setIsProjectModalOpen(true)}>
+            <CreateProjectButton 
+              onClick={() => {
+                // Мгновенно устанавливаем состояние для предотвращения мигания
+                setIsProjectModalOpen(true)
+              }}
+            >
               Создать проект
             </CreateProjectButton>
             <LaunchEnginesButton href="/game" onClick={handleEngineClick}>
