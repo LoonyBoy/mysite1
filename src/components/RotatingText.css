@@ -31,6 +31,7 @@
   word-break: keep-all;
   overflow-wrap: break-word;
   hyphens: none;
+  line-height: 1; /* ensure consistent line height */
 }
 
 .text-rotate-word {
@@ -40,6 +41,7 @@
   hyphens: none;
   max-width: 100%;
   text-wrap: balance;
+  line-height: 1; /* stabilize vertical spacing */
 }
 
 .text-rotate-element {
@@ -72,7 +74,8 @@
   }
   
   .text-rotate-element {
-    line-height: 1.2;
+  line-height: 1.0; /* tighter line-height for mobile to control gap */
+  margin-bottom: 8px; /* enforce 8px gap when elements stack */
   }
   
   .text-rotate-word {
@@ -80,16 +83,19 @@
     overflow-wrap: break-word;
     hyphens: none;
     text-wrap: balance;
+  margin-bottom: 0; /* avoid double spacing */
   }
 }
 
 /* Специальные стили для iOS Safari */
 @supports (-webkit-touch-callout: none) {
   .text-rotate-element {
-    -webkit-font-smoothing: antialiased;
-    -webkit-backface-visibility: hidden;
-    -webkit-perspective: 1000;
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
+  -webkit-font-smoothing: antialiased;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000;
+  -webkit-perspective: 1000;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
   }
 }

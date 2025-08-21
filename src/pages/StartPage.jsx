@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { gsap } from 'gsap'
 import CustomCursor from '../components/CustomCursor'
+import HyperText from '../components/HyperText'
 import { useParticles } from '../components/GlobalParticleManager'
 import useParticleControl from '../hooks/useParticleControl'
 
@@ -52,16 +53,24 @@ const MainTitle = styled.h1`
   position: relative;
   z-index: 10; /* Значительно поверх частиц */
   color: var(--white);
-  opacity: 0; /* Скрыт до анимации появления */
+  opacity: 1; /* Сразу видимый заголовок */
   text-shadow: 
     0 0 10px rgba(0, 0, 0, 0.5),
     0 0 20px rgba(0, 0, 0, 0.3),
     0 2px 4px rgba(0, 0, 0, 0.8);
   
+  .hypertext-title {
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+  }
+  
   .char {
     display: inline-block;
-    opacity: 0;
-    transform: translateY(100px) rotateX(90deg);
+    opacity: 1; /* Сразу видимые буквы */
+    transform: none; /* Убираем трансформации */
     position: relative;
   }
   
@@ -136,8 +145,8 @@ const Subtitle = styled.p`
   color: var(--primary-red);
   text-align: center;
   margin-bottom: 2rem;
-  opacity: 0;
-  transform: translateY(30px);
+  opacity: 1; /* Сразу видимый */
+  transform: translateY(0); /* Без смещения */
   position: relative;
   z-index: 10; /* Значительно поверх частиц */
   text-shadow: 
@@ -157,8 +166,8 @@ const EnterButton = styled.button`
   letter-spacing: 0.1em;
   text-transform: uppercase;
   transition: all 0.3s ease;
-  opacity: 0;
-  transform: translateY(30px);
+  opacity: 1; /* Сразу видимая */
+  transform: translateY(0); /* Без смещения */
   min-height: 44px;
   position: relative;
   z-index: 10;
@@ -380,30 +389,30 @@ const StartPage = () => {
       }
     }, 0.5)
     
-    // Анимация букв с глитч-эффектом появления
+    // Анимация букв с глитч-эффектом появления - ОТКЛЮЧЕНА
     .to(chars, {
       opacity: 1,
       y: 0,
       rotationX: 0,
-      duration: 1.2,
-      stagger: 0.08,
-      ease: "power2.out",
+      duration: 0, // Мгновенное появление
+      stagger: 0, // Без задержки между буквами
+      ease: "none",
       onComplete: () => {
-        // После появления запускаем обычные глитчи
-        setTimeout(() => {
-          startGlitchEffect()
-        }, 500)
+        // После появления запускаем обычные глитчи - ОТКЛЮЧЕНО
+        // setTimeout(() => {
+        //   startGlitchEffect()
+        // }, 500)
       }
     }, 0.7)
 
-    // Анимация подзаголовка и кнопки через 2 секунды после заголовка
+    // Анимация подзаголовка и кнопки - ОТКЛЮЧЕНА (мгновенное появление)
     .to([subtitleRef.current, buttonRef.current], {
       opacity: 1,
       y: 0,
-      duration: 0.8,
-      stagger: 0.3,
-      ease: "power3.out"
-    }, "+=2") // Задержка 2 секунды
+      duration: 0, // Мгновенное появление
+      stagger: 0, // Без задержки между элементами
+      ease: "none"
+    }, 0) // Без задержки
 
     // Включаем скролл обратно при размонтировании
     return () => {
@@ -423,14 +432,16 @@ const StartPage = () => {
     const titleElement = titleRef.current
     if (!titleElement) return
 
-    // Устанавливаем data-text атрибут для псевдоэлементов
-    titleElement.setAttribute('data-text', 'loony_boss')
+    // Устанавливаем data-text атрибут для псевдоэлементов - ОТКЛЮЧЕНО
+    // titleElement.setAttribute('data-text', 'loony_boss')
 
     // Интенсивный глитч при появлении - несколько быстрых вспышек
     let glitchCount = 0
     const maxGlitches = 8
     
     const intensiveGlitch = () => {
+      return // Глитч отключен
+      /*
       if (glitchCount >= maxGlitches) return
       
       titleElement.classList.add('glitch-active')
@@ -446,10 +457,11 @@ const StartPage = () => {
           setTimeout(intensiveGlitch, Math.random() * 200 + 100)
         }
       }, glitchDuration)
+      */
     }
     
-    // Запускаем интенсивный глитч
-    intensiveGlitch()
+    // Запускаем интенсивный глитч - ОТКЛЮЧЕНО
+    // intensiveGlitch()
   }
 
   // Функция для обычных глитч-эффектов
@@ -457,8 +469,10 @@ const StartPage = () => {
     const titleElement = titleRef.current
     if (!titleElement) return
 
-    // Функция для случайного глитча
+    // Функция для случайного глитча - ОТКЛЮЧЕНА
     const randomGlitch = () => {
+      return // Глитч отключен
+      /*
       // Добавляем класс глитча
       titleElement.classList.add('glitch-active')
       
@@ -467,6 +481,7 @@ const StartPage = () => {
       setTimeout(() => {
         titleElement.classList.remove('glitch-active')
       }, glitchDuration)
+      */
     }
 
     // Первый обычный глитч через небольшую паузу
@@ -476,7 +491,7 @@ const StartPage = () => {
       // Затем случайные глитчи каждые 3-8 секунд
       glitchIntervalRef.current = setInterval(() => {
         // Случайность появления глитча (30% вероятность)
-        if (Math.random() < 0.3) {
+        if (Math.random() < 0.0) { // Отключен глитч (было 0.3)
           randomGlitch()
         }
       }, Math.random() * 5000 + 3000) // 3-8 секунд
@@ -523,11 +538,16 @@ const StartPage = () => {
       <BackgroundText ref={backgroundRef}>CODE</BackgroundText>
       
       <MainTitle ref={titleRef}>
-        {splitText('loony_boss')}
+        <HyperText 
+          text="LOONY BOSS"
+          duration={2000}
+          animateOnLoad={true}
+          className="hypertext-title"
+        />
       </MainTitle>
       
       <Subtitle ref={subtitleRef}>
-        Web Developer & Digital Creator
+        Web Development | Bots | Automation 
       </Subtitle>
       
       <EnterButton 

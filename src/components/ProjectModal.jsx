@@ -593,6 +593,12 @@ const ProjectModal = ({ isOpen, onClose }) => {
       // Блокируем скролл body
       document.body.style.overflow = 'hidden'
     } else {
+      // Сброс состояния при закрытии модального окна для полной очистки
+      setStep('main')
+      setSelectedCategory(null)
+      setSelectedSubcategories([])
+      setFormData({ name: '', phone: '', description: '' })
+      
       // Восстанавливаем скролл body при закрытии
       document.body.style.overflow = ''
     }
@@ -628,6 +634,9 @@ const ProjectModal = ({ isOpen, onClose }) => {
   const handleBack = () => {
     if (step === 'subcategory') {
       setStep('main')
+      // Сбрасываем выбранные подкатегории и категорию при возврате к главному экрану
+      setSelectedSubcategories([])
+      setSelectedCategory(null)
     } else if (step === 'contact') {
       setStep('subcategory')
     }

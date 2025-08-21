@@ -7,8 +7,8 @@ import CustomCursor from '../components/CustomCursor'
 import MobileHints from '../components/MobileHints'
 import MobileNavigation from '../components/MobileNavigation'
 import ProjectModal from '../components/ProjectModal'
-import { useParticles } from '../components/GlobalParticleManager'
 import RotatingText from '../components/RotatingText'
+import { useParticles } from '../components/GlobalParticleManager'
 import useParticleControl from '../hooks/useParticleControl'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -72,8 +72,8 @@ const MainHeading = styled.h1`
 
   .text-line {
     display: flex;
-    align-items: baseline;
-    gap: 16px;
+    align-items: center; /* avoid baseline shifts during transforms */
+    gap: 8px; /* unified 8px rule */
     min-height: 1em;
     overflow: visible;
     
@@ -106,12 +106,12 @@ const MainHeading = styled.h1`
     margin-bottom: 24px;
     
     .text-line {
-      gap: 12px;
+      gap: 8px; /* keep 8px spacing on mobile */
       min-height: 1em;
       overflow: visible;
       
       &:last-child {
-        min-height: 2.5em;
+        min-height: 2em; /* match desktop to avoid extra vertical space */
         align-items: flex-start;
       }
     }

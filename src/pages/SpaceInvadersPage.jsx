@@ -651,17 +651,22 @@ const SpaceInvadersPage = () => {
     const playerX = canvas ? canvas.width / 2 : 400
     const playerY = canvas ? canvas.height - 80 : 500
     
-    // Обновляем характеристики игрока (только скорострельность и цвет)
+    // Полностью пересоздаем объект игрока для сброса всех визуальных свойств
     gameObjects.current.player = {
-      ...gameObjects.current.player,
       x: playerX,
       y: playerY,
-      type: shipType,
-      fireRate: stats.fireRate,
-      color: shipConfig.color,
       width: 24,
       height: 32,
-      speed: 15 // Убеждаемся, что скорость остается правильной
+      speed: 15,
+      type: shipType,
+      fireRate: stats.fireRate,
+      bulletSpeed: 3,
+      bulletDamage: 1,
+      lastShot: 0,
+      stealthMode: false,
+      stealthCooldown: 0,
+      color: shipConfig.color,
+      visualProps: null // Сбрасываем визуальные свойства
     }
 
     console.log('🚀 Ship selected:', shipType, shipConfig, 'Position:', { x: playerX, y: playerY })
@@ -739,10 +744,8 @@ const SpaceInvadersPage = () => {
       }
     } else {
       console.log('ℹ️ SpaceInvadersPage: No animation data found - showing ship selection')
-      // Инициализируем визуальные свойства для обычного режима
-      // rotation: 90 - для обычной игры корабль направлен вверх
-      gameObjects.current.player.visualProps = { scale: 1, opacity: 1, rotation: 90 }
-
+      // Не устанавливаем visualProps здесь, они будут установлены при начале игры
+      
       // Показываем выбор корабля перед стартом
       setShowShipSelection(true)
       setGameInitialized(false)
@@ -1293,21 +1296,26 @@ const SpaceInvadersPage = () => {
       // Сохраняем текущий контекст для применения трансформаций
       ctx.save()
       
+      // Применяем трансформации относительно центра корабля
+      ctx.translate(player.x, player.y)
+      
       // Применяем визуальные свойства анимации если они есть
       const visualProps = player.visualProps
       if (visualProps) {
         // Устанавливаем прозрачность
         ctx.globalAlpha = visualProps.opacity || 1
         
-        // Применяем трансформации относительно центра корабля
-        ctx.translate(player.x, player.y)
+        // Применяем масштаб
         ctx.scale(visualProps.scale || 1, visualProps.scale || 1)
         
-        // Применяем поворот (по умолчанию 0 - направлен влево как курсор)
+        // Применяем поворот (анимационный)
         ctx.rotate((visualProps.rotation || 0) * Math.PI / 180)
-        
-        ctx.translate(-player.x, -player.y)
+      } else {
+        // Для обычной игры: поворачиваем корабль на 90 градусов (направляем вверх)
+        ctx.rotate(90 * Math.PI / 180)
       }
+      
+      ctx.translate(-player.x, -player.y)
       
       // Добавляем красное свечение при низких жизнях
       if (lives <= 1) {
@@ -1761,7 +1769,8 @@ const SpaceInvadersPage = () => {
       bulletDamage: 1,
       lastShot: 0,
       stealthMode: false,
-      stealthCooldown: 0
+      stealthCooldown: 0,
+      visualProps: null // Сбрасываем визуальные свойства
     }
     
     // Очищаем канвас
