@@ -37,6 +37,16 @@ const MobileNavigation = () => {
       if (document?.body?.style?.overflow === 'hidden') {
         return true
       }
+      // Проверяем, есть ли открытые модальные окна по z-index
+      const modals = document.querySelectorAll('[style*="z-index: 1000"], [style*="z-index:1000"]')
+      if (modals.length > 0) {
+        return true
+      }
+      // Проверяем на наличие модального оверлея
+      const modalOverlay = document.querySelector('[style*="position: fixed"][style*="background"]')
+      if (modalOverlay) {
+        return true
+      }
     } catch {}
     return false
   }

@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage'
 import MenuPage from './pages/MenuPage'
 import SpaceInvadersPage from './pages/SpaceInvadersPage'
 import LightLabCasePage from './pages/LightLabCasePage'
+import TestModalPage from './pages/TestModalPage'
 import PerformanceOptimizer from './components/PerformanceOptimizer'
 import { ParticleProvider } from './components/GlobalParticleManager'
 
@@ -27,6 +28,7 @@ function App() {
             <Route path="/menu" element={<MenuPage />} />
             <Route path="/project/lightlab" element={<LightLabCasePage />} />
             <Route path="/game" element={<SpaceInvadersPage />} />
+            <Route path="/test-modal" element={<TestModalPage />} />
           </Routes>
         </ParticleProvider>
       </Router>

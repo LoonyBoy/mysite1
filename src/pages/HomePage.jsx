@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import CustomCursor from '../components/CustomCursor'
 import MobileHints from '../components/MobileHints'
 import MobileNavigation from '../components/MobileNavigation'
+import ProjectModal from '../components/ProjectModal'
 import { useParticles } from '../components/GlobalParticleManager'
 import RotatingText from '../components/RotatingText'
 import useParticleControl from '../hooks/useParticleControl'
@@ -148,7 +149,7 @@ const ButtonsContainer = styled.div`
   flex-shrink: 0;
 `
 
-const CreateProjectButton = styled.a`
+const CreateProjectButton = styled.button`
   display: inline-grid;
   place-items: center;
   padding: 16px 32px;
@@ -263,12 +264,27 @@ const HomePage = () => {
   const isTransitioningRef = useRef(false)
   const navigate = useNavigate()
   const { camera, setTransitionContext } = useParticles()
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   
   // Подключаем интерактивное управление частицами
   const { resetRotation } = useParticleControl(camera, true, {
     wheel: 0.002,
     touch: 0.005
   })
+
+  // Блокируем скролл body когда модальное окно открыто
+  useEffect(() => {
+    if (isProjectModalOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+
+    // Cleanup при размонтировании компонента
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isProjectModalOpen])
 
   // Обработчик перехода в игру
   const handleGameClick = () => {
@@ -612,7 +628,7 @@ const HomePage = () => {
     if (isMobile) return
 
     const onWheelNavigateToMenu = (e) => {
-      if (isTransitioningRef.current) return
+      if (isTransitioningRef.current || isProjectModalOpen) return
       const deltaY = e.deltaY || 0
       if (deltaY <= 12) return
       isTransitioningRef.current = true
@@ -632,7 +648,7 @@ const HomePage = () => {
 
     window.addEventListener('wheel', onWheelNavigateToMenu, { passive: false })
     return () => window.removeEventListener('wheel', onWheelNavigateToMenu)
-  }, [navigate])
+  }, [navigate, isProjectModalOpen])
 
   return (
     <HomeContainer>
@@ -697,7 +713,7 @@ const HomePage = () => {
             интерактивных сайтов и приложений с фокусом на UX/UI и производительность.
           </Description>
           <ButtonsContainer>
-            <CreateProjectButton href="https://t.me/loony_boss" target="_blank" rel="noopener noreferrer">
+            <CreateProjectButton onClick={() => setIsProjectModalOpen(true)}>
               Создать проект
             </CreateProjectButton>
             <LaunchEnginesButton href="/game" onClick={handleEngineClick}>
@@ -706,6 +722,11 @@ const HomePage = () => {
           </ButtonsContainer>
         </DescriptionContainer>
       </HeroSection>
+      
+      <ProjectModal 
+        isOpen={isProjectModalOpen} 
+        onClose={() => setIsProjectModalOpen(false)} 
+      />
       
       <MobileHints />
       <MobileNavigation />
