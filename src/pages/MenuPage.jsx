@@ -16,15 +16,17 @@ import { useDeviceDetection } from '../hooks/useDeviceDetection'
 
 
 const MenuContainer = styled.div`
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: transparent;
-  position: absolute;
+  /* Ensure the menu immediately covers the viewport and hides previous page content during transitions */
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
+  background: var(--black, #000);
   overflow-x: hidden;
-  z-index: 1;
+  z-index: 100;
   margin: 0;
   padding: 0;
   box-sizing: border-box;

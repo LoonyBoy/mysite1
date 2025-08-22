@@ -61,7 +61,7 @@ const ModalHeader = styled.div`
   flex-shrink: 0;
 
   @media (max-width: 768px) {
-  padding: 20px 20px 12px; /* Увеличили верхний отступ, чтобы крестик находился внутри рамки */
+  padding: 16px 16px 8px; /* Use 8px grid on mobile */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 `
@@ -376,9 +376,11 @@ const FormContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 24px;
+  padding-top: ${props => props.spacing === 'contact' ? '18px' : '0'};
 
   @media (max-width: 768px) {
     gap: 12px; /* Уменьшили еще больше для мобильных */
+    padding-top: ${props => props.spacing === 'contact' ? '12px' : '0'};
   }
 `
 
@@ -801,21 +803,25 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true }) => {
       subcategories[selectedCategory]?.find(sub => sub.id === id)?.text
     ).filter(Boolean)
 
-    let message = `🚀 Новая заявка на проект!\n\n`
-    message += `👤 Имя: ${formData.name}\n`
-    message += `📞 Телефон: ${formData.phone}\n\n`
-    message += `📋 Категория проекта: ${category}\n`
-    
+    // New user-requested template
+    // Здравствуйте, меня зовут ...!
+    // Мне нужен такой-то проект: (категория + опции)
+    // Мой номер телефона: ...
+    let message = `Здравствуйте, меня зовут ${formData.name}!\n\n`
+    // Project line
+    message += `Мне нужно ${category}\n\n`
     if (selectedSubcats.length > 0) {
-      message += `\n✅ Выбранные опции:\n`
-      selectedSubcats.forEach((sub, index) => {
-        message += `${index + 1}. ${sub}\n`
-      })
+      message += `Дополнительные опции:\n${selectedSubcats.join(', ')}`
     }
-    
+    message += `\n\n`
+
+    // Optional short description
     if (formData.description.trim()) {
-      message += `\n💬 Дополнительная информация:\n${formData.description}`
+      message += `Коротко о проекте: ${formData.description}\n\n`
     }
+
+    // Phone
+    message += `Мой номер телефона: ${formData.phone}`
 
     return encodeURIComponent(message)
   }
@@ -834,7 +840,7 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true }) => {
   const handleSendWhatsApp = () => {
     const message = generateContactMessage()
     // Замените YOUR_PHONE_NUMBER на ваш номер телефона в международном формате без + (например: 79123456789)
-    window.open(`https://wa.me/79123456789?text=${message}`)
+  window.open(`https://wa.me/79131114551?text=${message}`)
   }
 
   return (
@@ -940,7 +946,7 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true }) => {
 
             {step === 'contact' && (
               <>
-                <FormContainer>
+                <FormContainer spacing="contact">
                   <FormGroup>
                       <AnimatedInput
                         label="Имя"
@@ -962,7 +968,7 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true }) => {
                     <FormGroup>
                       <AnimatedInput
                         label="Коротко о проекте"
-                        multiline
+                        multiline={true}
                         value={formData.description}
                         onChange={(e) => handleInputChange('description', e.target.value)}
                       />
