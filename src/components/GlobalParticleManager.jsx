@@ -117,17 +117,20 @@ export const ParticleProvider = ({ children }) => {
       setParticlesVisible(true) // На домашней странице частицы видны сразу
     } else if (path === '/menu' && currentPage === 'home' && !isAnimating) {
       // Переход на меню с домашней — без анимации вращения
-      logger.particles('Transition: home->menu (no rotation animation)', { context: transitionContext })
+      logger.particles('Transition: home->menu (no rotation animation)', { context: transitionContext, particlesVisible })
       setCurrentPage('menu')
       setParticlesVisible(true)
+      console.log('🎨 Setting particles visible for home->menu transition')
       // Фиксируем базовую скорость без ускорения/замедления
       setParticleAnimation({ rotationSpeed: { x: 1.0, y: 1.0 }, fastRotation: false })
       // Цвет частиц оставляем как есть, чтобы не было анимации перехода
       return
     } else if (path === '/menu' && currentPage !== 'menu' && !isAnimating) {
       // Устанавливаем страницу меню без анимации (прямой переход)
+      logger.particles('Direct transition to menu', { from: currentPage, to: 'menu', particlesVisible })
       setCurrentPage('menu')
       setParticlesVisible(true)
+      console.log('🎨 Setting particles visible for menu page')
       return
     } else if (path === '/game' && currentPage === 'home' && !isAnimating) {
       // Переход в игру с домашней - специальная анимация

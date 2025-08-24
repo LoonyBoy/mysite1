@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Flip } from 'gsap/Flip'
 import styled from 'styled-components'
@@ -10,6 +10,7 @@ import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
 import useParticleControl from '../hooks/useParticleControl'
 import Dither from '../../dither.jsx'; // Adjusted to new file extension
+import DesktopModalAnimations from '../utils/DesktopModalAnimations'
 
 import { useDeviceDetection } from '../hooks/useDeviceDetection'
 // ProjectsScrollStack не используем в новой версии модалки
@@ -24,7 +25,7 @@ const MenuContainer = styled.div`
   min-height: 100vh;
   min-height: 100dvh;
   height: 100dvh;
-  background: var(--black, #000);
+  background: transparent; /* частицы видны через прозрачный фон */
   overflow-x: hidden;
   z-index: 100;
   margin: 0;
@@ -218,14 +219,19 @@ const Card = styled.div`
   }
   
   @media (max-width: 768px) {
-    width: 100%;
-    height: 22vh;
+   width: 100%;
+   /* let cards flex to fill the viewport evenly on mobile instead of fixed 22vh
+     this prevents leftover empty space below the last card when total card
+     heights < 100dvh */
+   height: auto;
+   min-height: 22vh;
+   flex: 1 1 22vh;
     border-right: none;
     /* no bottom border on mobile to avoid seam artifacts */
     border-bottom: none;
     padding: 0 8px;
     margin-right: 0;
-    margin-bottom: -1px;
+   margin-bottom: -1px;
     /* mobile: make separator horizontal between stacked cards */
     &:not(:last-child)::after {
       left: 8px;
@@ -267,6 +273,11 @@ const Card = styled.div`
     background: transparent; /* фон дает GlobalDither на полном экране */
     backdrop-filter: none;
     cursor: default;
+    /* Hide card separator line when fullscreen to avoid red stripe on mobile */
+    &::after {
+      display: none !important;
+      content: none !important;
+    }
   /* Позиционируем содержимое модалки у верхнего края. На десктопе не показываем внутренние скроллы (модалка должна занимать весь экран).
     На мобильных разрешаем вертикальный скролл внутри карточки. */
   display: flex;
@@ -300,9 +311,12 @@ const CardPlaceholder = styled.div`
   }
 
   @media (max-width: 768px) {
-    width: 100%;
-    height: 22vh;
-    border-right: none;
+  width: 100%;
+  /* match Card's mobile flex sizing so placeholder keeps layout when a card opens */
+  height: auto;
+  min-height: 22vh;
+  flex: 1 1 22vh;
+  border-right: none;
   border-bottom: none;
   }
 `
@@ -357,6 +371,13 @@ const AboutModalContent = styled.div`
   box-sizing: border-box;
   align-items: start;
   text-align: left;
+
+  /* Desktop: start hidden to avoid flash before progressive reveal */
+  @media (min-width: 769px) {
+    opacity: 0;
+    transform: translateY(10px);
+    will-change: opacity, transform;
+  }
 
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
@@ -495,6 +516,13 @@ const ProjectsModalWrap = styled.div`
   overflow: hidden; /* не даём вертикально скроллить страницу */
   padding: 72px 16px 12px; /* опускаем блок ниже: увеличили верхний отступ */
   
+  /* Desktop: start hidden to avoid flash before progressive reveal */
+  @media (min-width: 769px) {
+    opacity: 0;
+    transform: translateY(10px);
+    will-change: opacity, transform;
+  }
+  
   @media (max-width: 1024px) {
     height: auto;
     min-height: 100dvh;
@@ -537,6 +565,13 @@ const ServicesModalWrap = styled.div`
   padding: 16px 16px 16px;
   overflow: hidden;
   -webkit-overflow-scrolling: touch;
+
+  /* Desktop: start hidden to avoid flash before progressive reveal */
+  @media (min-width: 769px) {
+    opacity: 0;
+    transform: translateY(10px);
+    will-change: opacity, transform;
+  }
 
   @media (max-width: 768px) {
     /* Mobile: allow content to scroll inside modal */
@@ -1585,23 +1620,34 @@ const menuItems = [
 const MenuPage = () => {
   const menuRef = useRef(null)
   const navigate = useNavigate()
-  const { camera, setParticleProps, setHoveredRect, setParticleSpeed } = useParticles()
+  const { camera, setParticleProps, setHoveredRect, setParticleSpeed, particlesVisible } = useParticles()
   const isTransitioningRef = useRef(false)
+  
+  // Логируем состояние частиц
+  useEffect(() => {
+    console.log('MenuPage: Particles state', { camera: !!camera, particlesVisible })
+  }, [camera, particlesVisible])
   const [hoveredIndex, setHoveredIndex] = useState(null)
   const [globalDitherColorIndex, setGlobalDitherColorIndex] = useState(0)
   const globalDitherRef = useRef(null)
   const hoverTimelinesRef = useRef([])
   // убрали таймеры дебаунса — из‑за них терялись hover‑события
   const [openedIndex, setOpenedIndex] = useState(null)
+  const desktopAnimatorRef = useRef(null)
   const cardRefs = useRef([])
   const mousePosRef = useRef({ x: 0, y: 0 })
   const hoverLockRef = useRef({}) // индекс → timestamp до которого игнорируем mouseleave
   const lastHoveredBeforeOpenRef = useRef(null)
   const isModalOpenRef = useRef(false)
   const lastOpenModalIndexRef = useRef(null)
+  // Prevent fast-click bugs right after navigating into /menu
+  const menuReadyRef = useRef(false)
+  const pendingOpenRef = useRef(null)
   const stripsRef = useRef([])
   const aboutContainerRef = useRef(null)
   const ditherBreatheTlRef = useRef(null)
+  // store a cleanup handler for transient dither edge bars (top/bottom)
+  const edgeBarsCleanupRef = useRef(null)
   const [servicesCategory, setServicesCategory] = useState('web')
   const serviceCategories = ['web', 'bots', 'automation']
   const [servicesTier, setServicesTier] = useState('optimal')
@@ -1690,6 +1736,41 @@ const MenuPage = () => {
           } catch (e) {}
         })
       }
+    } catch (e) { }
+  }
+
+  // Aggressive cleanup: remove transient edge bars and any thin red hairlines that may remain
+  const forceRemoveTransientRedBars = () => {
+    try {
+      // remove explicit edge bars
+      const tops = Array.from(document.querySelectorAll('.__dither-edge-top'))
+      const bottoms = Array.from(document.querySelectorAll('.__dither-edge-bottom'))
+      tops.concat(bottoms).forEach((el) => { try { if (el.parentNode) el.parentNode.removeChild(el) } catch(e){} })
+
+      // scan for thin red elements (height <=6px) near viewport edges and hide them
+      const winH = window.innerHeight || document.documentElement.clientHeight
+      const els = Array.from(document.querySelectorAll('body *'))
+      els.forEach((el) => {
+        try {
+          const r = el.getBoundingClientRect()
+          if (!r || r.width === 0 || r.height === 0) return
+          if (r.height <= 6 && (Math.abs(r.bottom - winH) <= 6 || Math.abs(r.top) <= 6)) {
+            const s = getComputedStyle(el)
+            const bg = (s.backgroundColor || '').toLowerCase()
+            const bt = (s.borderTopColor || '').toLowerCase()
+            const bb = (s.borderBottomColor || '').toLowerCase()
+            const isRedish = (str) => {
+              const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(str)
+              if (!m) return false
+              const rch = Number(m[1]), gch = Number(m[2]), bch = Number(m[3])
+              return rch > 120 && gch < 100 && bch < 100
+            }
+            if (bg.indexOf('var(--primary-red)') !== -1 || bt.indexOf('var(--primary-red)') !== -1 || bb.indexOf('var(--primary-red)') !== -1 || isRedish(bg) || isRedish(bt) || isRedish(bb)) {
+              try { el.style.display = 'none'; el.style.opacity = '0'; } catch (e) {}
+            }
+          }
+        } catch (e) { }
+      })
     } catch (e) { }
   }
   const projectsTouchingRef = useRef(false)
@@ -2350,6 +2431,42 @@ const MenuPage = () => {
     if (props) gsap.set(gd, props)
   }
 
+  // Mark menu as ready after layout settles (2 RAFs + fonts), then run queued open if any
+  useEffect(() => {
+    let raf1 = 0, raf2 = 0, t = 0
+    const settle = () => {
+      menuReadyRef.current = true
+      if (pendingOpenRef.current != null && openedIndex === null) {
+        const idx = pendingOpenRef.current
+        pendingOpenRef.current = null
+        // Defer to next frame to be safe
+        requestAnimationFrame(() => openCardFullscreen(idx))
+      }
+    }
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        try {
+          if (document.fonts && typeof document.fonts.ready?.then === 'function') {
+            document.fonts.ready.then(() => { t = setTimeout(settle, 20) })
+          } else {
+            t = setTimeout(settle, 20)
+          }
+        } catch {
+          t = setTimeout(settle, 20)
+        }
+      })
+    })
+    return () => { try { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); clearTimeout(t) } catch {} }
+  }, [openedIndex])
+
+  // Init desktop animations helper (no-op on mobile/reduced motion)
+  useEffect(() => {
+    try {
+      desktopAnimatorRef.current = new DesktopModalAnimations()
+    } catch {}
+    return () => { desktopAnimatorRef.current = null }
+  }, [])
+
   const handleHover = (index, isHovering) => {
     // На сенсорных устройствах отключаем hover-анимации, чтобы контент не "съезжал"
     if (isTouchRef.current) return
@@ -2479,6 +2596,11 @@ const MenuPage = () => {
   }
 
   const openCardFullscreen = (index, event) => {
+    // If page just mounted and layout isn't settled yet, queue the intent
+    if (!menuReadyRef.current) {
+      pendingOpenRef.current = index
+      return
+    }
     // If click event provided, confirm the pointer is actually within the intended card
     if (event) {
       let x = undefined, y = undefined
@@ -2577,25 +2699,50 @@ const MenuPage = () => {
       }
     }
 
-    // Прячем соседние карточки с лёгкой задержкой, чтобы dither начал закрывать их первым
+    // Сразу скрываем и отключаем интерактив у соседних карточек (без задержек)
   cardRefs.current.forEach((card, i) => {
       if (!card) return
       if (i !== index) {
-    gsap.to(card, { opacity: 0, duration: 0.36, delay: 0.08, ease: 'power1.out', pointerEvents: 'none' })
+        try { card.style.pointerEvents = 'none' } catch {}
+        gsap.killTweensOf(card)
+        gsap.set(card, { autoAlpha: 0 })
       }
     })
-    const state = Flip.getState(el)
+  const state = Flip.getState(el)
     el.classList.add('is-open')
     setOpenedIndex(index)
+    // Desktop: after content mounts, pre-hide sections to avoid flash (CSS also covers initial state)
+    if (!isTouchRef.current) {
+      requestAnimationFrame(() => {
+        try {
+          const content = el.querySelector('.about-modal, [data-testid="projects-modal"], .services-modal, .projects-modal, .modal-content')
+          desktopAnimatorRef.current?.prepareModalOpen(el, content)
+        } catch {}
+      })
+    }
     // Никакого текста не осталось, поэтому Flip только для карточки
-    Flip.from(state, {
+  Flip.from(state, {
       duration: isTouchRef.current ? 0.36 : 0.6,
       ease: isTouchRef.current ? 'power2.out' : 'power3.inOut',
       absolute: true,
       scale: false,
       nested: true,
-      delay: isTouchRef.current ? 0 : 0.16
+      delay: isTouchRef.current ? 0 : 0.16,
+      onComplete: () => {
+        // Desktop: progressive section reveal inside modal content
+        if (!isTouchRef.current) {
+          try {
+            const content = el.querySelector('.about-modal, [data-testid="projects-modal"], .services-modal, .projects-modal, .modal-content')
+            desktopAnimatorRef.current?.animateModalOpen(el, content)
+          } catch {}
+        }
+      }
     })
+
+  // Defensive removal attempts right after modal is opened (no longer needed since we don't create red bars)
+  // try { forceRemoveTransientRedBars() } catch (e) { }
+  // try { setTimeout(() => { try { forceRemoveTransientRedBars() } catch (e) {} }, 200) } catch (e) {}
+  // try { setTimeout(() => { try { forceRemoveTransientRedBars() } catch (e) {} }, 800) } catch (e) {}
 
     // Появление контента модалки на мобильных: лёгкий fade/slide
     if (isTouchRef.current) {
@@ -2638,68 +2785,15 @@ const MenuPage = () => {
           const fullClip = 'inset(0px 0px 0px 0px)'
           gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100dvh', borderRadius: 0, clipPath: startClip, opacity: 0, backgroundColor: gd.style.backgroundColor || '' })
 
-          // create thin red bars at top and bottom of the card to animate during expansion
+          // Remove any existing edge bars completely - no longer creating new ones
           const existingTop = document.querySelector('.__dither-edge-top')
           const existingBottom = document.querySelector('.__dither-edge-bottom')
           if (existingTop) existingTop.remove()
           if (existingBottom) existingBottom.remove()
-          const topBar = document.createElement('div')
-          const bottomBar = document.createElement('div')
-          topBar.className = '__dither-edge-top'
-          bottomBar.className = '__dither-edge-bottom'
-          const vw = document.documentElement.clientWidth || window.innerWidth
-          const vh = document.documentElement.clientHeight || window.innerHeight
-          const rectTop = Math.round(rect.top)
-          const rectBottom = Math.round(rect.bottom)
-          // compute coordinates relative to the GlobalDither element so bars follow it
-          let gdRect = { top: 0, bottom: vh }
-          try { if (gd && gd.getBoundingClientRect) gdRect = gd.getBoundingClientRect() } catch (e) {}
-          const topRel = Math.round(rectTop - gdRect.top)
-          const bottomRel = Math.round(gdRect.bottom - rectBottom)
-          const barHeight = 3
-          Object.assign(topBar.style, {
-            position: 'fixed',
-            left: '0px',
-            right: '0px',
-            height: barHeight + 'px',
-            background: 'var(--primary-red)',
-            zIndex: 100001,
-            pointerEvents: 'none',
-            top: rectTop + 'px',
-            opacity: '1'
-          })
-          Object.assign(bottomBar.style, {
-            position: 'fixed',
-            left: '0px',
-            right: '0px',
-            height: barHeight + 'px',
-            background: 'var(--primary-red)',
-            zIndex: 100001,
-            pointerEvents: 'none',
-            bottom: (vh - rectBottom) + 'px',
-            opacity: '1'
-          })
-          // append bars into the global dither element so they move/clip with it
-          try {
-            if (gd && gd.appendChild) {
-              // make bars positioned relative to gd
-              topBar.style.position = 'absolute'
-              bottomBar.style.position = 'absolute'
-              // place bars using coordinates relative to gd
-              topBar.style.top = topRel + 'px'
-              bottomBar.style.bottom = bottomRel + 'px'
-              gd.appendChild(topBar)
-              gd.appendChild(bottomBar)
-            } else {
-              document.body.appendChild(topBar)
-              document.body.appendChild(bottomBar)
-            }
-          } catch (e) {
-            document.body.appendChild(topBar)
-            document.body.appendChild(bottomBar)
-          }
 
           // animate clone to full screen bounds (respect safe-area-inset)
+          const vw = document.documentElement.clientWidth || window.innerWidth
+          const vh = document.documentElement.clientHeight || window.innerHeight
           const targetTop = 0
           const targetLeft = 0
           const targetWidth = vw
@@ -2708,21 +2802,12 @@ const MenuPage = () => {
           tl.to(clone, { top: targetTop, left: targetLeft, width: targetWidth, height: targetHeight, duration: 0.68 }, 0)
           // animate dither clipPath to full
           tl.to(gd, { clipPath: fullClip, opacity: 1, duration: 0.64, ease: 'sine.inOut' }, 0)
-          // animate top and bottom bars to screen edges
-          tl.to(topBar, { top: 0, duration: 0.56, ease: 'power3.inOut' }, 0)
-          tl.to(bottomBar, { bottom: 0, duration: 0.56, ease: 'power3.inOut' }, 0)
           // fade in internal modal content slightly after start
           tl.to(clone, { opacity: 1, duration: 0.26 }, '-=0.38')
 
-          // when animation completes, remove clone and immediately remove transient bars
+          // when animation completes, remove clone
           tl.call(() => {
-            try {
-              try { if (topBar && topBar.parentNode) topBar.parentNode.removeChild(topBar) } catch (e) {}
-              try { if (bottomBar && bottomBar.parentNode) bottomBar.parentNode.removeChild(bottomBar) } catch (e) {}
-            } catch (e) { }
             try { if (clone && clone.parentNode) clone.parentNode.removeChild(clone) } catch (e) {}
-            // run a final pass to hide any thin hairlines left at bottom
-            try { removeBottomHairlines() } catch (e) {}
           })
         } catch (err) { /* non-fatal */ }
       } catch (err) { /* non-fatal */ }
@@ -2740,6 +2825,13 @@ const MenuPage = () => {
     hoverLockRef.current[index] = performance.now() + 600
     const gd = globalDitherRef.current
     const state = Flip.getState(el)
+    // Desktop: progressive content exit before flip-back
+    if (!isTouchRef.current) {
+      try {
+        const content = el.querySelector('.about-modal, [data-testid="projects-modal"], .services-modal, .projects-modal, .modal-content')
+        desktopAnimatorRef.current?.animateModalClose(el, content)
+      } catch {}
+    }
     // Заголовок: при закрытии просто исчезает (fade-out), чтобы не "уезжать" вместе с Flip
     const titleEl = el.querySelector(`.title-${index}`)
     if (titleEl) {
@@ -2766,26 +2858,21 @@ const MenuPage = () => {
         ditherBreatheTlRef.current?.kill()
         if (isTouchRef.current) {
           try {
-            const topBar = (gd && gd.querySelector) ? gd.querySelector('.__dither-edge-top') : document.querySelector('.__dither-edge-top')
-            const bottomBar = (gd && gd.querySelector) ? gd.querySelector('.__dither-edge-bottom') : document.querySelector('.__dither-edge-bottom')
-            const rect = el.getBoundingClientRect()
-            let gdRectNow = { top: 0, bottom: (document.documentElement.clientHeight || window.innerHeight) }
-            try { if (gd && gd.getBoundingClientRect) gdRectNow = gd.getBoundingClientRect() } catch (e) {}
-            const topTarget = Math.round(rect.top - gdRectNow.top)
-            const bottomTarget = Math.round(gdRectNow.bottom - rect.bottom)
-            const tlBars = gsap.timeline({ defaults: { ease: 'power3.inOut' }, onComplete: resolve })
-            const barDur = isTouchRef.current ? 0.22 : 0.44
-            const clipDur = isTouchRef.current ? 0.26 : 0.48
-            if (topBar) tlBars.to(topBar, { top: topTarget + 'px', duration: barDur, ease: 'power3.inOut' }, 0)
-            if (bottomBar) tlBars.to(bottomBar, { bottom: bottomTarget + 'px', duration: barDur, ease: 'power3.inOut' }, 0)
+            // Просто затемнить global dither без анимации баров (они больше не создаются)
             const endClip = computeClipFromElement(el)
-            tlBars.to(gd, { clipPath: endClip, opacity: 0, duration: clipDur, ease: 'sine.inOut' }, 0)
-            tlBars.call(() => {
-              try { if (topBar && topBar.parentNode) topBar.parentNode.removeChild(topBar) } catch {}
-              try { if (bottomBar && bottomBar.parentNode) bottomBar.parentNode.removeChild(bottomBar) } catch {}
+            gsap.to(gd, { clipPath: endClip, opacity: 0, duration: 0.26, ease: 'sine.inOut', onComplete: () => {
               gd.classList.remove('front')
               try { gd.style.backgroundColor = ''; } catch {}
-            })
+              // Убираем обработчики если были установлены
+              try {
+                if (edgeBarsCleanupRef.current) {
+                  document.removeEventListener('scroll', edgeBarsCleanupRef.current)
+                  document.removeEventListener('touchmove', edgeBarsCleanupRef.current)
+                  edgeBarsCleanupRef.current = null
+                }
+              } catch (e) { }
+              resolve()
+            } })
           } catch (err) {
             gsap.to(gd, { opacity: 0, duration: 0.12, ease: 'power2.in', onComplete: () => { try { gd.classList.remove('front'); gd.style.backgroundColor = '' } catch {} ; resolve() } })
           }
@@ -2814,10 +2901,12 @@ const MenuPage = () => {
         gsap.set(titleEl, { opacity: 1 })
       }
 
-      // Возвращаем видимость остальных карточек
+      // Возвращаем видимость и интерактив остальных карточек
       cardRefs.current.forEach((card) => {
         if (!card) return
-        gsap.to(card, { opacity: 1, duration: 0.2, ease: 'power2.out', pointerEvents: 'auto' })
+        gsap.killTweensOf(card)
+        gsap.set(card, { clearProps: 'opacity,visibility' })
+        gsap.to(card, { autoAlpha: 1, duration: 0.2, ease: 'power2.out', onComplete: () => { try { card.style.pointerEvents = 'auto' } catch {} } })
       })
 
       // Разрешаем обработку hover после закрытия
@@ -2854,9 +2943,9 @@ const MenuPage = () => {
   }
 
   // Подключаем интерактивное управление частицами
-  const sensitivity = { wheel: 0.002, touch: 0.005 }
-  const isMobileDevice = window.innerWidth <= 768 || 'ontouchstart' in window;
-  const { resetRotation } = useParticleControl(camera, !isMobileDevice, sensitivity)
+  const sensitivity = useMemo(() => ({ wheel: 0.002, touch: 0.005 }), [])
+  const isMobileDevice = useMemo(() => window.innerWidth <= 768 || 'ontouchstart' in window, [])
+  const { resetRotation } = useParticleControl(camera, !isMobileDevice && !!camera, sensitivity)
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -3380,7 +3469,7 @@ const MenuPage = () => {
                   )}
 
                   {openedIndex === index && index === 2 && (
-                    <ServicesModalWrap>
+                    <ServicesModalWrap className="services-modal">
                       <ProjectsTopTitle>Услуги</ProjectsTopTitle>
                       <PricingHeader>
                         {/* Desktop navigation */}
@@ -3552,20 +3641,6 @@ const MenuPage = () => {
                   </CloseButton>
                 )}
                 {/* Убрано изображение в хавере "О себе" */}
-                {index === 1 && (
-                  <ProjectList className="project-list">
-                    <h4>Завершенные проекты</h4>
-                    <ul>
-                      <li><button onClick={() => navigate('/project/lightlab')}>Light Lab Case</button></li>
-                      <li><button onClick={() => navigate('/game')}>Space Invaders</button></li>
-                    </ul>
-                    <h4>В разработке</h4>
-                    <ul>
-                      <li><button>Project A</button></li>
-                      <li><button>Project B</button></li>
-                    </ul>
-                  </ProjectList>
-                )}
               </Card>
               {/* Подставка для предотвращения смещения сетки при фиксировании .is-open */}
               {openedIndex === index && <CardPlaceholder aria-hidden="true" />}
@@ -3580,55 +3655,6 @@ const MenuPage = () => {
 }
 
 export default MenuPage
-
-const ProjectList = styled.div`
-  position: absolute;
-  top: 50%;
-  left: 20px;
-  right: 20px;
-  transform: translateY(-50%) translateX(-100%);
-  opacity: 0;
-  z-index: 3;
-  transition: all 0.3s ease;
-  text-align: center;
-  pointer-events: none;
-
-  h4 {
-    font-size: 24px;
-    margin-bottom: 10px;
-    color: white;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-    margin-bottom: 20px;
-  }
-
-  li {
-    margin: 5px 0;
-    font-size: 18px; // Увеличенный шрифт
-  }
-
-  button {
-    background: rgba(0,0,0,0.1);
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    margin: 5px;
-    transition: background 0.3s;
-    color: white;
-    font-weight: 500;
-    width: 80%;
-    pointer-events: auto;
-
-    &:hover {
-      background: rgba(0,0,0,0.2);
-    }
-  }
-`;
 
 // Preload dither effects
 const preloadImage = new Image();
