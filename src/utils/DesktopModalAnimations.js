@@ -56,7 +56,9 @@ class DesktopModalAnimations {
     // Primary sections (left column text, key summaries)
     const primary = [
       ...q('.about-left, .about-section, .summary, .lead, .subtitle'),
-      ...q('p, .intro, .description')
+      ...q('p, .intro, .description'),
+      // FAQ summaries count as primary interactive text
+      ...q('.faq-accordion summary')
     ]
 
     // Media and hero visuals
@@ -66,7 +68,9 @@ class DesktopModalAnimations {
 
     // Grids and lists
     const grids = [
-      ...q('.projects-grid, .feature-grid, .pricing-grid, .grid, ul, ol')
+      ...q('.projects-grid, .feature-grid, .pricing-grid, .grid, ul, ol'),
+      // Treat FAQ answers as grid/list to reveal after primary (content only)
+      ...q('.faq-accordion .faq-content')
     ]
 
     // Actions/buttons

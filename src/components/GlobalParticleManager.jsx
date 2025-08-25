@@ -156,11 +156,11 @@ export const ParticleProvider = ({ children }) => {
         animateParticlesGameExit()
       }, 100)
       return
-    } else if (path === '/project/lightlab' && !isAnimating) {
+  } else if ((path === '/project/lightlab' || path === '/project/voytenko') && !isAnimating) {
       // Переход на страницу кейса LightLab - белый фон с черными частицами
       logger.particles('Contextual transition: projects->lightlab-case', { context: transitionContext })
-      console.log('📸 Detected LightLab case page entry, switching to white background with black particles')
-      setCurrentPage('lightlab-case')
+  console.log('📸 Detected case page entry, switching to white background with black particles')
+  setCurrentPage('lightlab-case')
       setParticlesVisible(true)
       animateParticlesLightLabEntry()
       return

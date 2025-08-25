@@ -464,6 +464,79 @@ const AboutText = styled.div`
   li { margin: 6px 0; }
 `
 
+// FAQ (Вопрос-ответ) — раскрывающиеся списки для модалки "О себе"
+const FAQAccordion = styled.div`
+  width: 100%;
+  margin: 12px 0 0 0;
+  padding: 0;
+
+  details {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(136, 78, 255, 0.25);
+    border-radius: 6px;
+    margin: 8px 0;
+    transition: border-color 160ms ease, background-color 160ms ease;
+    overflow: hidden;
+  }
+
+  details[open] {
+    background: rgba(136, 78, 255, 0.06);
+    border-color: rgba(136, 78, 255, 0.5);
+  }
+
+  summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 12px 14px 12px 40px;
+    position: relative;
+    font-weight: 500;
+    color: #fff;
+    outline: none;
+    user-select: none;
+  }
+
+  summary::-webkit-details-marker { display: none; }
+  summary::marker { content: ''; }
+
+  /* Иконка + / − */
+  summary::before {
+    content: '+';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.95);
+    background: linear-gradient(180deg, rgba(136,78,255,0.35), rgba(136,78,255,0.15));
+    box-shadow: inset 0 0 0 1px rgba(136,78,255,0.5);
+  }
+
+  details[open] summary::before { content: '−'; }
+
+  /* Плавное раскрытие: grid rows trick */
+  .faq-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 220ms ease;
+  }
+  details[open] .faq-content { grid-template-rows: 1fr; }
+  .faq-content-inner { overflow: hidden; }
+
+  .faq-answer {
+    padding: 0 14px 12px 40px;
+    color: rgba(255,255,255,0.9);
+  }
+  .faq-answer p { margin: 0 0 10px 0; }
+  .faq-answer ul { margin: 8px 0 2px 18px; }
+  .faq-answer li { margin: 4px 0; }
+`
+
 const AboutRight = styled.div`
   display: flex;
   align-items: flex-end;
@@ -1425,6 +1498,32 @@ const CardOverlay = styled.div`
   -webkit-backface-visibility: hidden;
 `
 
+const DevBadge = styled.div`
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  pointer-events: none;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: ${props => props.$status === 'done' ? 'rgba(34,197,94,0.22)' : 'rgba(234,179,8,0.22)'};
+  border: 1px solid ${props => props.$status === 'done' ? 'rgba(34,197,94,0.5)' : 'rgba(234,179,8,0.5)'};
+  box-shadow: 0 0 0 1px ${props => props.$status === 'done' ? 'rgba(34,197,94,0.15)' : 'rgba(234,179,8,0.15)'}, 0 6px 16px rgba(0,0,0,0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(2px);
+
+  @media (max-width: 768px) {
+    font-size: 10px;
+    padding: 3px 7px;
+    top: 8px;
+    left: 8px;
+  }
+`
+
 const CardText = styled.div`
   position: absolute;
   left: 12px; right: 12px; bottom: 10px;
@@ -1491,9 +1590,31 @@ const CardTitle = styled.h3`
   font-weight: 400;
   color: white;
   margin: 0;
-  transition: all 0.3s ease;
+  transition: color 0.2s ease, opacity 0.2s ease;
   line-height: 1.08;
   letter-spacing: -0.015em;
+  position: relative;
+  padding-bottom: 8px; /* room for underline */
+
+  /* Underline swipe: hidden by default */
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 0;
+    background: rgba(255,255,255,0.85);
+    transition: width 0.22s ease;
+  }
+  /* Show underline on hover/focus of the card */
+  ${Card}:hover &::after,
+  ${Card}.force-hover &::after,
+  ${Card}:focus-visible &::after {
+    width: 100%;
+  }
+  /* Hide underline when opened */
+  ${Card}.is-open &::after { width: 0; }
   
   ${Card}:hover & {
     color: white;
@@ -1513,31 +1634,6 @@ const HiddenDescription = styled.div`
   display: none;
 `
 
-const Arrow = styled.div`
-  position: absolute;
-  right: 24px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 24px;
-  color: white;
-  transition: all 0.3s ease;
-  opacity: 0.7;
-  pointer-events: none;
-  
-  ${Card}:hover & {
-    color: white;
-    opacity: 1;
-    /* убираем CSS transform, оставляем только GSAP анимации */
-  }
-  ${Card}.force-hover & {
-    color: white;
-    opacity: 1;
-  }
-
-  ${Card}.is-open & {
-    display: none;
-  }
-`
 
 const NavigationHint = styled.div`
   position: fixed;
@@ -2414,11 +2510,11 @@ const MenuPage = () => {
       { id: 'raykhan', title: 'Raykhan', description: 'SPA интернет‑магазин премиальных духов с 3D‑фоном и анимациями', href: '#', image: '/images/raykhan.png', tech: ['React 18', 'Framer Motion', 'GSAP', 'Three.js'], year: '2025', role: 'Front‑end', features: ['WebGL Silk‑фон', 'Каталог/карточки товаров'] },
     ],
     bots: [
-      { id: 'tg-shop', title: 'Бот "Худеем с Войтенко!"', description: 'Продажа подписок и консультаций с автопродлением (CloudPayments)', href: '#', image: '/images/botdieta.png', tech: ['Python', 'aiogram 3', 'MySQL', 'CloudPayments'], year: '2025', role: 'Back‑end', features: ['Подписки и автопродление', 'Webhooks CloudPayments'] },
-      { id: 'wa-support', title: 'KLAMbot', description: 'Документооборот и статусы по объектам/альбомам. Google Sheets + уведомления.', href: '#', image: '/images/klambot.png', tech: ['Python', 'PTB v20+', 'Google Sheets API', 'aiosmtplib'], year: '2025', role: 'Automation', features: ['Интеграция с Google Sheets', 'Раскраска статусов и уведомления'] },
+  { id: 'tg-shop', status: 'done', title: 'Бот "Худеем с Войтенко!"', description: 'Продажа подписок и консультаций с автопродлением (CloudPayments)', href: '/project/voytenko', image: '/images/botdieta.png', tech: ['Python', 'aiogram 3', 'MySQL', 'CloudPayments'], year: '2025', role: 'Back‑end', features: ['Подписки и автопродление', 'Webhooks CloudPayments'] },
+  { id: 'wa-support', status: 'done', title: 'KLAMbot', description: 'Документооборот и статусы по объектам/альбомам. Google Sheets + уведомления.', href: '#', image: '/images/klambot.png', tech: ['Python', 'PTB v20+', 'Google Sheets API', 'aiosmtplib'], year: '2025', role: 'Automation', features: ['Интеграция с Google Sheets', 'Раскраска статусов и уведомления'] },
     ],
     tools: [
-      { id: 'wb-integrator', title: 'WB Авто-акции', description: 'Интеграция с Wildberries + Google Sheets: акции, маржа, выгрузки', href: '#', image: '/images/WB.png', tech: ['Python', 'Requests', 'Pandas', 'Google Sheets API'], year: '2025', role: 'Automation', features: ['Расчёт маржи и отбор в акции', 'Выгрузки в Google Sheets'] },
+  { id: 'wb-integrator', status: 'done', title: 'WB Авто-акции', description: 'Интеграция с Wildberries + Google Sheets: акции, маржа, выгрузки', href: '#', image: '/images/WB.png', tech: ['Python', 'Requests', 'Pandas', 'Google Sheets API'], year: '2025', role: 'Automation', features: ['Расчёт маржи и отбор в акции', 'Выгрузки в Google Sheets'] },
     ],
   }
 
@@ -2495,18 +2591,14 @@ const MenuPage = () => {
       }
     }
 
-    const arrow = cardElement.querySelector(`.arrow-${index}`)
-
     // Единственный заголовок (позиция не меняется)
     const title = cardElement.querySelector(`.title-${index}`)
 
     // Стоп текущей таймлайн на этой карточке
     const tlPrev = hoverTimelinesRef.current[index]
     if (tlPrev) tlPrev.kill()
-    gsap.killTweensOf([arrow, title])
+  gsap.killTweensOf([title])
     if (title) gsap.set(title, { x: 0, clearProps: 'transform' })
-    // Сохраняем вертикальное центрирование стрелки через yPercent, не очищая transform
-    if (arrow) gsap.set(arrow, { x: 0, rotation: 0, opacity: 1, yPercent: -50 })
 
     setHoveredIndex(isHovering ? index : null);
     // Dim siblings for focus
@@ -2560,8 +2652,7 @@ const MenuPage = () => {
         const clip = buildClipFromRect(cardElement.getBoundingClientRect())
         tl.to(gd, { opacity: 1, clipPath: clip, duration: 0.22 }, 0)
       }
-      if (arrow) tl.to(arrow, { x: 10, rotation: 45, opacity: 0.8, yPercent: -50, duration: 0.25 }, 0)
-      // Текст не трогаем — только стрелка и dither
+  // Текст не трогаем — только dither
       if (index === 0) {
         const profileImg = cardElement.querySelector('.profile-img')
         if (profileImg) tl.to(profileImg, { opacity: 1, y: 0, scale: 1.05, duration: 0.28 }, 0.05)
@@ -2573,7 +2664,6 @@ const MenuPage = () => {
         gsap.killTweensOf(gd)
         tl.to(gd, { opacity: 0, clipPath: 'inset(0 100% 100% 0 round 16px)', duration: 0.18, ease: 'power2.in' }, 0)
       }
-      if (arrow) tl.to(arrow, { x: 0, rotation: 0, opacity: 1, yPercent: -50, duration: 0.25 }, 0)
       if (index === 0) {
         const profileImg = cardElement.querySelector('.profile-img')
         if (profileImg) tl.to(profileImg, { opacity: 0, y: 20, scale: 1, duration: 0.25 }, 0)
@@ -3260,7 +3350,7 @@ const MenuPage = () => {
                       <TitleSection>
                         <CardTitle className={`title-${index}`}>{card.title}</CardTitle>
                       </TitleSection>
-                      <Arrow className={`arrow-${index}`}>→</Arrow>
+                      
                     </>
                   )}
 
@@ -3288,6 +3378,70 @@ const MenuPage = () => {
                           <p>
                             Сделать «как у всех» — это не ко мне. Сделать продуманно и стильно — это ко мне.
                           </p>
+                          <AboutCaption className="about-caption">Вопрос-ответ</AboutCaption>
+                          <FAQAccordion className="faq-accordion">
+                            <details>
+                              <summary>Что делать, если я не разбираюсь в технических деталях?</summary>
+                              <div className="faq-content"><div className="faq-content-inner">
+                                <div className="faq-answer">
+                                  <p>Это не проблема. Я объясняю простыми словами, без «айтишного жаргона», и беру на себя всю техническую часть. Тебе нужно только рассказать, какой результат ты хочешь — остальное я сделаю сам.</p>
+                                </div>
+                              </div></div>
+                            </details>
+
+                            <details>
+                              <summary>Можно ли вносить изменения в проект по ходу работы?</summary>
+                              <div className="faq-content"><div className="faq-content-inner">
+                                <div className="faq-answer">
+                                  <p>Да, можно. Небольшие правки я вношу без проблем. Если изменения крупные — мы обсуждаем их отдельно, потому что они могут повлиять на сроки и бюджет.</p>
+                                </div>
+                              </div></div>
+                            </details>
+
+                            <details>
+                              <summary>Что ты делаешь, если я не знаю, чего хочу?</summary>
+                              <div className="faq-content"><div className="faq-content-inner">
+                                <div className="faq-answer">
+                                  <p>Помогаю разобраться. Я задаю правильные вопросы, структурирую твои мысли и предлагаю варианты решений. В итоге вместе формируем понятное техническое задание, с которым можно уверенно двигаться дальше.</p>
+                                </div>
+                              </div></div>
+                            </details>
+
+                            <details>
+                              <summary>Что такое подписочная система?</summary>
+                              <div className="faq-content"><div className="faq-content-inner">
+                                <div className="faq-answer">
+                                  <p>Это «абонемент на спокойствие» за 30 000 ₽ в месяц. Тебе не нужно искать и нанимать разных специалистов для поддержки проекта — всё делаю я. В подписку входит:</p>
+                                  <ul>
+                                    <li>хостинг и размещение проекта,</li>
+                                    <li>техническая поддержка,</li>
+                                    <li>обновление контента (до 5 страниц/пунктов в месяц),</li>
+                                    <li>защита от DDoS-атак и других угроз,</li>
+                                    <li>консультации и мелкие доработки.</li>
+                                  </ul>
+                                  <p>Ты занимаешься бизнесом, а я слежу, чтобы твой проект всегда работал стабильно и без проблем.</p>
+                                </div>
+                              </div></div>
+                            </details>
+
+                            <details>
+                              <summary>Можешь ли ты подключаться к уже существующему проекту и дорабатывать его?</summary>
+                              <div className="faq-content"><div className="faq-content-inner">
+                                <div className="faq-answer">
+                                  <p>Да. Часто ко мне приходят после других разработчиков. Я могу оптимизировать код, исправить ошибки, ускорить работу сайта или бота и довести проект до нужного результата.</p>
+                                </div>
+                              </div></div>
+                            </details>
+
+                            <details>
+                              <summary>Что для тебя значит «сделать хорошо»?</summary>
+                              <div className="faq-content"><div className="faq-content-inner">
+                                <div className="faq-answer">
+                                  <p>Это значит создать надёжный, удобный и качественный продукт, который работает без сбоев, одинаково хорошо открывается на любых устройствах и понятен каждому пользователю.</p>
+                                </div>
+                              </div></div>
+                            </details>
+                          </FAQAccordion>
                         </AboutText>
                       </AboutLeft>
                       <AboutRight>
@@ -3337,6 +3491,7 @@ const MenuPage = () => {
                               <ProjectCard style={{ width: '100%' }}>
                                 <CardInner>
                                   <CardFront>
+                                    <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
                                     <CardImage style={{ backgroundImage: `url(${p.image})` }} />
                                     <CardOverlay />
                                     <CardText>
@@ -3366,6 +3521,7 @@ const MenuPage = () => {
                                 <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
                                   <CardInner>
                                     <CardFront>
+                                      <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
                                       <CardImage style={{ backgroundImage: `url(${p.image})` }} />
                                       <CardOverlay />
                                       <CardText>
@@ -3415,6 +3571,7 @@ const MenuPage = () => {
                                 <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
                                   <CardInner>
                                     <CardFront>
+                                      <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
                                       <CardImage style={{ backgroundImage: `url(${p.image})` }} />
                                       <CardOverlay />
                                       <CardText>
@@ -3444,6 +3601,7 @@ const MenuPage = () => {
                                 <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
                                   <CardInner>
                                     <CardFront>
+                                      <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
                                       <CardImage style={{ backgroundImage: `url(${p.image})` }} />
                                       <CardOverlay />
                                       <CardText>
