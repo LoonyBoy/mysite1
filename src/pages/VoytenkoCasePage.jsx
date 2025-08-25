@@ -5,7 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useNavigate } from 'react-router-dom'
 import { useParticles } from '../components/GlobalParticleManager'
 import CustomCursor from '../components/CustomCursor'
-import { FaPlayCircle, FaFilePdf, FaKey, FaShoppingCart, FaUserShield } from 'react-icons/fa'
+import { FaPlayCircle, FaFilePdf, FaKey, FaShoppingCart, FaUserShield, FaInfoCircle, FaCreditCard, FaGift } from 'react-icons/fa'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -20,8 +20,9 @@ const CaseContainer = styled.div`
   color: #000000;
   
   @media (max-width: 768px) {
-    min-height: 400vh;
-    overflow-y: visible;
+  /* Не раздуваем страницу на мобиле — убираем искусственное увеличение высоты */
+  min-height: auto;
+  overflow-y: visible;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
     height: auto;
@@ -99,7 +100,8 @@ const ContentSection = styled.section`
   
   @media (max-width: 768px) {
     padding: 2rem 1rem;
-    min-height: 200vh;
+  /* Убираем дополнительное пространство под каруселью */
+  min-height: auto;
   }
 `
 
@@ -209,10 +211,15 @@ const OptionsContainer = styled.div`
   height: 380px;
   overflow: hidden;
   position: relative;
+  outline: none;
 
   @media (max-width: 768px) {
-    height: 320px;
-    max-width: 100%;
+  /* Вертикальная карусель на мобильных */
+  flex-direction: column;
+  height: auto;
+  max-width: 100%;
+  overflow: visible;
+  gap: 12px;
   }
 `
 
@@ -228,6 +235,7 @@ const OptionCard = styled.div`
   border-radius: 0;
   background-color: #18181b;
   background-image: url(${p => p.$bg});
+  background-repeat: no-repeat;
   background-size: ${p => (p.$active ? 'auto 100%' : 'auto 120%')};
   background-position: center;
   cursor: pointer;
@@ -239,6 +247,38 @@ const OptionCard = styled.div`
   transition: all 0.7s ease-in-out;
   flex: ${p => (p.$active ? '7 1 0%' : '1 1 0%')};
   z-index: ${p => (p.$active ? 10 : 1)};
+
+  @media (max-width: 768px) {
+    /* Переход к вертикальному раскрытию */
+    width: 100%;
+    min-width: 100%;
+    flex: none;
+    height: ${p => (p.$active ? 'min(60vh, 420px)' : '64px')};
+    /* Вертикальный вход */
+    transform: ${p => (p.$animated ? 'translateY(0)' : 'translateY(40px)')};
+    /* Масштаб по ширине экрана, чтобы кадр заполнял блок вертикально */
+    background-size: ${p => (p.$active ? '100% auto' : '120% auto')};
+    background-position: center;
+  }
+`
+
+const Indicators = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+  justify-content: center;
+`
+
+const Dot = styled.button`
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 1px solid #666;
+  background: ${p => (p.$active ? '#D14836' : 'transparent')};
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  &:focus-visible { outline: 2px dashed #D14836; outline-offset: 2px; }
 `
 
 const CardShadow = styled.div`
@@ -247,8 +287,27 @@ const CardShadow = styled.div`
   height: 120px;
   pointer-events: none;
   transition: all 0.7s ease-in-out;
-  bottom: ${p => (p.$active ? '0' : '-40px')};
-  box-shadow: ${p => (p.$active ? 'inset 0 -120px 120px -120px #000, inset 0 -120px 120px -80px #000' : 'inset 0 -120px 0px -120px #000, inset 0 -120px 0px -80px #000')};
+  bottom: 0;
+  /* Градиент вместо inset-теней, чтобы не было видимых краёв */
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0.75) 0%,
+    rgba(0,0,0,0.55) 30%,
+    rgba(0,0,0,0.25) 70%,
+    rgba(0,0,0,0) 100%
+  );
+  opacity: ${p => (p.$active ? 1 : 0.001)}; /* почти невидимая в свернутом состоянии */
+
+  @media (max-width: 768px) {
+    height: 40%; /* большее покрытие на вертикальных карточках */
+    background: linear-gradient(
+      to top,
+      rgba(0,0,0,0.8) 0%,
+      rgba(0,0,0,0.6) 25%,
+      rgba(0,0,0,0.25) 65%,
+      rgba(0,0,0,0) 100%
+    );
+  }
 `
 
 const CardLabel = styled.div`
@@ -262,6 +321,11 @@ const CardLabel = styled.div`
   z-index: 2;
   pointer-events: none;
   color: #fff;
+
+  @media (max-width: 768px) {
+    /* Чуть ниже на мобильных, чтобы не выходить за край в свернутых карточках */
+    bottom: 8px;
+  }
 `
 
 const IconCircle = styled.div`
@@ -326,6 +390,28 @@ const LightboxClose = styled.button`
 
   &:hover { background: rgba(255,255,255,0.1); }
   &:focus-visible { outline: 2px dashed #D14836; outline-offset: 2px; }
+`
+
+const LightboxContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 95vw;
+`
+
+const LightboxHeader = styled.div`
+  color: #fff;
+  text-align: center;
+  max-width: 900px;
+  padding: 0 0.5rem;
+  .title { font-weight: 700; font-size: 1.05rem; }
+  .desc { font-size: 0.95rem; color: #e5e7eb; margin-top: 0.15rem; }
+
+  @media (max-width: 768px) {
+    .title { font-size: 1rem; }
+    .desc { font-size: 0.9rem; }
+  }
 `
 
 // Accordion components
@@ -471,6 +557,8 @@ const VoytenkoCasePage = () => {
   const [activeIndex, setActiveIndex] = React.useState(0)
   const [animatedOptions, setAnimatedOptions] = React.useState([])
   const [lightboxIndex, setLightboxIndex] = React.useState(null)
+  const scrollYRef = useRef(0)
+  const cardRefs = useRef([])
   const [accOpen, setAccOpen] = React.useState({
     greeting: false,
     payment: false,
@@ -479,6 +567,16 @@ const VoytenkoCasePage = () => {
     admin: false,
     tech: false,
   })
+
+  const carouselOptions = React.useMemo(() => ([
+    { title: 'Описание бота', description: 'Название + краткое описание', image: '/images/voytenko-01-intro.webp', icon: <FaInfoCircle size={20} color="#fff" /> },
+    { title: 'Команда /start', description: 'Приветственное сообщение', image: '/images/voytenko-02-start.webp', icon: <FaPlayCircle size={20} color="#fff" /> },
+    { title: 'Меню', description: 'Главное меню бота', image: '/images/voytenko-03-menu.webp', icon: <FaShoppingCart size={20} color="#fff" /> },
+    { title: 'Отправка подарка', description: 'PDF‑файлы с меню на неделю', image: '/images/voytenko-04-pdf.webp', icon: <FaGift size={20} color="#fff" /> },
+    { title: 'Админ кабинет', description: 'Управление и аналитика', image: '/images/voytenko-05-admin.webp', icon: <FaUserShield size={18} color="#fff" /> },
+    { title: 'Приват канал', description: 'Обязательная подписка для подарков', image: '/images/voytenko-06-private-channel.webp', icon: <FaUserShield size={18} color="#fff" /> },
+    { title: 'Оплата', description: 'CloudPayments / автопродление', image: '/images/voytenko-07-payment.webp', icon: <FaCreditCard size={18} color="#fff" /> }
+  ]), [])
 
   const toggleAcc = (key) => setAccOpen(s => ({ ...s, [key]: !s[key] }))
 
@@ -501,37 +599,18 @@ const VoytenkoCasePage = () => {
       }
     }, 800)
 
-    // Входная анимация заголовка и действий (только десктоп)
-    if (!prefersReduced && !isMobile) {
-      if (titleRef.current) {
-        gsap.from(titleRef.current, { opacity: 0, y: 12, duration: 0.8, ease: 'power2.out' })
-      }
-      if (actionsRef.current) {
-        gsap.from(actionsRef.current, { opacity: 0, y: 12, delay: 0.05, duration: 0.8, ease: 'power2.out' })
-      }
-    } else {
-      // На мобиле/при reduced motion гарантируем полную видимость
+    // Убираем стартовую анимацию — всегда гарантируем полную видимость
+    {
       const items = [titleRef.current, actionsRef.current].filter(Boolean)
       if (items.length) gsap.set(items, { opacity: 1, y: 0, scale: 1, clearProps: 'transform' })
     }
 
-    // Скролл‑затухание внутри HeroSection только на десктопе и без reduced motion
+    // Скролл‑затухание отключено: гарантируем 100% видимость на старте и в покое
     let st
-    if (!prefersReduced && !isMobile && heroRef.current) {
+    if (heroRef.current) {
       const targets = [titleRef.current, actionsRef.current].filter(Boolean)
-      st = ScrollTrigger.create({
-        trigger: heroRef.current,
-        start: 'top top',
-        end: 'bottom top',
-        scrub: true,
-        onUpdate: (self) => {
-          const p = Math.min(1, Math.max(0, self.progress))
-          const easeOut = p // линейно, деликатно
-          targets.forEach(el => {
-            gsap.to(el, { opacity: 1 - easeOut, y: -12 * easeOut, scale: 1 - 0.015 * easeOut, overwrite: 'auto', duration: 0 })
-          })
-        }
-      })
+      gsap.set(targets, { opacity: 1, y: 0, scale: 1, clearProps: 'transform' })
+      // Оставлен задел на будущее: если понадобится вернуть эффект, включим создание ScrollTrigger здесь
     }
 
     return () => {
@@ -546,27 +625,48 @@ const VoytenkoCasePage = () => {
     const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (prefersReduced) {
       // show all instantly
-      setAnimatedOptions([0,1,2,3,4])
+      setAnimatedOptions([0,1,2,3,4,5,6])
       return
     }
     const timers = []
-    const count = 5
+    const count = 7
     for (let i = 0; i < count; i++) {
       timers.push(setTimeout(() => setAnimatedOptions(prev => Array.from(new Set([...prev, i]))), 180 * i))
     }
     return () => { timers.forEach(t => clearTimeout(t)) }
   }, [])
 
-  // Close lightbox with ESC and lock scroll when open
+  // Close lightbox with ESC and lock scroll when open (preserve scroll position)
   useEffect(() => {
     if (lightboxIndex === null) return
     const onKey = (e) => { if (e.key === 'Escape') setLightboxIndex(null) }
+    // Save scroll position and lock body to prevent jump-to-top on close
     const prevOverflow = document.body.style.overflow
+    const prevPosition = document.body.style.position
+    const prevTop = document.body.style.top
+    const prevWidth = document.body.style.width
+    const prevScrollBehavior = document.documentElement.style.scrollBehavior
+
+    scrollYRef.current = window.scrollY || window.pageYOffset || 0
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollYRef.current}px`
+    document.body.style.width = '100%'
     document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
     return () => {
+      // Read the locked offset before resetting styles
+      const lockedTop = document.body.style.top
+      const y = lockedTop ? Math.abs(parseInt(lockedTop, 10)) : scrollYRef.current
+
       document.body.style.overflow = prevOverflow
+      document.body.style.position = prevPosition
+      document.body.style.top = prevTop
+      document.body.style.width = prevWidth
       window.removeEventListener('keydown', onKey)
+      // restore scroll position instantly (avoid smooth behavior)
+      document.documentElement.style.scrollBehavior = 'auto'
+      window.scrollTo(0, y)
+      document.documentElement.style.scrollBehavior = prevScrollBehavior
     }
   }, [lightboxIndex])
 
@@ -574,6 +674,34 @@ const VoytenkoCasePage = () => {
     if (lightboxIndex !== null) return
     setTransitionContext('lightlab-case->projects')
     navigate('/menu')
+  }
+
+  // Auto-scroll active card into view on mobile
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const isMobile = window.innerWidth <= 768
+    if (!isMobile) return
+    const el = cardRefs.current[activeIndex]
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [activeIndex])
+
+  const handleKeyDown = (e) => {
+    if (!carouselOptions.length) return
+    const last = carouselOptions.length - 1
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex(i => (i >= last ? 0 : i + 1))
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex(i => (i <= 0 ? last : i - 1))
+    } else if (e.key === 'Home') {
+      e.preventDefault(); setActiveIndex(0)
+    } else if (e.key === 'End') {
+      e.preventDefault(); setActiveIndex(last)
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault(); setLightboxIndex(activeIndex)
+    }
   }
 
   return (
@@ -606,10 +734,9 @@ const VoytenkoCasePage = () => {
             Telegram‑бот для платных подписок на программу похудения Войтенко с автопродлением.
             Оплата через CloudPayments, уведомления и статусы подписок.
           </p>
-
           <FeaturesTechGrid>
             <div>
-              <h3>Что делает бот</h3>
+              <h3>Функционал</h3>
               <Accordion>
                 <AccordionItem>
                   <AccordionHeader
@@ -736,44 +863,28 @@ const VoytenkoCasePage = () => {
           </ResultCallout>
         </Description>
 
-        <CarouselSection>
-          <OptionsContainer>
-            {(() => {
-              const carouselOptions = [{
-              title: 'Видео‑интро',
-              description: '1‑я часть + приветствие',
-              image: '/images/botdieta.jpg',
-              icon: <FaPlayCircle size={20} color="#fff" />
-            }, {
-              title: 'PDF‑пакет',
-              description: 'Гайд + меню',
-              image: '/images/rudakovrz7.jpg',
-              icon: <FaFilePdf size={20} color="#fff" />
-            }, {
-              title: 'Выбор меню',
-              description: '1200–2200 ккал',
-              image: '/images/botdieta.png',
-              icon: <FaShoppingCart size={20} color="#fff" />
-            }, {
-              title: 'Подписка',
-              description: 'CloudPayments',
-              image: '/images/photo_2024-03-01_11-30-50.jpg',
-              icon: <FaKey size={18} color="#fff" />
-            }, {
-              title: 'Закрытый канал',
-              description: 'Автоинвайт и доступ',
-              image: '/images/rudakovrz8.png',
-              icon: <FaUserShield size={18} color="#fff" />
-            }]
-              return carouselOptions.map((opt, i) => (
+        {(() => {
+          return (
+            <CarouselSection>
+              <OptionsContainer
+                role="listbox"
+                aria-label="Слайды кейса"
+                tabIndex={0}
+                onKeyDown={handleKeyDown}
+              >
+                {carouselOptions.map((opt, i) => (
               <OptionCard
                 key={i}
                 $bg={opt.image}
                 $active={activeIndex === i}
                 $animated={animatedOptions.includes(i)}
+                role="option"
+                aria-selected={activeIndex === i}
+                onMouseEnter={() => { if (window.innerWidth > 768) setActiveIndex(i) }}
                 onClick={() => {
                   if (activeIndex === i) setLightboxIndex(i); else setActiveIndex(i)
                 }}
+                ref={el => { cardRefs.current[i] = el }}
               >
                 <CardShadow $active={activeIndex === i} />
                 <CardLabel>
@@ -794,18 +905,35 @@ const VoytenkoCasePage = () => {
                   </LabelInfo>
                 </CardLabel>
               </OptionCard>
-            ))})()}
-          </OptionsContainer>
-          {lightboxIndex !== null && (() => {
-            const imgs = ['/images/botdieta.jpg','/images/rudakovrz7.jpg','/images/botdieta.png','/images/photo_2024-03-01_11-30-50.jpg','/images/rudakovrz8.png']
-            return (
-              <LightboxOverlay onClick={() => setLightboxIndex(null)} role="dialog" aria-modal="true">
-                <LightboxClose onClick={(e) => { e.stopPropagation(); setLightboxIndex(null) }}>Закрыть</LightboxClose>
-                <LightboxImage src={imgs[lightboxIndex]} alt="Просмотр изображения" onClick={(e) => e.stopPropagation()} />
-              </LightboxOverlay>
-            )
-          })()}
-        </CarouselSection>
+                ))}
+              </OptionsContainer>
+              <Indicators role="tablist" aria-label="Переход по слайдам">
+                {carouselOptions.map((_, i) => (
+                  <Dot
+                    key={i}
+                    $active={activeIndex === i}
+                    aria-label={`Слайд ${i+1}`}
+                    aria-selected={activeIndex === i}
+                    role="tab"
+                    onClick={() => setActiveIndex(i)}
+                  />
+                ))}
+              </Indicators>
+              {lightboxIndex !== null && (
+                <LightboxOverlay onClick={() => setLightboxIndex(null)} role="dialog" aria-modal="true">
+                  <LightboxClose onClick={(e) => { e.stopPropagation(); setLightboxIndex(null) }}>Закрыть</LightboxClose>
+                  <LightboxContent onClick={(e) => e.stopPropagation()}>
+                    <LightboxHeader>
+                      <div className="title">{carouselOptions[lightboxIndex].title}</div>
+                      <div className="desc">{carouselOptions[lightboxIndex].description}</div>
+                    </LightboxHeader>
+                    <LightboxImage src={carouselOptions[lightboxIndex].image} alt={carouselOptions[lightboxIndex].title} />
+                  </LightboxContent>
+                </LightboxOverlay>
+              )}
+            </CarouselSection>
+          )
+        })()}
       </ContentSection>
     </CaseContainer>
   )

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useParticles } from '../components/GlobalParticleManager'
 import CustomCursor from '../components/CustomCursor'
 import logger from '../utils/Logger'
+import { fetchTopScores, saveScore } from '../lib/scoresApi'
 
 const GameContainer = styled.div`
   width: 100vw;
@@ -266,6 +267,78 @@ const GameOverButton = styled.button`
   }
 `
 
+// Элементы ввода инициалов (с мобильными отступами)
+const InitialsRow = styled.div`
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  @media (max-width: 768px) {
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+`
+
+const InitialsColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px;
+  border: ${props => props.$active ? '2px solid var(--primary-red)' : '2px solid transparent'};
+  @media (max-width: 768px) {
+    padding: 2px;
+  }
+`
+
+const ArrowButton = styled.button`
+  width: 40px;
+  height: 28px;
+  border: 2px solid var(--primary-red);
+  background: transparent;
+  color: var(--primary-red);
+  @media (max-width: 768px) {
+    width: 32px;
+    height: 24px;
+  }
+`
+
+const InitialLetter = styled.div`
+  font-size: 2rem;
+  color: #fff;
+  width: 40px;
+  text-align: center;
+  line-height: 1;
+  @media (max-width: 768px) {
+    font-size: 1.6rem;
+    width: 32px;
+  }
+`
+
+// Контейнер для действий справа от инициалов
+const GameOverActionRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  @media (max-width: 768px) {
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+`
+
+const RightActions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: stretch;
+`
+
+const ButtonsColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`
+
 // Стили для интерфейса выбора корабля
 const ShipSelectionOverlay = styled.div`
   position: absolute;
@@ -287,12 +360,82 @@ const ShipSelectionTitle = styled.h2`
   font-size: clamp(2rem, 6vw, 4rem);
   font-weight: 400;
   color: var(--primary-red);
-  text-align: center;
-  margin-bottom: 2rem;
+  text-align: left;
+  margin: 0;
   text-shadow: 
     0 0 10px rgba(209, 72, 54, 0.5),
     0 0 20px rgba(209, 72, 54, 0.3),
     0 2px 4px rgba(0, 0, 0, 0.8);
+
+  @media (max-width: 768px) {
+    /* Make the title smaller on mobile */
+    font-size: 1.5rem;
+    line-height: 1.2;
+  }
+`
+
+const ShipSelectionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: calc(100% - 4rem);
+  max-width: 1200px;
+  margin: 0 auto 0.5rem;
+  padding: 1rem 2rem;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 0 1rem;
+    margin-bottom: 0.5rem;
+  }
+`
+
+const CloseOverlayButton = styled.button`
+  /* Match MenuPage modal close button visuals */
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--primary-red);
+  background: transparent;
+  border: 2px solid var(--primary-red);
+  border-radius: 0;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    background: var(--primary-red);
+    color: var(--black);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.985);
+  }
+
+  @media (max-width: 768px) {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+`
+
+// Кнопка "крестик" для оверлея Game Over (в правом верхнем углу)
+const GameOverCloseButton = styled(CloseOverlayButton)`
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  z-index: 101;
+  @media (max-width: 768px) {
+    top: 1rem;
+    right: 1rem;
+  }
 `
 
 const ShipsGrid = styled.div`
@@ -310,9 +453,10 @@ const ShipsGrid = styled.div`
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    padding: 0 1rem;
+  grid-template-columns: 1fr;
+  /* Cards should be flush to each other on mobile */
+  gap: 0;
+  padding: 0;
     max-height: calc(100vh - 140px);
   }
 `
@@ -330,7 +474,7 @@ const ShipCard = styled.div`
   
   &:hover {
     border-color: var(--primary-red);
-    transform: translateY(-5px);
+  ${props => !props.selected && 'transform: translateY(-5px);'}
     box-shadow: 0 10px 30px rgba(209, 72, 54, 0.3);
   }
   
@@ -362,13 +506,16 @@ const ShipCard = styled.div`
   }
 
   @media (max-width: 768px) {
-    padding: 0.8rem;
-    margin: 0 auto;
+  /* Make cards taller with more inner space */
+  padding: 1rem 1rem 1.1rem;
+  margin: 0;
     width: 100%;
     display: flex;
     text-align: left;
     align-items: flex-start;
     gap: 1rem;
+  /* Ensure comfortable touch height */
+  min-height: 110px;
   }
 `
 
@@ -496,6 +643,10 @@ const SelectButton = styled.button`
   transition: all 0.3s ease;
   cursor: pointer;
   outline: none;
+  /* Avoid minor overflow due to border/padding on narrow screens */
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
   
   &:hover {
     background: var(--primary-red);
@@ -509,7 +660,7 @@ const SelectButton = styled.button`
   }
 
   @media (max-width: 768px) {
-    width: 100%;
+  width: 100%;
     padding: 0.5rem 0.8rem;
     font-size: 0.8rem;
     margin-top: auto;
@@ -570,10 +721,19 @@ const SpaceInvadersPage = () => {
   const [screenFlash, setScreenFlash] = useState({ active: false, opacity: 0 })
   const [gameInitialized, setGameInitialized] = useState(false)
   const [shipAnimating, setShipAnimating] = useState(false)
+  // Таблица рекордов и сохранение
+  const [topScores, setTopScores] = useState([])
+  const [initials, setInitials] = useState(['A','A','A'])
+  const [saving, setSaving] = useState(false)
+  const [saveDone, setSaveDone] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [activeInitial, setActiveInitial] = useState(0)
+  const gameOverRef = useRef(null)
   
   // Состояния для выбора корабля
   const [showShipSelection, setShowShipSelection] = useState(true)
-  const [selectedShipType, setSelectedShipType] = useState('interceptor') // По умолчанию перехватчик
+  // По умолчанию корабль не выбран
+  const [selectedShipType, setSelectedShipType] = useState(null)
   
   // Конфигурации кораблей (визуальный порядок: Синий, Фиолетовый, Зеленый, Красный)
   const shipTypes = {
@@ -591,8 +751,7 @@ const SpaceInvadersPage = () => {
       shape: 'polygon(0% 50%, 80% 30%, 100% 40%, 100% 60%, 80% 70%)',
       stats: { health: 1, fireRate: 1 },
       color: '#8A2BE2', // Фиолетовый
-      trail: { length: 10, width: 2 },
-      special: 'stealth'
+  trail: { length: 10, width: 2 }
     },
     scout: {
       name: 'Разведчик',
@@ -625,8 +784,7 @@ const SpaceInvadersPage = () => {
       bulletSpeed: 3, // Скорость пуль
       bulletDamage: 1, // Урон пуль
       lastShot: 0, // Время последнего выстрела
-      stealthMode: false, // Режим невидимости
-      stealthCooldown: 0 // Перезарядка стелса
+  // Стелс удален для режима "Хардкор"
     },
     bullets: [],
     enemies: [],
@@ -663,8 +821,7 @@ const SpaceInvadersPage = () => {
       bulletSpeed: 3,
       bulletDamage: 1,
       lastShot: 0,
-      stealthMode: false,
-      stealthCooldown: 0,
+  // Стелс удален для режима "Хардкор"
       color: shipConfig.color,
       visualProps: null // Сбрасываем визуальные свойства
     }
@@ -822,6 +979,80 @@ const SpaceInvadersPage = () => {
       spawnEnemies()
     }
   }, [gameInitialized, shipAnimating, showShipSelection])
+
+  // Загрузка Топ-10 и подготовка ввода инициалов при окончании игры
+  useEffect(() => {
+    if (gameState === 'gameOver') {
+      setSaving(false)
+      setSaveDone(false)
+      setSaveError('')
+      setActiveInitial(0)
+      fetchTopScores(10).then(setTopScores).catch(() => {})
+      // Фокус на оверлее для перехвата стрелок
+      setTimeout(() => {
+        if (gameOverRef.current) gameOverRef.current.focus()
+      }, 0)
+    }
+  }, [gameState])
+
+  const handleInitialsKeyDown = useCallback((e) => {
+    if (gameState !== 'gameOver') return
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    const isForbiddenName = (name) => {
+      const n = String(name).toUpperCase()
+      const forbidden = ['HUY','HUI','XUI','XUY','XYI','BLY','EBA','LOH','LOX']
+      return forbidden.includes(n)
+    }
+    const rotate = (i, delta) => {
+      setInitials(prev => {
+        const pos = letters.indexOf(prev[i])
+        const next = letters[(pos + delta + letters.length) % letters.length]
+        const copy = [...prev]
+        copy[i] = next
+        return copy
+      })
+    }
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault()
+        setActiveInitial(prev => Math.max(0, prev - 1))
+        break
+      case 'ArrowRight':
+        e.preventDefault()
+        setActiveInitial(prev => Math.min(2, prev + 1))
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        rotate(activeInitial, +1)
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        rotate(activeInitial, -1)
+        break
+      case 'Enter':
+        e.preventDefault()
+        // Нажать сохранить, если доступно
+        if (!saving && !saveDone) {
+          const name = initials.join('')
+          if (isForbiddenName(name)) {
+            setSaveError('ты думаешь это правда смешно?')
+            return
+          }
+          const ship = gameObjects.current.player.type || 'unknown'
+          setSaving(true); setSaveError('')
+          Promise.resolve()
+            .then(() => saveScore({ name, ship, score }))
+            .then(() => setSaveDone(true))
+            .then(() => fetchTopScores(10).then(setTopScores))
+            .catch((err) => {
+              const msg = (err && err.message === 'FORBIDDEN_NAME') ? 'ты думаешь это правда смешно?' : 'Не удалось сохранить. Попробуйте позже.'
+              setSaveError(msg)
+            })
+            .finally(() => setSaving(false))
+        }
+        break
+    }
+  }, [activeInitial, gameState, initials, saveDone, saving, score])
 
   // Анимация корабля от позиции курсора до игровой позиции
   useEffect(() => {
@@ -1028,16 +1259,7 @@ const SpaceInvadersPage = () => {
         logger.navigation('Escape key pressed, exiting game')
         exitGame()
       }
-      
-      // Активация стелс-режима для стелс-корабля
-      if (e.key === ' ' || e.code === 'Space') {
-        const player = gameObjects.current.player
-        if (player.type === 'stealth' && !player.stealthMode && player.stealthCooldown <= 0) {
-          player.stealthMode = true
-          player.stealthCooldown = 180 // 3 секунды при 60 FPS
-          console.log('🫥 Stealth mode activated!')
-        }
-      }
+  // Space key no longer triggers any ability
     }
 
     // Добавляем обработчики для касаний и мыши
@@ -1166,13 +1388,7 @@ const SpaceInvadersPage = () => {
       player.lastShot = currentTime
     }
     
-    // Особые способности
-    if (player.type === 'stealth' && player.stealthCooldown > 0) {
-      player.stealthCooldown--
-      if (player.stealthCooldown <= 0) {
-        player.stealthMode = false
-      }
-    }
+  // Особые способности отключены для "Хардкор"
     
     // Обновляем пули
     gameObjects.current.bullets = bullets.filter(bullet => {
@@ -1325,12 +1541,7 @@ const SpaceInvadersPage = () => {
         ctx.shadowOffsetY = 0
       }
       
-      // Режим невидимости для стелс-корабля
-      if (player.stealthMode) {
-        ctx.globalAlpha *= 0.3 // Полупрозрачность
-        ctx.shadowColor = player.color || '#8A2BE2'
-        ctx.shadowBlur = 20
-      }
+  // Невидимость отключена для режима "Хардкор"
       
       // Цвет корабля зависит от типа
       const shipColor = player.color || '#D14836'
@@ -1676,11 +1887,7 @@ const SpaceInvadersPage = () => {
   // Проверка коллизий врагов с игроком
   const checkPlayerCollisions = () => {
     const { player, enemies } = gameObjects.current
-    
-    // Стелс-корабль в режиме невидимости не получает урон
-    if (player.stealthMode) {
-      return
-    }
+  // Невидимость отключена: всегда проверяем столкновения
     
     // Используем обратный цикл для безопасного удаления элементов
     for (let enemyIndex = enemies.length - 1; enemyIndex >= 0; enemyIndex--) {
@@ -1768,8 +1975,7 @@ const SpaceInvadersPage = () => {
       bulletSpeed: 3,
       bulletDamage: 1,
       lastShot: 0,
-      stealthMode: false,
-      stealthCooldown: 0,
+  // Стелс удален для режима "Хардкор"
       visualProps: null // Сбрасываем визуальные свойства
     }
     
@@ -1967,39 +2173,18 @@ const SpaceInvadersPage = () => {
             {shipTypes[gameObjects.current.player.type]?.name}
           </div>
         )}
-        {gameObjects.current.player.stealthMode && (
-          <div style={{ 
-            fontSize: '0.8em', 
-            marginTop: '0.3rem',
-            color: '#8A2BE2',
-            textShadow: '0 0 10px #8A2BE2',
-            animation: 'pulse 1s ease-in-out infinite'
-          }}>
-            🫥 НЕВИДИМОСТЬ
-          </div>
-        )}
-        {gameObjects.current.player.type === 'stealth' && !gameObjects.current.player.stealthMode && gameObjects.current.player.stealthCooldown > 0 && (
-          <div style={{ 
-            fontSize: '0.8em', 
-            marginTop: '0.3rem',
-            color: 'rgba(138, 43, 226, 0.5)',
-            textShadow: '0 0 5px rgba(138, 43, 226, 0.5)'
-          }}>
-            Перезарядка: {Math.ceil(gameObjects.current.player.stealthCooldown / 60)}с
-          </div>
-        )}
         <div style={{ fontSize: '0.8em', marginTop: '0.5rem', opacity: 0.7 }}>
-          {gameObjects.current.player.type === 'stealth' ? 'ПРОБЕЛ - невидимость' : 'Зажми и двигай для управления'}
+          Зажми и двигай для управления
         </div>
       </GameUI>
       
-            {gameState === 'playing' && (
+            {gameState === 'playing' && !showShipSelection && (
         <ExitHint>
           Стрелочка справа или Escape для выхода
         </ExitHint>
       )}
       
-      {gameState === 'playing' && (
+  {gameState === 'playing' && !showShipSelection && (
         <ExitButton 
           onClick={(e) => {
             e.preventDefault()
@@ -2027,10 +2212,26 @@ const SpaceInvadersPage = () => {
         </ExitButton>
       )}
       
-      {/* Временно отключен интерфейс выбора корабля */}
       {showShipSelection && (
         <ShipSelectionOverlay>
-          <ShipSelectionTitle>Выберите корабль</ShipSelectionTitle>
+          <ShipSelectionHeader>
+            <ShipSelectionTitle>Выберите корабль</ShipSelectionTitle>
+            <CloseOverlayButton
+              aria-label="Закрыть"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                exitGame();
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                exitGame();
+              }}
+            >
+              ✕
+            </CloseOverlayButton>
+          </ShipSelectionHeader>
           <ShipsGrid>
             {Object.keys(shipTypes).map(key => {
               const s = shipTypes[key]
@@ -2041,6 +2242,20 @@ const SpaceInvadersPage = () => {
                   onClick={(e) => {
                     // Проверяем, что клик не был по кнопке
                     if (e.target.tagName !== 'BUTTON') {
+                      selectShip(key);
+                    }
+                  }}
+                  onTouchEnd={(e) => {
+                    // Позволяем выбирать корабль простым тапом по карточке
+                    e.preventDefault();
+                    e.stopPropagation();
+                    selectShip(key);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
                       selectShip(key);
                     }
                   }}
@@ -2096,43 +2311,134 @@ const SpaceInvadersPage = () => {
         </ShipSelectionOverlay>
       )}
       {gameState === 'gameOver' && (
-        <GameOverOverlay>
+        <GameOverOverlay
+          tabIndex={-1}
+          ref={gameOverRef}
+          onKeyDown={handleInitialsKeyDown}
+        >
+          <GameOverCloseButton
+            aria-label="Закрыть"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              exitGame();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              exitGame();
+            }}
+          >
+            ✕
+          </GameOverCloseButton>
           <GameOverTitle>GAME OVER</GameOverTitle>
           <FinalScore>Финальный счет: {score}</FinalScore>
-          <GameOverButtons>
-            <GameOverButton 
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                console.log('Restart button clicked!')
-                logger.navigation('Restart button clicked')
-                restartGame()
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                console.log('Restart button mouse down')
-              }}
-            >
-              РЕСТАРТ
-            </GameOverButton>
-            <GameOverButton 
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                console.log('Exit button clicked!')
-                logger.navigation('Exit button clicked')
-                exitGame()
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                console.log('Exit button mouse down')
-              }}
-            >
-              ДОМОЙ
-            </GameOverButton>
-          </GameOverButtons>
+          {/* Ввод и сохранение инициалов + действия справа */}
+          <GameOverActionRow>
+            <InitialsRow>
+              {[0,1,2].map(i => (
+                <InitialsColumn key={i} $active={i === activeInitial}>
+                  <ArrowButton
+                    type="button"
+                    onClick={() => {
+                      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                      setInitials(prev => {
+                        const pos = letters.indexOf(prev[i]);
+                        const next = letters[(pos + 1) % letters.length];
+                        const copy = [...prev];
+                        copy[i] = next; return copy;
+                      })
+                    }}
+                    aria-label={`Буква ${i+1} вверх`}
+                  >▲</ArrowButton>
+                  <InitialLetter>{initials[i]}</InitialLetter>
+                  <ArrowButton
+                    type="button"
+                    onClick={() => {
+                      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                      setInitials(prev => {
+                        const pos = letters.indexOf(prev[i]);
+                        const next = letters[(pos - 1 + letters.length) % letters.length];
+                        const copy = [...prev];
+                        copy[i] = next; return copy;
+                      })
+                    }}
+                    aria-label={`Буква ${i+1} вниз`}
+                  >▼</ArrowButton>
+                </InitialsColumn>
+              ))}
+            </InitialsRow>
+            <RightActions>
+              <GameOverButton
+                onClick={async () => {
+                  try {
+                    setSaving(true); setSaveError('')
+                    const name = initials.join('')
+                    const upper = name.toUpperCase()
+                    const forbidden = ['HUY','HUI','XUI','XUY','XYI','BLY','EBA','LOH','LOX']
+                    if (forbidden.includes(upper)) {
+                      setSaving(false)
+                      setSaveError('ты думаешь это правда смешно?')
+                      return
+                    }
+                    const ship = gameObjects.current.player.type || 'unknown'
+                    await saveScore({ name, ship, score })
+                    setSaveDone(true)
+                    const items = await fetchTopScores(10)
+                    setTopScores(items)
+                  } catch (e) {
+                    const msg = (e && e.message === 'FORBIDDEN_NAME') ? 'ты думаешь это правда смешно?' : 'Не удалось сохранить. Попробуйте позже.'
+                    setSaveError(msg)
+                  } finally { setSaving(false) }
+                }}
+                disabled={saving || saveDone}
+                style={{ opacity: saving || saveDone ? 0.6 : 1 }}
+              >
+                {saveDone ? 'СОХРАНЕНО' : (saving ? 'СОХРАНЕНИЕ…' : 'СОХРАНИТЬ СЧЕТ')}
+              </GameOverButton>
+              <ButtonsColumn>
+                <GameOverButton 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('Restart button clicked!')
+                    logger.navigation('Restart button clicked')
+                    restartGame()
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('Restart button mouse down')
+                  }}
+                >
+                  РЕСТАРТ
+                </GameOverButton>
+              </ButtonsColumn>
+            </RightActions>
+          </GameOverActionRow>
+          {saveError && <div style={{ color: 'var(--primary-red)', marginBottom: '1rem' }}>{saveError}</div>}
+
+
+          {/* Таблица Топ-10 */}
+          <div style={{ width: 'min(600px, 90vw)', margin: '0 auto 2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr', gap: '8px', color: '#fff', opacity: 0.9, marginBottom: 8 }}>
+              <div>#</div>
+              <div>Имя</div>
+              <div>Корабль</div>
+              <div>Счет</div>
+            </div>
+            <div style={{ display: 'grid', rowGap: '6px' }}>
+              {topScores.map((row, idx) => (
+                <div key={`${row.name}-${row.score}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr', gap: '8px', color: '#ddd' }}>
+                  <div>{idx + 1}</div>
+                  <div>{row.name}</div>
+                  <div>{shipTypes[row.ship]?.name || row.ship}</div>
+                  <div>{row.score}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
         </GameOverOverlay>
       )}
     </GameContainer>

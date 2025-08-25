@@ -5,11 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+  "server": "node ./server/index.js",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
+  "cors": "^2.8.5",
+  "dotenv": "^16.4.5",
+  "express": "^4.19.2",
+  "mysql2": "^3.11.3",
     "@react-three/drei": "^9.96.0",
     "@react-three/fiber": "^8.18.0",
     "@react-three/postprocessing": "^2.19.1",

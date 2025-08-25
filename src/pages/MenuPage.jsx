@@ -102,7 +102,7 @@ const CloseButton = styled.button`
   /* square cyberpunk close icon button */
   position: fixed;
   top: calc(16px + env(safe-area-inset-top, 0px));
-  right: 16px;
+  right: calc(24px + var(--close-right-offset, 0px));
   z-index: 1102; /* поверх модалки и dither */
   width: 44px;
   height: 44px;
@@ -371,6 +371,18 @@ const AboutModalContent = styled.div`
   box-sizing: border-box;
   align-items: start;
   text-align: left;
+  /* Desktop: make About modal internally scrollable */
+  overflow: hidden;
+
+  @media (min-width: 769px) {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(136,78,255,0.6) rgba(255,255,255,0.06);
+    &::-webkit-scrollbar { width: 10px; }
+    &::-webkit-scrollbar-track { background: rgba(255,255,255,0.06); }
+    &::-webkit-scrollbar-thumb { background: rgba(136,78,255,0.6); border-radius: 10px; }
+  }
 
   /* Desktop: start hidden to avoid flash before progressive reveal */
   @media (min-width: 769px) {
@@ -539,9 +551,14 @@ const FAQAccordion = styled.div`
 
 const AboutRight = styled.div`
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  height: 100%;
+  /* Keep the photo visible; let it parallax via transform */
+  @media (min-width: 769px) {
+    position: sticky;
+    top: 24px; /* match AboutModalContent padding */
+    align-self: start;
+  }
 `
 
 const AboutPhotoWrap = styled.div`
@@ -549,6 +566,7 @@ const AboutPhotoWrap = styled.div`
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  will-change: transform; /* parallax */
 `
 
 const AboutPhoto = styled.img`
@@ -1742,6 +1760,7 @@ const MenuPage = () => {
   const stripsRef = useRef([])
   const aboutContainerRef = useRef(null)
   const ditherBreatheTlRef = useRef(null)
+  const aboutPhotoWrapRef = useRef(null)
   // store a cleanup handler for transient dither edge bars (top/bottom)
   const edgeBarsCleanupRef = useRef(null)
   const [servicesCategory, setServicesCategory] = useState('web')
@@ -3092,7 +3111,7 @@ const MenuPage = () => {
       const underline = root.querySelector('.about-title-underline')
       const paragraphs = root.querySelectorAll('.about-text p')
       const listItems = root.querySelectorAll('.about-list li')
-      const photo = root.querySelector('.about-photo')
+  const photo = root.querySelector('.about-photo')
 
       // Стартовые состояния
       gsap.set(underline, { scaleX: 0 })
@@ -3133,6 +3152,64 @@ const MenuPage = () => {
       isServicesUIUpdatingRef.current = false
     }
   }, [navigate])
+
+  // Desktop-only: enable internal scrolling for About modal and parallax the photo slower than content
+  useEffect(() => {
+    if (openedIndex !== 0) return
+    if (isTouchRef.current) return
+    const container = aboutContainerRef.current
+    if (!container) return
+
+    // Ensure body doesn't block scrolling while modal handles it
+    const prevOverflow = document.body.style.overflow
+    const prevPad = document.body.style.paddingRight
+    try {
+      const bodyScrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+      document.body.style.overflow = 'hidden'
+      document.body.style.paddingRight = `${bodyScrollbarWidth}px`
+    } catch {}
+
+    // Move close button away from the modal's internal scrollbar
+    const applyCloseOffset = () => {
+      try {
+        const innerScrollbarWidth = container.offsetWidth - container.clientWidth
+        const offset = Math.max(0, innerScrollbarWidth - 2) + 4
+        document.documentElement.style.setProperty('--close-right-offset', `${offset}px`)
+      } catch {}
+    }
+    applyCloseOffset()
+    const onResize = () => applyCloseOffset()
+    window.addEventListener('resize', onResize)
+
+    // Parallax: move photo wrapper at a slower rate
+    const photoWrap = container.querySelector('.about-photo-wrap')
+    const speed = 0.25 // 25% of scroll speed
+    const onScroll = () => {
+      const y = container.scrollTop * speed
+      if (photoWrap) {
+        gsap.to(photoWrap, { y: y, duration: 0.2, ease: 'power2.out', overwrite: true })
+      }
+    }
+    // Prevent wheel from bubbling to window (which has a global wheel listener)
+    const onWheelBlock = (e) => {
+      e.stopPropagation()
+      // Do not preventDefault so native scrolling of the container still occurs
+    }
+    container.addEventListener('scroll', onScroll, { passive: true })
+    container.addEventListener('wheel', onWheelBlock, { passive: true })
+    // Initialize position
+    onScroll()
+
+    return () => {
+  try { container.removeEventListener('scroll', onScroll) } catch {}
+      try { container.removeEventListener('wheel', onWheelBlock) } catch {}
+      try { gsap.killTweensOf(photoWrap) } catch {}
+      try { if (photoWrap) gsap.set(photoWrap, { clearProps: 'transform' }) } catch {}
+  try { document.body.style.overflow = prevOverflow; document.body.style.paddingRight = prevPad } catch {}
+  try { document.documentElement.style.removeProperty('--close-right-offset') } catch {}
+  try { window.removeEventListener('resize', onResize) } catch {}
+    }
+  }, [openedIndex])
 
   // Центрирование горизонтальных рядов в модалке «Проекты» и блокировка вертикального скролла
   useEffect(() => {
