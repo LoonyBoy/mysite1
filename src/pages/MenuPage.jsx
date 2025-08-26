@@ -11,6 +11,10 @@ import MobileNavigation from '../components/MobileNavigation'
 import useParticleControl from '../hooks/useParticleControl'
 import Dither from '../../dither.jsx'; // Adjusted to new file extension
 import DesktopModalAnimations from '../utils/DesktopModalAnimations'
+// Иконки каналов связи (используются в hover-оверлее «Контакты»)
+import telegramIcon from '../images/telegram.svg'
+import whatsappIcon from '../images/whatsapp.svg'
+import emailIcon from '../images/email.svg'
 
 import { useDeviceDetection } from '../hooks/useDeviceDetection'
 // ProjectsScrollStack не используем в новой версии модалки
@@ -422,6 +426,129 @@ const AboutLeft = styled.div`
     filter: blur(0.3px);
     opacity: 0.9;
     pointer-events: none;
+  }
+`
+
+// Hover-оверлей для карточки «Контакты»: 3 вертикальные зоны (Telegram / WhatsApp / Email)
+const ContactsHoverOverlay = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: none; /* показываем только на hover карточки на десктопе */
+  /* Поверх глобального Dither (который поднимается до z-index:900 классом .front) */
+  z-index: 950;
+  pointer-events: none; /* не перехватываем клики — открытие карточки работает как раньше */
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+
+  ${Card}:hover & {
+    display: flex;
+  }
+
+  flex-direction: column;
+`
+
+const HoverZone = styled.div`
+  flex: 1 0 33.3333%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  position: relative; /* for centering absolute content on hover */
+  pointer-events: auto; /* чтобы ловить hover внутри зон */
+  cursor: pointer;
+  /* Разделители между зонами */
+  & + & { border-top: 1px solid rgba(255, 255, 255, 0.18); }
+`
+
+const IconCircle = styled.div`
+  /* Wrapper only for hover-scale; no visible frame */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  will-change: transform;
+  background: transparent;
+  border: none;
+  img {
+    width: clamp(36px, 4vw, 56px);
+    height: clamp(36px, 4vw, 56px);
+    display: block;
+    opacity: 1;
+    /* Force logos to render white regardless of original colors */
+    filter: brightness(0) saturate(100%) invert(1) contrast(1000%);
+    mix-blend-mode: normal;
+  }
+  ${HoverZone}:hover & {
+    transform: scale(1.06);
+  }
+  /* Email zone special hover: hide the icon */
+  ${HoverZone}[data-type="email"]:hover & {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px) scale(0.94);
+  }
+`
+
+// Masked glyph to force solid white icons regardless of original SVG colors
+const IconGlyph = styled.div`
+  width: clamp(48px, 6vw, 84px);
+  height: clamp(48px, 6vw, 84px);
+  background: ${(p) => p.$color || '#fff'};
+  /* Standard and WebKit masks for broader support */
+  -webkit-mask: url(${(p) => p.$src}) center / contain no-repeat;
+  mask: url(${(p) => p.$src}) center / contain no-repeat;
+  pointer-events: none;
+`
+
+const IconLabel = styled.div`
+  font-size: clamp(11px, 1.2vw, 13px);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.01em;
+  user-select: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  /* Email zone special hover: hide the label */
+  ${HoverZone}[data-type="email"]:hover & {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+  }
+`
+
+const ContactStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.2s ease, gap 0.2s ease;
+  will-change: transform;
+  /* Email zone special hover: grow the contact details */
+  ${HoverZone}[data-type="email"]:hover & {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1.18);
+  z-index: 1;
+    gap: 6px;
+  }
+`
+
+const ContactLink = styled.a`
+  font-size: clamp(11px, 1.1vw, 13px);
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: underline;
+  line-height: 1.15;
+  &:hover { opacity: 1; }
+  transition: font-size 0.2s ease, opacity 0.2s ease;
+  /* Email zone special hover: increase font size and weight */
+  ${HoverZone}[data-type="email"]:hover & {
+    font-size: clamp(14px, 1.6vw, 18px);
+    font-weight: 600;
   }
 `
 
@@ -1304,13 +1431,18 @@ const Bullets = styled.ul`
     transition: opacity 0.15s ease, transform 0.15s ease;
     z-index: 5;
   }
-  .term:hover::after { opacity: 1; transform: translateY(0); }
+  .term:hover::after, .term:focus::after, .term.is-open::after { opacity: 1; transform: translateY(0); }
+  .term:focus { outline: none; }
+  @media (pointer: coarse) {
+    .term { cursor: pointer; }
+  }
   
   @media (max-width: 768px) {
     .term::after {
       max-width: 280px;
       padding: 6px 12px;
       font-size: 12px;
+  z-index: 20;
     }
   }
 `
@@ -1601,6 +1733,10 @@ const TitleSection = styled.div`
   ${Card}.force-hover &::before {
     opacity: 1;
   }
+  /* When a card hides its title (e.g., contacts overlay), suppress the dark backdrop */
+  ${Card}.title-hidden &::before {
+    opacity: 0 !important;
+  }
 `
 
 const CardTitle = styled.h3`
@@ -1625,6 +1761,7 @@ const CardTitle = styled.h3`
     background: rgba(255,255,255,0.85);
     transition: width 0.22s ease;
   }
+  &.no-underline::after { width: 0 !important; }
   /* Show underline on hover/focus of the card */
   ${Card}:hover &::after,
   ${Card}.force-hover &::after,
@@ -1679,12 +1816,16 @@ const NavigationHint = styled.div`
 
 
 
-// Более тёмные тона для dither-фона; для "Контакты" — тёмно-красный
+// Более тёмные тона для dither-фона; для "Контакты" — тёмно-красный.
+// Добавлены отдельные цвета для зон: Telegram / WhatsApp / Email на ховере контактов (индексы 4–6)
 const waveColors = [
-  [0, 0, 0.35],      // тёмно-синий
-  [0.3, 0, 0.3],     // тёмный пурпур
-  [0, 0.3, 0],       // тёмно-зелёный
-  [0.4, 0.05, 0.05], // тёмно-красный для "Контакты"
+  [0, 0, 0.35],       // 0: тёмно-синий (About)
+  [0.3, 0, 0.3],      // 1: тёмный пурпур (Projects)
+  [0, 0.3, 0],        // 2: тёмно-зелёный (Services)
+  [0.4, 0.05, 0.05],  // 3: тёмно-красный для "Контакты"
+  [0.06, 0.22, 0.62], // 4: Telegram — глубокий голубой
+  [0.03, 0.45, 0.22], // 5: WhatsApp — насыщенный зелёный
+  [0.55, 0.45, 0.06], // 6: Email — мягкий жёлтый
 ];
 const menuItems = [
   {
@@ -1915,6 +2056,7 @@ const MenuPage = () => {
     return serviceCategories[nextIdx]
   }
   const servicesGridRef = useRef(null)
+  const servicesModalRef = useRef(null)
   const tabsRowRef = useRef(null)
   const tabWebRef = useRef(null)
   const tabBotsRef = useRef(null)
@@ -2214,6 +2356,33 @@ const MenuPage = () => {
       // Any heavy tier processing here
     }, 50)
   }
+
+  // Toggle term tooltip (mobile/keyboard)
+  const handleTermToggle = (e) => {
+    e.stopPropagation()
+    const el = e.currentTarget
+    const open = el.classList.contains('is-open')
+    // close others within the same modal to avoid stacking
+    try {
+      const root = servicesModalRef.current || document
+      root.querySelectorAll('.term.is-open').forEach(n => { if (n !== el) n.classList.remove('is-open') })
+    } catch {}
+    if (open) el.classList.remove('is-open')
+    else el.classList.add('is-open')
+  }
+
+  // Close any open term tooltips on outside click (while Services modal open)
+  useEffect(() => {
+    if (openedIndex !== 2) return
+    const onDocClick = (e) => {
+      const root = servicesModalRef.current
+      if (!root) return
+      if (root.contains(e.target)) return
+      try { root.querySelectorAll('.term.is-open').forEach(n => n.classList.remove('is-open')) } catch {}
+    }
+    document.addEventListener('click', onDocClick, true)
+    return () => document.removeEventListener('click', onDocClick, true)
+  }, [openedIndex])
 
   // animate category change: slide out current, swap content, slide in new
   const isProjectsAnimatingRef = useRef(false)
@@ -2635,7 +2804,7 @@ const MenuPage = () => {
     const colors = ['#1a1a66', '#4d1a4d', '#1a4d1a', '#5a0f0f'];
     const defaultColor = '#8B2E23';
 
-    if (isHovering) {
+  if (isHovering) {
       setParticleProps(prev => ({ ...prev, color: colors[index] }));
       setGlobalDitherColorIndex(index)
     } else {
@@ -2665,6 +2834,8 @@ const MenuPage = () => {
 
     if (isHovering) {
       cardElement.classList.add('force-hover')
+      // When contacts card, mark title as hidden to suppress TitleSection backdrop
+      if (index === 3) cardElement.classList.add('title-hidden')
       const gd = globalDitherRef.current
       if (gd) {
         gsap.killTweensOf(gd)
@@ -2676,8 +2847,13 @@ const MenuPage = () => {
         const profileImg = cardElement.querySelector('.profile-img')
         if (profileImg) tl.to(profileImg, { opacity: 1, y: 0, scale: 1.05, duration: 0.28 }, 0.05)
       }
+      // Contacts (index 3): прячем заголовок на hover, чтобы не перекрывал иконки зон
+      if (index === 3 && title) {
+        tl.to(title, { opacity: 0, duration: 0.18, ease: 'power2.out' }, 0)
+      }
     } else {
       cardElement.classList.remove('force-hover')
+      cardElement.classList.remove('title-hidden')
       const gd = globalDitherRef.current
       if (gd) {
         gsap.killTweensOf(gd)
@@ -2686,6 +2862,10 @@ const MenuPage = () => {
       if (index === 0) {
         const profileImg = cardElement.querySelector('.profile-img')
         if (profileImg) tl.to(profileImg, { opacity: 0, y: 20, scale: 1, duration: 0.25 }, 0)
+      }
+      // Contacts (index 3): возвращаем заголовок при уходе курсора
+      if (index === 3 && title) {
+        tl.to(title, { opacity: 1, duration: 0.18, ease: 'power2.out' }, 0)
       }
     }
   }
@@ -3413,21 +3593,73 @@ const MenuPage = () => {
               <Card
                 ref={(el) => (cardRefs.current[index] = el)}
                 className={`card-${index}`}
-                onMouseEnter={() => handleHover(index, true)}
-                onMouseLeave={() => handleHover(index, false)}
-                onClick={(e) => openCardFullscreen(index, e)}
+                onMouseEnter={() => { handleHover(index, true); if (!isTouchRef.current && index === 3) setGlobalDitherColorIndex(3) }}
+                onMouseLeave={(e) => { handleHover(index, false); if (!isTouchRef.current && index === 3) { try { setGlobalDitherColorIndex(3) } catch {} } }}
+                onMouseMove={(e) => {
+                  if (isTouchRef.current) return;
+                  if (index !== 3) return;
+                  const el = cardRefs.current[index];
+                  if (!el) return;
+                  const r = el.getBoundingClientRect();
+                  const y = e.clientY - r.top;
+                  const zoneH = r.height / 3;
+                  if (y < zoneH) {
+                    setGlobalDitherColorIndex(4); // Telegram
+                  } else if (y < zoneH * 2) {
+                    setGlobalDitherColorIndex(5); // WhatsApp
+                  } else {
+                    setGlobalDitherColorIndex(6); // Email
+                  }
+                }}
+                onClick={(e) => { if (index === 3) { e.stopPropagation(); e.preventDefault?.(); return; } openCardFullscreen(index, e) }}
                 tabIndex={0}
                 role="button"
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCardFullscreen(index, e) } }}
+                aria-disabled={index === 3}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (index === 3) { e.preventDefault(); return; } e.preventDefault(); openCardFullscreen(index, e) } }}
               >
+                {openedIndex !== index && index === 3 && (
+                  <ContactsHoverOverlay aria-hidden="true">
+                    <HoverZone onClick={(e) => { e.stopPropagation(); e.preventDefault?.(); window.open('https://t.me/loony_boss', '_blank', 'noopener,noreferrer'); }}>
+                      <IconCircle>
+                        <IconGlyph $src={telegramIcon} $color="#229ED9" aria-hidden="true" />
+                      </IconCircle>
+                      <IconLabel>Telegram</IconLabel>
+                    </HoverZone>
+                    <HoverZone onClick={(e) => { e.stopPropagation(); e.preventDefault?.(); window.open('https://wa.me/79131114551', '_blank', 'noopener,noreferrer'); }}>
+                      <IconCircle>
+                        <IconGlyph $src={whatsappIcon} $color="#25D366" aria-hidden="true" />
+                      </IconCircle>
+                      <IconLabel>WhatsApp</IconLabel>
+                    </HoverZone>
+                    <HoverZone data-type="email">
+                      <IconCircle>
+                        <IconGlyph $src={emailIcon} aria-hidden="true" />
+                      </IconCircle>
+                      <IconLabel>Почта</IconLabel>
+                      <ContactStack>
+                        <ContactLink
+                          href="mailto:loony.boss@yandex.ru"
+                          onClick={(e) => { e.stopPropagation(); }}
+                        >
+                          loony.boss@yandex.ru
+                        </ContactLink>
+                        <ContactLink
+                          href="tel:+79131114551"
+                          onClick={(e) => { e.stopPropagation(); }}
+                        >
+                          +7 913 111-45-51
+                        </ContactLink>
+                      </ContactStack>
+                    </HoverZone>
+                  </ContactsHoverOverlay>
+                )}
                 {/* per-card dither удален, используем глобальный */}
                 <CardContent>
                   {openedIndex !== index && (
                     <>
                       <TitleSection>
-                        <CardTitle className={`title-${index}`}>{card.title}</CardTitle>
+                        <CardTitle className={`title-${index} ${index === 3 ? 'no-underline' : ''}`}>{card.title}</CardTitle>
                       </TitleSection>
-                      
                     </>
                   )}
 
@@ -3704,7 +3936,7 @@ const MenuPage = () => {
                   )}
 
                   {openedIndex === index && index === 2 && (
-                    <ServicesModalWrap className="services-modal">
+                    <ServicesModalWrap className="services-modal" ref={servicesModalRef}>
                       <ProjectsTopTitle>Услуги</ProjectsTopTitle>
                       <PricingHeader>
                         {/* Desktop navigation */}
@@ -3822,7 +4054,15 @@ const MenuPage = () => {
                                     const norm = (s) => s.toLowerCase().replace(/‑/g, '-');
                                     const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
                                     const text = key ? (
-                                      <span className="term" data-hint={map[key]}>{f}</span>
+                                      <span
+                                        className="term"
+                                        tabIndex={0}
+                                        role="button"
+                                        aria-label="Подсказка"
+                                        data-hint={map[key]}
+                                        onClick={handleTermToggle}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTermToggle(e) } }}
+                                      >{f}</span>
                                     ) : f
                                     return (<li key={f}>{text}</li>)
                                   })}
@@ -3844,7 +4084,17 @@ const MenuPage = () => {
                                         }
                                         const norm = (s) => s.toLowerCase().replace(/‑/g, '-')
                                         const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
-                                        const text = key ? (<span className="term" data-hint={map[key]}>{f}</span>) : f
+                                        const text = key ? (
+                                          <span
+                                            className="term"
+                                            tabIndex={0}
+                                            role="button"
+                                            aria-label="Подсказка"
+                                            data-hint={map[key]}
+                                            onClick={handleTermToggle}
+                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTermToggle(e) } }}
+                                          >{f}</span>
+                                        ) : f
                                         return (<li key={f}>{text}</li>)
                                       })}
                                     </Bullets>
