@@ -26,7 +26,7 @@ const CustomCursor = ({ color = '#D14836' }) => {
     // Создаем элемент следа
     trail.style.position = 'fixed'
     trail.style.pointerEvents = 'none'
-    trail.style.zIndex = '9998'
+  trail.style.zIndex = '10049'
     trail.style.mixBlendMode = 'difference'
     trail.style.opacity = '0'
 
@@ -145,12 +145,12 @@ const CustomCursor = ({ color = '#D14836' }) => {
       document.body.style.cursor = 'none'
     }
 
+    // Left/game edge: do NOT transform cursor into a triangle anymore; keep the circle
     const handleNavigationEdgeLeftEnter = () => {
-      cursor.classList.remove('hover', 'navigation')
-      cursor.classList.add('triangle')
+      cursor.classList.remove('hover', 'navigation', 'triangle')
       cursor.textContent = ''
-      cursor.style.backgroundColor = 'transparent'
-      trail.style.display = 'none'
+      cursor.style.backgroundColor = color
+      trail.style.display = 'block'
       document.body.style.cursor = 'none'
     }
 

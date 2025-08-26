@@ -683,7 +683,7 @@ const subcategories = {
   ]
 }
 
-const ProjectModal = ({ isOpen, onClose, startAnimation = true }) => {
+const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
   const [step, setStep] = useState('main') // 'main', 'subcategory', 'contact'
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [selectedSubcategories, setSelectedSubcategories] = useState([])
@@ -724,19 +724,20 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true }) => {
 
   useEffect(() => {
     if (isOpen) {
-      // Сброс состояния при открытии модального окна
-      setStep('main')
+      // При открытии учитываем возможный префилл
+      const nextStep = prefill?.step === 'contact' ? 'contact' : 'main'
+      setStep(nextStep)
       setSelectedCategory(null)
       setSelectedSubcategories([])
-      setFormData({ name: '', phone: '', description: '' })
+      setFormData({ name: '', phone: '', description: prefill?.description || '' })
     } else {
-      // Сброс состояния при закрытии модального окна для полной очистки
+      // Полная очистка при закрытии
       setStep('main')
       setSelectedCategory(null)
       setSelectedSubcategories([])
       setFormData({ name: '', phone: '', description: '' })
     }
-  }, [isOpen])
+  }, [isOpen, prefill])
 
   const handleCategorySelect = (categoryId) => {
     setSelectedCategory(categoryId)

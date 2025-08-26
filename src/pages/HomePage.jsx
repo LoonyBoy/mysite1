@@ -166,6 +166,7 @@ const CreateProjectButton = styled.button`
   text-decoration: none;
   font-weight: 600;
   font-size: 1.1rem;
+  font-family: 'Unbounded', sans-serif;
   border-radius: 0;
   transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
   cursor: pointer;
@@ -648,12 +649,10 @@ const HomePage = () => {
     if (navigationEdge && navigationHint && !isMobile) {
       const handleMouseEnter = () => {
         navigationHint.classList.add('visible')
-        document.body.style.cursor = 'none'
       }
       
       const handleMouseLeave = () => {
         navigationHint.classList.remove('visible')
-        document.body.style.cursor = 'auto'
       }
       
       const handleClick = () => {
@@ -827,7 +826,8 @@ const HomePage = () => {
         }} 
       />
       
-      <MobileHints />
+  {/* Hide mobile hints on mobile devices */}
+  {!isMobile && <MobileHints />}
       <MobileNavigation />
     </HomeContainer>
   )

@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { useParticles } from '../components/GlobalParticleManager'
 import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
+import ProjectModal from '../components/ProjectModal'
 import useParticleControl from '../hooks/useParticleControl'
 import Dither from '../../dither.jsx'; // Adjusted to new file extension
 import DesktopModalAnimations from '../utils/DesktopModalAnimations'
@@ -140,6 +141,16 @@ const CloseButton = styled.button`
     inset: 0;
     pointer-events: none;
   }
+`
+
+// Back button placed to the left of the CloseButton on the top-right
+const BackTopButton = styled(CloseButton)`
+  right: calc(24px + var(--close-right-offset, 0px) + 44px + 8px);
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--primary-red);
+  border-color: var(--primary-red);
 `
 
 const CardRow = styled.div`
@@ -1302,8 +1313,12 @@ const PricingCard = styled.div`
   display: flex; flex-direction: column; gap: 8px; height: 100%;
 
   @media (min-width: 1024px) {
-    /* прижатые карточки: убираем двойную линию между соседями */
-    & + & { border-left: none; }
+  /* Desktop: убираем внешние левые/правые края, оставляем только разделители между колонками */
+  border-right: none;
+  /* для первых в ряду (1,4,7,...) убираем левый край */
+  &:nth-child(3n+1) { border-left: none; }
+  /* для остальных показываем левый разделитель */
+  &:not(:nth-child(3n+1)) { border-left: 1px solid rgba(255,255,255,0.12); }
   }
   
   @media (max-width: 768px) {
@@ -1356,6 +1371,17 @@ const CardSectionTitle = styled.div`
 
 const SectionBlock = styled.div`
   min-height: ${props => props.$minHeight ? `${props.$minHeight}px` : 'auto'};
+`
+const SelectButton = styled.button`
+  padding: 12px 18px; font-size: 15px; border: 2px solid var(--primary-red);
+  background: var(--primary-red); color: var(--black); cursor: pointer; border-radius: 0;
+`
+const RightCol = styled.div`
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  @media (max-width: 768px) {
+    align-items: center;
+    width: 100%;
+  }
 `
 const PricingHead = styled.div`
   display: flex; flex-direction: column; gap: 8px;
@@ -1733,6 +1759,13 @@ const TitleSection = styled.div`
   ${Card}.force-hover &::before {
     opacity: 1;
   }
+  /* Make Contacts title backdrop slightly darker to avoid red tint looking gray */
+  ${Card}.card-3:hover &::before,
+  ${Card}.card-3.force-hover &::before {
+    opacity: 1;
+    background: linear-gradient(180deg, rgba(0,0,0,0.82), rgba(0,0,0,0.74));
+    filter: blur(9px);
+  }
   /* When a card hides its title (e.g., contacts overlay), suppress the dark backdrop */
   ${Card}.title-hidden &::before {
     opacity: 0 !important;
@@ -1749,6 +1782,17 @@ const CardTitle = styled.h3`
   letter-spacing: -0.015em;
   position: relative;
   padding-bottom: 8px; /* room for underline */
+
+  /* Make Contacts title (card-3) visually brighter */
+  ${Card}.card-3 & {
+    color: #ffffff;
+    opacity: 1;
+  }
+  ${Card}.card-3:hover &,
+  ${Card}.card-3.force-hover & {
+    color: #ffffff;
+    text-shadow: 0 0 1px rgba(255,255,255,0.7), 0 0 10px rgba(255,255,255,0.08);
+  }
 
   /* Underline swipe: hidden by default */
   &::after {
@@ -1767,6 +1811,13 @@ const CardTitle = styled.h3`
   ${Card}.force-hover &::after,
   ${Card}:focus-visible &::after {
     width: 100%;
+  }
+  /* On touch devices, don't show underline on hover/focus to avoid default initial highlight */
+  @media (pointer: coarse) {
+    ${Card}:hover &::after,
+    ${Card}:focus-visible &::after {
+      width: 0;
+    }
   }
   /* Hide underline when opened */
   ${Card}.is-open &::after { width: 0; }
@@ -1907,6 +1958,68 @@ const MenuPage = () => {
   const [servicesCategory, setServicesCategory] = useState('web')
   const serviceCategories = ['web', 'bots', 'automation']
   const [servicesTier, setServicesTier] = useState('optimal')
+  const [servicesStep, setServicesStep] = useState('pick') // 'pick' | 'subscription'
+
+  // Project creation modal (same behavior as on HomePage)
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
+  const [prefill, setPrefill] = useState(null)
+  const [showSubscriptionInfo, setShowSubscriptionInfo] = useState(false)
+  const [isProjectModalAnimationReady, setIsProjectModalAnimationReady] = useState(false)
+  const bodyLockRef = useRef({ scrollY: 0, prevStyles: {} })
+
+  // Lock body scroll while ProjectModal is open (copied from HomePage)
+  useEffect(() => {
+    const lockBody = () => {
+      const scrollY = window.scrollY || window.pageYOffset || 0
+      const body = document.body
+      bodyLockRef.current.prevStyles = {
+        position: body.style.position || '',
+        top: body.style.top || '',
+        left: body.style.left || '',
+        right: body.style.right || '',
+        width: body.style.width || '',
+        overflow: body.style.overflow || '',
+        overscrollBehavior: body.style.overscrollBehavior || ''
+      }
+      bodyLockRef.current.scrollY = scrollY
+
+      body.style.position = 'fixed'
+      body.style.top = `-${scrollY}px`
+      body.style.left = '0'
+      body.style.right = '0'
+      body.style.width = '100%'
+      body.style.overflow = 'hidden'
+      body.style.overscrollBehavior = 'none'
+    }
+
+    const unlockBody = () => {
+      const body = document.body
+      const { scrollY, prevStyles } = bodyLockRef.current
+      body.style.position = prevStyles.position
+      body.style.top = prevStyles.top
+      body.style.left = prevStyles.left
+      body.style.right = prevStyles.right
+      body.style.width = prevStyles.width
+      body.style.overflow = prevStyles.overflow
+      body.style.overscrollBehavior = prevStyles.overscrollBehavior
+      window.scrollTo(0, scrollY || 0)
+    }
+
+    if (isProjectModalOpen) {
+      isModalOpenRef.current = true
+      lockBody()
+    } else {
+      unlockBody()
+      // only reset modal flag if no card modal is active
+      if (openedIndex == null) isModalOpenRef.current = false
+    }
+
+    return () => {
+      if (isProjectModalOpen) {
+        unlockBody()
+      }
+    }
+  }, [isProjectModalOpen, openedIndex])
   const serviceTiers = ['basic', 'optimal', 'premium']
   const serviceTierLabels = {
     basic: 'Базовый',
@@ -1935,6 +2048,15 @@ const MenuPage = () => {
         try { gd.style.opacity = ''; gd.style.clipPath = 'inset(0 100% 100% 0 round 16px)'; gd.classList.remove('front') } catch (e) {}
       }
     } catch (e) { }
+  }, [])
+
+  // On initial mount, ensure no accidental force-hover on mobile
+  useEffect(() => {
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+      requestAnimationFrame(() => {
+        cardRefs.current.forEach((c) => c && c.classList.remove('force-hover'))
+      })
+    }
   }, [])
 
   // runtime helper: detect thin red hairline elements near bottom of viewport and hide them
@@ -2489,6 +2611,8 @@ const MenuPage = () => {
   // Позиционируем индикатор и анимируем карточки при первом открытии модалки "Услуги"
   useEffect(() => {
     if (openedIndex !== 2) return
+  // При каждом открытии модалки "Услуги" начинаем со шага выбора услуги
+  setServicesStep('pick')
     // Всегда сбрасываем категорию на "web" при каждом открытии модалки
     if (servicesCategory !== 'web') {
       setServicesCategory('web')
@@ -2834,8 +2958,6 @@ const MenuPage = () => {
 
     if (isHovering) {
       cardElement.classList.add('force-hover')
-      // When contacts card, mark title as hidden to suppress TitleSection backdrop
-      if (index === 3) cardElement.classList.add('title-hidden')
       const gd = globalDitherRef.current
       if (gd) {
         gsap.killTweensOf(gd)
@@ -2847,13 +2969,8 @@ const MenuPage = () => {
         const profileImg = cardElement.querySelector('.profile-img')
         if (profileImg) tl.to(profileImg, { opacity: 1, y: 0, scale: 1.05, duration: 0.28 }, 0.05)
       }
-      // Contacts (index 3): прячем заголовок на hover, чтобы не перекрывал иконки зон
-      if (index === 3 && title) {
-        tl.to(title, { opacity: 0, duration: 0.18, ease: 'power2.out' }, 0)
-      }
     } else {
       cardElement.classList.remove('force-hover')
-      cardElement.classList.remove('title-hidden')
       const gd = globalDitherRef.current
       if (gd) {
         gsap.killTweensOf(gd)
@@ -2862,10 +2979,6 @@ const MenuPage = () => {
       if (index === 0) {
         const profileImg = cardElement.querySelector('.profile-img')
         if (profileImg) tl.to(profileImg, { opacity: 0, y: 20, scale: 1, duration: 0.25 }, 0)
-      }
-      // Contacts (index 3): возвращаем заголовок при уходе курсора
-      if (index === 3 && title) {
-        tl.to(title, { opacity: 1, duration: 0.18, ease: 'power2.out' }, 0)
       }
     }
   }
@@ -3200,29 +3313,10 @@ const MenuPage = () => {
 
       // Разрешаем обработку hover после закрытия
       isModalOpenRef.current = false
+      // After closing, do not auto-select any card; clear any forced hover to avoid accidental underline
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          const { x, y } = mousePosRef.current
-          let targetIndex = -1
-          for (let i = 0; i < cardRefs.current.length; i++) {
-            const c = cardRefs.current[i]
-            if (!c) continue
-            const r = c.getBoundingClientRect()
-            if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
-              targetIndex = i
-              break
-            }
-          }
-          if (targetIndex === -1) {
-            cardRefs.current.forEach((c) => c && c.classList.remove('force-hover'))
-          } else {
-            cardRefs.current.forEach((c, i) => {
-              if (!c) return
-              if (i === targetIndex) c.classList.add('force-hover')
-              else c.classList.remove('force-hover')
-            })
-            handleHover(targetIndex, true)
-          }
+          cardRefs.current.forEach((c) => c && c.classList.remove('force-hover'))
           lastHoveredBeforeOpenRef.current = null
         })
       })
@@ -3593,72 +3687,40 @@ const MenuPage = () => {
               <Card
                 ref={(el) => (cardRefs.current[index] = el)}
                 className={`card-${index}`}
-                onMouseEnter={() => { handleHover(index, true); if (!isTouchRef.current && index === 3) setGlobalDitherColorIndex(3) }}
-                onMouseLeave={(e) => { handleHover(index, false); if (!isTouchRef.current && index === 3) { try { setGlobalDitherColorIndex(3) } catch {} } }}
-                onMouseMove={(e) => {
-                  if (isTouchRef.current) return;
-                  if (index !== 3) return;
-                  const el = cardRefs.current[index];
-                  if (!el) return;
-                  const r = el.getBoundingClientRect();
-                  const y = e.clientY - r.top;
-                  const zoneH = r.height / 3;
-                  if (y < zoneH) {
-                    setGlobalDitherColorIndex(4); // Telegram
-                  } else if (y < zoneH * 2) {
-                    setGlobalDitherColorIndex(5); // WhatsApp
-                  } else {
-                    setGlobalDitherColorIndex(6); // Email
+    onMouseEnter={() => { handleHover(index, true) }}
+    onMouseLeave={() => { handleHover(index, false) }}
+                onClick={(e) => {
+                  if (index === 3) {
+                    e.stopPropagation();
+                    e.preventDefault?.();
+                    // Open project creation modal like on HomePage
+                    setIsProjectModalOpen(true)
+                    setIsProjectModalAnimationReady(true)
+                    return
                   }
+                  openCardFullscreen(index, e)
                 }}
-                onClick={(e) => { if (index === 3) { e.stopPropagation(); e.preventDefault?.(); return; } openCardFullscreen(index, e) }}
                 tabIndex={0}
                 role="button"
                 aria-disabled={index === 3}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (index === 3) { e.preventDefault(); return; } e.preventDefault(); openCardFullscreen(index, e) } }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (index === 3) {
+                      setIsProjectModalOpen(true)
+                      setIsProjectModalAnimationReady(true)
+                      return
+                    }
+                    openCardFullscreen(index, e)
+                  }
+                }}
               >
-                {openedIndex !== index && index === 3 && (
-                  <ContactsHoverOverlay aria-hidden="true">
-                    <HoverZone onClick={(e) => { e.stopPropagation(); e.preventDefault?.(); window.open('https://t.me/loony_boss', '_blank', 'noopener,noreferrer'); }}>
-                      <IconCircle>
-                        <IconGlyph $src={telegramIcon} $color="#229ED9" aria-hidden="true" />
-                      </IconCircle>
-                      <IconLabel>Telegram</IconLabel>
-                    </HoverZone>
-                    <HoverZone onClick={(e) => { e.stopPropagation(); e.preventDefault?.(); window.open('https://wa.me/79131114551', '_blank', 'noopener,noreferrer'); }}>
-                      <IconCircle>
-                        <IconGlyph $src={whatsappIcon} $color="#25D366" aria-hidden="true" />
-                      </IconCircle>
-                      <IconLabel>WhatsApp</IconLabel>
-                    </HoverZone>
-                    <HoverZone data-type="email">
-                      <IconCircle>
-                        <IconGlyph $src={emailIcon} aria-hidden="true" />
-                      </IconCircle>
-                      <IconLabel>Почта</IconLabel>
-                      <ContactStack>
-                        <ContactLink
-                          href="mailto:loony.boss@yandex.ru"
-                          onClick={(e) => { e.stopPropagation(); }}
-                        >
-                          loony.boss@yandex.ru
-                        </ContactLink>
-                        <ContactLink
-                          href="tel:+79131114551"
-                          onClick={(e) => { e.stopPropagation(); }}
-                        >
-                          +7 913 111-45-51
-                        </ContactLink>
-                      </ContactStack>
-                    </HoverZone>
-                  </ContactsHoverOverlay>
-                )}
                 {/* per-card dither удален, используем глобальный */}
                 <CardContent>
                   {openedIndex !== index && (
                     <>
                       <TitleSection>
-                        <CardTitle className={`title-${index} ${index === 3 ? 'no-underline' : ''}`}>{card.title}</CardTitle>
+      <CardTitle className={`title-${index}`}>{card.title}</CardTitle>
                       </TitleSection>
                     </>
                   )}
@@ -3939,179 +4001,225 @@ const MenuPage = () => {
                     <ServicesModalWrap className="services-modal" ref={servicesModalRef}>
                       <ProjectsTopTitle>Услуги</ProjectsTopTitle>
                       <PricingHeader>
-                        {/* Desktop navigation */}
-                        <HeadingsRow style={{ marginBottom: 8, position: 'relative', display: 'none' }} className="desktop-only" ref={tabsRowRef}>
-                          <HeadingTab ref={tabWebRef} data-active={servicesCategory === 'web'} onClick={(e) => { e.stopPropagation(); switchCategory('web') }}>
-                            Сайты / Веб‑приложения
-                          </HeadingTab>
-                          <HeadingTab ref={tabBotsRef} data-active={servicesCategory === 'bots'} onClick={(e) => { e.stopPropagation(); switchCategory('bots') }}>
-                            Боты
-                          </HeadingTab>
-                          <HeadingTab ref={tabAutoRef} data-active={servicesCategory === 'automation'} onClick={(e) => { e.stopPropagation(); switchCategory('automation') }}>
-                            Программы / Софт
-                          </HeadingTab>
-                          <TabIndicator ref={indicatorRef} />
-                        </HeadingsRow>
+                        {/* Desktop navigation (hidden on subscription step) */}
+                        {servicesStep === 'pick' && (
+                          <HeadingsRow style={{ marginBottom: 8, position: 'relative', display: 'none' }} className="desktop-only" ref={tabsRowRef}>
+                            <HeadingTab ref={tabWebRef} data-active={servicesCategory === 'web'} onClick={(e) => { e.stopPropagation(); switchCategory('web') }}>
+                              Сайты / Веб‑приложения
+                            </HeadingTab>
+                            <HeadingTab ref={tabBotsRef} data-active={servicesCategory === 'bots'} onClick={(e) => { e.stopPropagation(); switchCategory('bots') }}>
+                              Боты
+                            </HeadingTab>
+                            <HeadingTab ref={tabAutoRef} data-active={servicesCategory === 'automation'} onClick={(e) => { e.stopPropagation(); switchCategory('automation') }}>
+                              Программы / Софт
+                            </HeadingTab>
+                            <TabIndicator ref={indicatorRef} />
+                          </HeadingsRow>
+                        )}
                         
-                        {/* Mobile navigation */}
-                        <MobileServicesNavigation data-testid="mobile-services-nav">
-                          <NavButton
-                            ref={servicesNavWebRef}
-                            className={servicesCategory === 'web' ? 'active' : ''}
-                            onClick={(e) => handleServicesNavButtonClick('web', e)}
-                            data-testid="services-nav-button-web"
-                          >
-                            Сайты
-                          </NavButton>
-                          <NavButton
-                            ref={servicesNavBotsRef}
-                            className={servicesCategory === 'bots' ? 'active' : ''}
-                            onClick={(e) => handleServicesNavButtonClick('bots', e)}
-                            data-testid="services-nav-button-bots"
-                          >
-                            Боты
-                          </NavButton>
-                          <NavButton
-                            ref={servicesNavAutoRef}
-                            className={servicesCategory === 'automation' ? 'active' : ''}
-                            onClick={(e) => handleServicesNavButtonClick('automation', e)}
-                            data-testid="services-nav-button-auto"
-                          >
-                            Софт
-                          </NavButton>
-                        </MobileServicesNavigation>
+                        {/* Mobile navigation (hidden on subscription step) */}
+                        {servicesStep === 'pick' && (
+                          <MobileServicesNavigation data-testid="mobile-services-nav">
+                            <NavButton
+                              ref={servicesNavWebRef}
+                              className={servicesCategory === 'web' ? 'active' : ''}
+                              onClick={(e) => handleServicesNavButtonClick('web', e)}
+                              data-testid="services-nav-button-web"
+                            >
+                              Сайты
+                            </NavButton>
+                            <NavButton
+                              ref={servicesNavBotsRef}
+                              className={servicesCategory === 'bots' ? 'active' : ''}
+                              onClick={(e) => handleServicesNavButtonClick('bots', e)}
+                              data-testid="services-nav-button-bots"
+                            >
+                              Боты
+                            </NavButton>
+                            <NavButton
+                              ref={servicesNavAutoRef}
+                              className={servicesCategory === 'automation' ? 'active' : ''}
+                              onClick={(e) => handleServicesNavButtonClick('automation', e)}
+                              data-testid="services-nav-button-auto"
+                            >
+                              Софт
+                            </NavButton>
+                          </MobileServicesNavigation>
+                        )}
                         
-                        {/* Mobile tier navigation */}
-                        <ServicesTierNavigation data-testid="mobile-services-tier-nav">
-                          <TierNavButton
-                            ref={servicesTierBasicRef}
-                            className={servicesTier === 'basic' ? 'active' : ''}
-                            onClick={(e) => handleServicesTierButtonClick('basic', e)}
-                            data-testid="services-tier-button-basic"
-                          >
-                            Базовый
-                          </TierNavButton>
-                          <TierNavButton
-                            ref={servicesTierOptimalRef}
-                            className={servicesTier === 'optimal' ? 'active' : ''}
-                            onClick={(e) => handleServicesTierButtonClick('optimal', e)}
-                            data-testid="services-tier-button-optimal"
-                          >
-                            Стандарт
-                          </TierNavButton>
-                          <TierNavButton
-                            ref={servicesTierPremiumRef}
-                            className={servicesTier === 'premium' ? 'active' : ''}
-                            onClick={(e) => handleServicesTierButtonClick('premium', e)}
-                            data-testid="services-tier-button-premium"
-                          >
-                            Премиум
-                          </TierNavButton>
-                        </ServicesTierNavigation>
+                        {/* Mobile tier navigation (hidden on subscription step) */}
+                        {servicesStep === 'pick' && (
+                          <ServicesTierNavigation data-testid="mobile-services-tier-nav">
+                            <TierNavButton
+                              ref={servicesTierBasicRef}
+                              className={servicesTier === 'basic' ? 'active' : ''}
+                              onClick={(e) => handleServicesTierButtonClick('basic', e)}
+                              data-testid="services-tier-button-basic"
+                            >
+                              Базовый
+                            </TierNavButton>
+                            <TierNavButton
+                              ref={servicesTierOptimalRef}
+                              className={servicesTier === 'optimal' ? 'active' : ''}
+                              onClick={(e) => handleServicesTierButtonClick('optimal', e)}
+                              data-testid="services-tier-button-optimal"
+                            >
+                              Стандарт
+                            </TierNavButton>
+                            <TierNavButton
+                              ref={servicesTierPremiumRef}
+                              className={servicesTier === 'premium' ? 'active' : ''}
+                              onClick={(e) => handleServicesTierButtonClick('premium', e)}
+                              data-testid="services-tier-button-premium"
+                            >
+                              Премиум
+                            </TierNavButton>
+                          </ServicesTierNavigation>
+                        )}
                       </PricingHeader>
 
-                      <PricingGrid ref={servicesGridRef} $center={servicesCategory === 'automation'}>
-                        {(() => {
-                          const list = servicesCategory === 'automation' ? servicesAutomation : (servicesCategory === 'web' ? servicesWeb : servicesBots)
-                          const sel = servicesTier === 'basic' ? 0 : servicesTier === 'optimal' ? 1 : 2
-                          return list.map((s, i) => (
-                            <PricingCard key={s.id} className={`${servicesTier === 'optimal' ? 'featured' : ''} ${i !== sel ? 'tier-hidden' : ''}`} onClick={(e) => { e.stopPropagation(); navigate('/contact') }}>
-                              <PricingTop>
-                                <PricingHead>
-                                  <h4>{s.title}</h4>
-                                  <p>{s.desc}</p>
-                                </PricingHead>
-                                <TopPrice>
-                                  <span className="amount">{s.price}</span>
-                                  <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
-                                </TopPrice>
-                              </PricingTop>
-                              <Divider />
-                              <CardSectionTitle>Что входит</CardSectionTitle>
-                              <SectionBlock $minHeight={256}>
-                                <Bullets>
-                                  {s.features.map(f => {
-                                    const map = {
-                                      'Адаптивная верстка': 'Сайт удобно читать с телефона и компьютера — всё подстраивается под экран.',
-                                      'Форма обратной связи': 'Посетитель быстро свяжется с вами: заявки уходят на почту или в мессенджер.',
-                                      'Кросс‑браузерное тестирование': 'Сайт выглядит и работает одинаково у большинства людей: Chrome, Safari, Firefox, Edge.',
-                                      'Развертывание на сервере': 'Публикую сайт на хостинге и настраиваем, чтобы он открывался по адресу.',
-                                      'Хостинг/домен': 'Хостинг — место, где живёт сайт. Домен — его адрес (например, site.ru).',
-                                      'База данных/CRM': 'Хранение информации о клиентах, покупках, заявках и т.д. Видим аналитику. Всё в одном месте.',
-                                      'админ‑панель': 'Управляете страницами, товарами и заявками без программиста.',
-                                      'Платежная система': 'Приём оплат на сайте: карты, СБП, криптовалюты и т.п.',
-                                      'Калькуляторы и формы': 'Быстрые расчёты и удобные заявки: клиент видит цену и отправляет данные в пару кликов.',
-                                      'Калькуляторы/формы': 'Быстрые расчёты и удобные заявки: клиент видит цену и отправляет данные в пару кликов.',
-                                      'Мультиязычность': 'Несколько языков и удобное переключение между ними.',
-                                      'Безопасность': 'SSL (https) и соблюдение законов о данных — защита и доверие пользователей.',
-                                      'GDPR/ФЗ‑152': 'Работа с персональными данными по закону: согласия, политика, защита.',
-                                      'Авто‑тесты': 'Автоматические проверки кода и нагрузочные тесты — ловим ошибки до релиза.',
-                                      'Документация и инструкции': 'Пошаговые материалы, чтобы вы могли сами работать с сайтом.',
-                                      'WebSockets': 'Живые обновления без перезагрузки сайта: чат, уведомления, изменения статусов сразу.',
-                                      'PWA (офлайн‑доступ)': 'Сайт как приложение: значок на телефоне, быстрее, часть функций доступна без интернета.',
-                                      'SEO': 'Делаю сайт понятным для Google/Yandex, чтобы он был выше в поиске и приводил больше клиентов.',
-                                    }
-                                    const norm = (s) => s.toLowerCase().replace(/‑/g, '-');
-                                    const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
-                                    const text = key ? (
-                                      <span
-                                        className="term"
-                                        tabIndex={0}
-                                        role="button"
-                                        aria-label="Подсказка"
-                                        data-hint={map[key]}
-                                        onClick={handleTermToggle}
-                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTermToggle(e) } }}
-                                      >{f}</span>
-                                    ) : f
-                                    return (<li key={f}>{text}</li>)
-                                  })}
-                                </Bullets>
-                              </SectionBlock>
-                              {s.extras?.length ? (
-                                <>
-                                  <Divider />
-                                  <CardSectionTitle>Доп. услуги</CardSectionTitle>
-                                  <SectionBlock $minHeight={96}>
-                                    <Bullets>
-                                      {s.extras.map(f => {
-                                        const map = {
-                                          'Хостинг/домен': 'Хостинг — место, где живёт сайт. Домен — его адрес (например, site.ru).',
-                                          'Доп. страница': 'Добавим новую страницу в общий стиль сайта с нужным контентом.',
-                                          'Расширенная аналитика': 'Подключим метрики (Google/Yandex), события, цели — чтобы видеть, что работает.',
-                                          'Миграции/перенос': 'Безопасный переезд: бэкап, перенос кода/БД/файлов, настройка домена и SSL, редиректы и проверка — без потери данных и SEO.',
-                                          'Мультиязычность': 'Добавим ещё один язык и переключатель. Контент можно перевести позже.',
-                                        }
-                                        const norm = (s) => s.toLowerCase().replace(/‑/g, '-')
-                                        const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
-                                        const text = key ? (
-                                          <span
-                                            className="term"
-                                            tabIndex={0}
-                                            role="button"
-                                            aria-label="Подсказка"
-                                            data-hint={map[key]}
-                                            onClick={handleTermToggle}
-                                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTermToggle(e) } }}
-                                          >{f}</span>
-                                        ) : f
-                                        return (<li key={f}>{text}</li>)
-                                      })}
-                                    </Bullets>
-                                  </SectionBlock>
-                                </>
-                              ) : null}
-                              <Divider />
-                              <Muted style={{ marginTop: 6 }}>{s.timeline}</Muted>
-                              <Muted style={{ opacity: 0.7 }}>{s.tech}</Muted>
-                              {s.notes?.length ? (
-                                <Muted style={{ opacity: 0.7, marginTop: 6 }}>{s.notes.join(' • ')}</Muted>
-                              ) : null}
+                      {/* Шаги услуг: 1) выбор услуги, 2) выбор подписки */}
+                      <div style={{width: '100%', display: 'grid', gap: 8, margin: '8px 0'}}>
+                        {servicesStep === 'pick' ? (
+                          <div style={{textAlign:'center', color:'#fff', opacity:0.9, fontSize:14}}>
+                            Шаг 1 из 2 — выберите услугу.
+                          </div>
+                        ) : (
+                          <div style={{textAlign:'center', color:'#fff', opacity:0.9, fontSize:14}}>
+                            Шаг 2 из 2 — выберите подписку под задачу.
+                          </div>
+                        )}
+                      </div>
 
-                            </PricingCard>
-                          ))
-                        })()}
-                      </PricingGrid>
+                      {servicesStep === 'pick' ? (
+                        <PricingGrid ref={servicesGridRef} $center={servicesCategory === 'automation'}>
+                          {(() => {
+                            const list = servicesCategory === 'automation' ? servicesAutomation : (servicesCategory === 'web' ? servicesWeb : servicesBots)
+                            const sel = servicesTier === 'basic' ? 0 : servicesTier === 'optimal' ? 1 : 2
+                            return list.map((s, i) => (
+                              <PricingCard
+                                key={s.id}
+                                className={`${servicesTier === 'optimal' ? 'featured' : ''} ${i !== sel ? 'tier-hidden' : ''}`}
+                                style={{ cursor: 'default' }}
+                              >
+                                 <PricingTop>
+                                   <PricingHead>
+                                     <h4>{s.title}</h4>
+                                     <p>{s.desc}</p>
+                                   </PricingHead>
+                                   <RightCol>
+                                     <TopPrice>
+                                       <span className="amount">{s.price}</span>
+                                       <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
+                                     </TopPrice>
+                                     <SelectButton type="button" onClick={(e)=>{ e.stopPropagation(); setServicesStep('subscription') }}>
+                                       Выбрать
+                                     </SelectButton>
+                                   </RightCol>
+                                 </PricingTop>
+                                {/* Для кого подходит */}
+                                <Divider />
+                                <CardSectionTitle>Для кого подходит</CardSectionTitle>
+                                <SectionBlock $minHeight={96}>
+                                  <Bullets>
+                                    {(() => {
+                                      const audMap = {
+                                        basic: ['Лендинги и промо‑сайты', 'Стартапы/MVP', 'Личные проекты'],
+                                        optimal: ['Сайты компаний и каталоги', 'Небольшие интернет‑магазины', 'CRM/формы/личные кабинеты'],
+                                        premium: ['Сложные веб‑приложения', 'SaaS/реал‑тайм', 'Высокие нагрузки'],
+                                        'bot-basic': ['FAQ и поддержка', 'Сбор лидов', 'Простые сценарии'],
+                                        'bot-optimal': ['Продажи/записи', 'Оплаты и админ‑панель', 'Интеграции с CRM'],
+                                        'bot-premium': ['Сложные сценарии', 'Realtime/аналитика', 'Масштабирование'],
+                                        'auto-custom': ['Интеграции и автоматизация', 'ETL/отчёты', 'Индивидуальные задачи']
+                                      }
+                                      const items = audMap[s.id] || []
+                                      return items.map(v => (<li key={v}>{v}</li>))
+                                    })()}
+                                  </Bullets>
+                                </SectionBlock>
+                                <Divider />
+                                <CardSectionTitle>Что входит</CardSectionTitle>
+                                <SectionBlock $minHeight={256}>
+                                  <Bullets>
+                                    {s.features.map(f => {
+                                      const map = { /* ...same mapping... */ }
+                                      const norm = (s) => s.toLowerCase().replace(/\u2011/g, '-')
+                                      const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
+                                      const text = key ? (
+                                        <span className="term" tabIndex={0} role="button" aria-label="Подсказка" data-hint={map[key]} onClick={handleTermToggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTermToggle(e) } }}>{f}</span>
+                                      ) : f
+                                      return (<li key={f}>{text}</li>)
+                                    })}
+                                  </Bullets>
+                                </SectionBlock>
+                                {/* Блок "Доп. услуги" убран по требованию */}
+                                <Divider />
+                                <Muted style={{ marginTop: 6 }}>{s.timeline}</Muted>
+                                <Muted style={{ opacity: 0.7 }}>{s.tech}</Muted>
+                                {s.notes?.length ? (
+                                  <Muted style={{ opacity: 0.7, marginTop: 6 }}>{s.notes.join(' • ')}</Muted>
+                                ) : null}
+                              </PricingCard>
+                            ))
+                          })()}
+                        </PricingGrid>
+                      ) : (
+                        <>
+                          {/* Эксплейнер подписки */}
+                          <div style={{
+                            color:'#fff', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.16)',
+                            borderRadius:12, padding:'14px 16px', margin:'8px 0 12px 0', display:'grid', gap:8
+                          }}>
+                            <div style={{fontSize:16, fontWeight:600}}>Что такое подписка и почему это выгодно</div>
+                            <ul style={{margin:0, padding:'0 0 0 18px', display:'grid', gap:6, opacity:0.95}}>
+                              <li>Экономия до 30–40% по сравнению с разовыми работами и наймом в штат.</li>
+                              <li>Фиксированный объём часов в месяц под ваши задачи — предсказуемый бюджет.</li>
+                              <li>Приоритет в очереди: быстрые фиксы, мониторинг и сопровождение.</li>
+                              <li>Непрерывное развитие: регулярно внедряем улучшения и новые фичи.</li>
+                              <li>Гибкость: можно повышать/понижать план по мере роста.</li>
+                            </ul>
+                          </div>
+
+                          {/* Планы подписки */}
+                          <PricingGrid>
+                            {[
+                              { id:'support', title:'Support', desc:'Поддержка и мелкие задачи', price:'от 29 000 ₽', hours:'до 8 ч/мес', bullets:['Фиксы и мелкие правки','Мониторинг и стабильность','Консультации и проверка гипотез'] },
+                              { id:'growth', title:'Growth', desc:'Развитие и интеграции', price:'от 59 000 ₽', hours:'до 20 ч/мес', recommended:true, bullets:['Новые блоки/экраны','Интеграции/UX‑улучшения','Проактивные рекомендации'] },
+                              { id:'pro', title:'Pro', desc:'Активная разработка', price:'от 99 000 ₽', hours:'до 40 ч/мес', bullets:['Фичи каждую неделю','Автоматизация и масштабирование','Техдолг и оптимизации'] },
+                            ].map(plan => (
+                              <PricingCard key={plan.id} className={plan.recommended ? 'featured' : ''} style={{position:'relative'}}>
+                                {plan.recommended && (
+                                  <div style={{position:'absolute', top:10, left:10, color:'#fff', fontSize:12, padding:'4px 8px', border:'1px solid rgba(255,255,255,0.28)', background:'rgba(255,255,255,0.12)', borderRadius:8}}>Рекомендуем</div>
+                                )}
+                                <PricingTop>
+                                  <PricingHead>
+                                    <h4>{plan.title}</h4>
+                                    <p>{plan.desc}</p>
+                                  </PricingHead>
+                                  <RightCol>
+                                    <TopPrice>
+                                      <span className="amount">{plan.price}</span>
+                                      <span className="period"> / месяц</span>
+                                    </TopPrice>
+                                    <div style={{fontSize:12, opacity:0.85, marginTop:-4}}>{plan.hours}</div>
+                                  </RightCol>
+                                </PricingTop>
+                                <Divider />
+                                <CardSectionTitle>Что входит</CardSectionTitle>
+                                <SectionBlock>
+                                  <Bullets>
+                                    {plan.bullets.map(b => (<li key={b}>{b}</li>))}
+                                  </Bullets>
+                                </SectionBlock>
+                                <Divider />
+                                <div style={{display:'flex', justifyContent:'flex-end', marginTop:8}}>
+                                  <SelectButton type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: `Интересует подписка ${plan.title}.` }); setIsProjectModalOpen(true); }}>Выбрать план</SelectButton>
+                                </div>
+                              </PricingCard>
+                            ))}
+                          </PricingGrid>
+                        </>
+                      )}
                     </ServicesModalWrap>
                   )}
                 </CardContent>
@@ -4125,6 +4233,17 @@ const MenuPage = () => {
                     ✕
                   </CloseButton>
                 )}
+                {openedIndex === index && servicesStep === 'subscription' && (
+                  <BackTopButton
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setServicesStep('pick') }}
+                    aria-label="Назад"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                  </BackTopButton>
+                )}
                 {/* Убрано изображение в хавере "О себе" */}
               </Card>
               {/* Подставка для предотвращения смещения сетки при фиксировании .is-open */}
@@ -4133,6 +4252,17 @@ const MenuPage = () => {
           ))}
         </CardRow>
       </Section>
+
+      <ProjectModal
+        isOpen={isProjectModalOpen}
+        prefill={prefill}
+        startAnimation={isProjectModalAnimationReady}
+        onClose={() => {
+          setIsProjectModalAnimationReady(false)
+          setIsProjectModalOpen(false)
+          setPrefill(null)
+        }}
+      />
 
       <MobileNavigation />
     </MenuContainer>

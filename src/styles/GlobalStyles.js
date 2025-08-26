@@ -24,7 +24,7 @@ export const GlobalStyles = createGlobalStyle`
   body {
     background: #000;
     color: #fff;
-    cursor: none;
+  cursor: none;
     min-height: 100vh;
     position: relative;
     
@@ -34,6 +34,13 @@ export const GlobalStyles = createGlobalStyle`
       touch-action: pan-y;
       position: static;
       overflow: visible;
+    }
+  }
+
+  /* Force our custom cursor everywhere on desktop */
+  @media (min-width: 769px) {
+    *, *::before, *::after {
+      cursor: none !important;
     }
   }
 
@@ -64,7 +71,7 @@ export const GlobalStyles = createGlobalStyle`
     background: var(--primary-red);
     border-radius: 50%;
     pointer-events: none;
-    z-index: 9999;
+  z-index: 10050;
     mix-blend-mode: difference;
     border: 0px solid transparent;
     will-change: transform;
@@ -80,7 +87,7 @@ export const GlobalStyles = createGlobalStyle`
 
   /* След курсора */
   .cursor-trail {
-    z-index: 9998;
+  z-index: 10049;
     opacity: 0;
     mix-blend-mode: difference;
     transition: none;
@@ -94,60 +101,10 @@ export const GlobalStyles = createGlobalStyle`
     }
   }
 
-  /* Состояние hover с плавным переходом */
-  .cursor.hover {
-    transform: scale(2);
-    background: var(--white);
-    transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                background-color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  }
-
-  .cursor-trail.hover {
-    transform: scale(2);
-    background: var(--white);
-    filter: blur(2px);
-    transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-                background-color 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  }
-
-  /* Навигационный курсор */
-  .cursor.navigation {
-    transform: scale(2);
-    background: var(--primary-red);
-    border-radius: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    color: white;
-    mix-blend-mode: normal;
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  }
-
-  /* Треугольный курсор с улучшенным эффектом */
-  .cursor.triangle {
-    transform: scale(1.2) translateX(-5px);
-    background: transparent;
-    border-radius: 0;
-    width: 0;
-    height: 0;
-    border-right: 16px solid var(--primary-red);
-    border-top: 12px solid transparent;
-    border-bottom: 12px solid transparent;
-    mix-blend-mode: normal;
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    
-    /* Добавляем легкое свечение для треугольника */
-    filter: drop-shadow(0 0 4px var(--primary-red));
-  }
-
-  /* Улучшенный эффект для анимации корабля */
-  .cursor.triangle.with-trail {
-    filter: drop-shadow(0 0 8px var(--primary-red));
-    box-shadow: 0 0 15px var(--primary-red);
+  /* Triangle cursor variant disabled: keep circle only */
+  .cursor.triangle,
+  .cursor.triangle.with-trail::after {
+    display: none !important;
   }
 
   a {
@@ -159,8 +116,8 @@ export const GlobalStyles = createGlobalStyle`
     background: none;
     border: none;
     color: inherit;
-    font-family: inherit;
-    cursor: none;
+  font-family: inherit;
+  cursor: none;
   }
 
   ::selection {
@@ -182,6 +139,7 @@ export const GlobalStyles = createGlobalStyle`
     
     * {
       -webkit-tap-highlight-color: rgba(209, 72, 54, 0.3);
+  cursor: auto !important; /* Allow system cursor on mobile */
     }
   }
 
