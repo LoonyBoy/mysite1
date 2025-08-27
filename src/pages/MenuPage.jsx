@@ -682,6 +682,23 @@ const FAQAccordion = styled.div`
   .faq-answer li { margin: 4px 0; }
 `
 
+// Green-accented FAQ variant for subscriptions, left-aligned text
+const FAQAccordionGreen = styled(FAQAccordion)`
+  details {
+    border-color: rgba(20, 108, 67, 0.35); /* dark green border */
+  }
+  details[open] {
+    background: rgba(20, 108, 67, 0.08);
+    border-color: rgba(20, 108, 67, 0.6);
+  }
+  summary { text-align: left; }
+  .faq-answer { text-align: left; }
+  summary::before {
+    background: linear-gradient(180deg, rgba(20,108,67,0.35), rgba(20,108,67,0.15));
+    box-shadow: inset 0 0 0 1px rgba(20,108,67,0.6);
+  }
+`
+
 const AboutRight = styled.div`
   display: flex;
   align-items: center;
@@ -1404,6 +1421,14 @@ const PricingCard = styled.div`
   transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
   display: flex; flex-direction: column; gap: 8px; height: 100%;
 
+  /* Per-card accent (RGB string like "255,64,64").
+     This replaces the old hardcoded purple highlight. */
+  ${props => props.$accentRGB && `
+    background: linear-gradient(180deg, rgba(${props.$accentRGB},0.12), rgba(0,0,0,0.28));
+    border-color: rgba(${props.$accentRGB},0.45);
+    /* No neon glow: keep only a subtle neutral shadow on hover via the default &:hover rule */
+  `}
+
   @media (min-width: 1024px) {
   /* Desktop: только внутренние разделители — симметрично и без внешних краёв */
   border-left: none;
@@ -1435,10 +1460,8 @@ const PricingCard = styled.div`
   transform: translateY(-2px);
   }
   
+  /* Keep the small lift for the currently selected tier */
   &.featured { 
-  background: linear-gradient(180deg, rgba(136,78,255,0.12), rgba(0,0,0,0.28));
-  border-color: rgba(136,78,255,0.45);
-  box-shadow: 0 12px 30px rgba(136,78,255,0.18), 0 8px 24px rgba(0,0,0,0.28);
   transform: translateY(-2px);
   }
 
@@ -1490,16 +1513,16 @@ const SelectButton = styled.button`
   `}
 `
 const RightCol = styled.div`
-  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: 0 0 auto; /* don't consume width */
   @media (max-width: 768px) {
     align-items: center;
     width: 100%;
   }
 `
 const PricingHead = styled.div`
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; /* let left side expand */
   h4 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
-  p { margin: 0; font-size: 13px; opacity: 0.85; }
+  p { margin: 0; font-size: 13px; opacity: 0.85; max-width: none; }
 
   @media (max-width: 768px) {
     gap: 6px;
@@ -1532,10 +1555,69 @@ const TopPrice = styled.div`
   }
 `
 
+/* Price under the title on desktop */
+const HeadingPrice = styled(TopPrice)`
+  margin-top: 2px;
+  @media (max-width: 1023px) { display: none; }
+`
+
 const PriceRow = styled.div`
   display: flex; align-items: baseline; gap: 6px;
   .amount { font-size: 24px; font-weight: 500; }
   .period { font-size: 12px; opacity: 0.8; }
+`
+
+/* Desktop-only confirm button styled like CloseButton */
+const ConfirmButton = styled(CloseButton)`
+  position: relative;
+  top: 0; right: 0; left: 0; bottom: 0;
+  width: 44px; height: 44px;
+  z-index: auto;
+  @media (max-width: 1023px) { display: none; }
+
+  /* compact state: only the icon is visible; label removed from layout */
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 180ms ease, background 180ms ease, color 180ms ease, border-color 180ms ease;
+
+  .icon { opacity: 1; transition: opacity 140ms ease; }
+  .label { 
+    position: absolute; 
+    opacity: 0; 
+    pointer-events: none; 
+    white-space: nowrap; 
+    font-size: 14px; 
+    transition: opacity 140ms ease; 
+  }
+
+  &.is-next { 
+    width: 112px; 
+    background: var(--primary-red); 
+    color: var(--black); 
+    border-color: var(--primary-red);
+    justify-content: center;
+  }
+  &.is-next .icon { display: none; }
+  &.is-next .label { position: static; opacity: 1; pointer-events: auto; }
+`
+
+const MobileOnly = styled.div`
+  @media (min-width: 1024px) { display: none; }
+`
+
+const DesktopOnly = styled.div`
+  @media (max-width: 1023px) { display: none; }
+`
+
+// Reserve space for morphing button to avoid layout shift
+const ConfirmSlot = styled.div`
+  width: 112px; /* equals expanded width of ConfirmButton */
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end; /* align the small 44px button to the right edge */
 `
 
 const Bullets = styled.ul`
@@ -1614,67 +1696,114 @@ const ComparisonTable = styled.div`
   width: 100%;
   max-width: 1060px; /* narrow and centered */
   margin: 8px 0 12px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  /* Do not allow inner scrolling; the page will scroll instead */
+  overflow: hidden;
+  position: relative; /* enable shadow backdrop */
+  isolation: isolate; /* keep pseudo-element beneath content */
 
-  .comp-table { 
-    width: 100%; 
-    min-width: 760px; 
-    border-collapse: separate; 
-    border-spacing: 0; 
-    background: rgba(0,0,0,0.18);
+  /* Subtle shadow under the whole table for contrast */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0; /* keep within container to avoid triggering scrollbars */
+    border-radius: 14px;
+    pointer-events: none;
+    z-index: 0;
+    /* soft radial shadow with a light blur */
+    background: radial-gradient(60% 60% at 50% 40%, rgba(0,0,0,0.28), rgba(0,0,0,0.0) 70%);
+    filter: blur(12px);
+    opacity: 0.9;
   }
 
-  thead th {
-    position: sticky;
-    top: 0; /* default; overridden for header-row below */
-    z-index: 1;
-    background: rgba(255,255,255,0.06);
+  .comp-table {
+    position: relative; 
+    z-index: 1; /* above the shadow */
+    width: 100%;
+    min-width: 0; /* allow shrinking to container */
+    table-layout: fixed; /* prevent horizontal overflow */
+    border-collapse: separate;
+    border-spacing: 0;
+    background: rgba(0,0,0,0.18);
+    border-radius: 12px; /* soften edges over the shadow */
+    overflow: hidden;
+  }
+
+  /* Base cells */
+  th, td {
     color: #fff;
     text-align: center;
-    font-weight: 600;
-    font-size: 14px;
-    letter-spacing: 0.02em;
-    padding: 12px 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.14);
-  .plan-title { display: inline-block; }
-  .plan-price { display: block; font-weight: 500; font-size: 12px; opacity: 0.8; margin-top: 4px; letter-spacing: 0.01em; }
-  }
-  thead th.feat { text-align: left; }
-
-  /* Row with column-aligned CTA buttons above headers */
-  thead tr.cta-row th { 
-    top: 0; 
-    background: rgba(255,255,255,0.04);
-    border-bottom: 1px solid rgba(255,255,255,0.12);
-    padding: 8px 10px;
-    height: 76px; /* room for 2-line buttons */
-    z-index: 2;
-  }
-  thead tr.cta-row th.feat { background: transparent; border-bottom: none; }
-  thead tr.header-row th { top: 76px; z-index: 1; }
-  .select-cta { width: 100%; }
-
-  tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
-  tbody tr:nth-child(even) { background: rgba(255,255,255,0.04); }
-
-  td { 
-    padding: 12px; 
+    padding: 14px 12px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
     border-right: 1px solid rgba(255,255,255,0.06);
     vertical-align: middle;
+    overflow-wrap: anywhere; /* allow wrapping long words */
+    word-break: break-word;
+    line-height: 1.45;
   }
-  td:last-child { border-right: none; }
-  td.feat { 
+  th:last-child, td:last-child { border-right: none; }
+
+  /* Body striping */
+  tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
+  tbody tr:nth-child(even) { background: rgba(255,255,255,0.04); }
+
+  /* Feature column */
+  th.feat, td.feat {
+    text-align: left;
     color: rgba(255,255,255,0.95);
-    font-size: 14px; 
-    text-align: left; 
+    font-size: 15px;
+    letter-spacing: 0.02em;
     min-width: 260px;
   }
+  .plan-title { display: inline-block; }
+
+  /* Value cells */
   td.val { text-align: center; white-space: nowrap; }
+
   .check { color: #fff; font-weight: 700; font-size: 16px; display: inline-block; margin-right: 6px; }
   .dash { color: rgba(255,255,255,0.35); display: inline-block; margin-right: 6px; }
   small { color: rgba(255,255,255,0.85); font-size: 12px; }
+
+  /* Sticky headers */
+  thead th {
+    position: sticky;
+    z-index: 3;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(2px);
+  }
+  thead tr.cta-row th {
+    top: 0;
+    background: rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    padding: 10px 12px;
+    height: 76px; /* room for 2-line buttons */
+    z-index: 4;
+  }
+  thead tr.cta-row th.feat { background: transparent; border-bottom: none; }
+  thead tr.header-row th {
+    top: 76px;
+    z-index: 3;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 14px 12px;
+  }
+  thead th.feat { text-align: left; }
+
+  /* Column width hints (table-layout: fixed honors first row) */
+  thead tr.header-row th.feat { width: 36%; }
+  thead tr.header-row th:nth-child(2),
+  thead tr.header-row th:nth-child(3),
+  thead tr.header-row th:nth-child(4) { width: 21.33%; }
+
+  .select-cta { width: 100%; }
+
+  /* Mobile tweaks */
+  @media (max-width: 768px) {
+    th, td { padding: 12px 10px; line-height: 1.4; }
+    th.feat, td.feat { font-size: 14px; min-width: 200px; }
+    td.val { white-space: normal; }
+    thead tr.header-row th { font-size: 15px; }
+  }
 `
 
 const ComparisonCTARow = styled.div`
@@ -1700,6 +1829,7 @@ const SubscriptionSplit = styled.div`
   gap: 24px;
   align-items: start;
   width: 100%;
+  overflow: hidden; /* no inner scrollbars; page scrolls */
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
     gap: 18px;
@@ -1711,6 +1841,26 @@ const StepNote = styled.div`
   opacity: 0.9;
   font-size: 14px;
   margin: 8px 0 0 0;
+`
+
+/* Desktop-only next-step bar aligned to the right above the pricing grid */
+const NextStepBar = styled.div`
+  display: none;
+  @media (min-width: 1024px) {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+  position: sticky;
+  top: 0; /* stick to top of the scrollable services modal */
+  z-index: 5; /* keep above cards */
+  margin: 6px auto; /* center like grid */
+  max-width: ${props => props.$narrow ? '1060px' : '100%'};
+  width: 100%;
+  }
+`
+
+const NextButton = styled(SelectButton)`
+  @media (max-width: 1023px) { display: none; }
 `
 
 const ProjectsRow = styled.div`
@@ -2158,6 +2308,10 @@ const MenuPage = () => {
   const [openedIndex, setOpenedIndex] = useState(null)
   const desktopAnimatorRef = useRef(null)
   const cardRefs = useRef([])
+  // Which service card shows inline "Next" morph button (desktop only)
+  const [inlineNextFor, setInlineNextFor] = useState(null)
+  // Track if user interacted on Step 1 (to decide when to show the top Next button)
+  const [step1Interacted, setStep1Interacted] = useState(false)
   const mousePosRef = useRef({ x: 0, y: 0 })
   const hoverLockRef = useRef({}) // индекс → timestamp до которого игнорируем mouseleave
   const lastHoveredBeforeOpenRef = useRef(null)
@@ -2603,6 +2757,7 @@ const MenuPage = () => {
   // Handle services navigation button click with animation
   const handleServicesNavButtonClick = (category, event) => {
     if (servicesCategory === category) return
+  setStep1Interacted(true)
     
     // Immediately update UI state for instant visual feedback
     setServicesCategory(category)
@@ -2665,6 +2820,7 @@ const MenuPage = () => {
     
     // Immediately update tier for instant visual feedback
     setServicesTier(tier)
+  setStep1Interacted(true)
     
     // Clear any existing debounce
     if (tierNavDebounceRef.current) {
@@ -2792,13 +2948,44 @@ const MenuPage = () => {
     }
     if (!windowScrollMode) container.addEventListener('keydown', onKeyDown)
 
-    return () => {
+  return () => {
     try { container.removeEventListener('wheel', onWheelScroll) } catch {}
     try { container.removeEventListener('keydown', onKeyDown) } catch {}
     try { document.body.style.overflow = prevOverflow; document.body.style.paddingRight = prevPad } catch {}
     try { document.documentElement.style.removeProperty('--close-right-offset') } catch {}
     try { if (onResize) window.removeEventListener('resize', onResize) } catch {}
     }
+  }, [openedIndex, servicesStep])
+
+  // Reset inline morph button when leaving pick step, switching category, or changing tier
+  useEffect(() => {
+    if (servicesStep !== 'pick') setInlineNextFor(null)
+  }, [servicesStep])
+
+  // When returning to Step 1, hide the top Next button until user interacts again
+  useEffect(() => {
+    if (servicesStep === 'pick') {
+      setStep1Interacted(false)
+    }
+  }, [servicesStep])
+
+  useEffect(() => {
+    // If user changes services category, clear any inline-next state
+    setInlineNextFor(null)
+  }, [servicesCategory])
+
+  useEffect(() => {
+    // If tier changes externally (e.g., via mobile nav), ensure morph state doesn't linger on a mismatched card
+    if (inlineNextFor && inlineNextFor !== servicesTier) setInlineNextFor(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [servicesTier])
+
+  // Allow ESC to cancel inline-next morph on desktop while pick step is open
+  useEffect(() => {
+    if (openedIndex !== 2 || servicesStep !== 'pick') return
+    const onKeyDown = (e) => { if (e.key === 'Escape') setInlineNextFor(null) }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
   }, [openedIndex, servicesStep])
 
   // animate category change: slide out current, swap content, slide in new
@@ -2878,6 +3065,7 @@ const MenuPage = () => {
     if (nextCat === servicesCategory) return
     if (isServicesSwitchingRef.current) return
     isServicesSwitchingRef.current = true
+  setStep1Interacted(true)
     const grid = servicesGridRef.current
     try { gsap.killTweensOf(grid) } catch { }
     if (grid) {
@@ -2908,6 +3096,8 @@ const MenuPage = () => {
     if (openedIndex !== 2) return
   // При каждом открытии модалки "Услуги" начинаем со шага выбора услуги
   setServicesStep('pick')
+  // Reset interaction flag on open of Services Step 1
+  setStep1Interacted(false)
     // Всегда сбрасываем категорию на "web" при каждом открытии модалки
     if (servicesCategory !== 'web') {
       setServicesCategory('web')
@@ -4385,29 +4575,61 @@ const MenuPage = () => {
                               Шаг 1 из 2 — выберите услугу.
                             </div>
                           </div>
+                          {/* Верхняя кнопка "Далее" убрана по требованию; переходим через морф в карточке */}
                           <PricingGrid ref={servicesGridRef} $center={servicesCategory === 'automation'} $narrow>
                           {(() => {
                             const list = servicesCategory === 'automation' ? servicesAutomation : (servicesCategory === 'web' ? servicesWeb : servicesBots)
                             const sel = servicesTier === 'basic' ? 0 : servicesTier === 'optimal' ? 1 : 2
-                            return list.map((s, i) => (
+                            return list.map((s, i) => {
+                              // Uniform subtle green accent for all tiers
+                              const accentRGB = '52,211,153' // emerald-like
+                              return (
                               <PricingCard
                                 key={s.id}
-                                className={`${servicesTier === 'optimal' ? 'featured' : ''} ${(servicesStep !== 'pick' && i !== sel) ? 'tier-hidden' : ''}`}
+                                className={`${i === sel ? 'featured' : ''} ${(servicesStep !== 'pick' && i !== sel) ? 'tier-hidden' : ''}`}
                                 style={{ cursor: 'default' }}
+                                $accentRGB={accentRGB}
                               >
                                  <PricingTop>
                                    <PricingHead>
                                      <h4>{s.title}</h4>
+                                     <DesktopOnly>
+                                       <HeadingPrice>
+                                         <span className="amount">{s.price}</span>
+                                         <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
+                                       </HeadingPrice>
+                                     </DesktopOnly>
                                      <p>{s.desc}</p>
                                    </PricingHead>
                                    <RightCol>
-                                     <TopPrice>
-                                       <span className="amount">{s.price}</span>
-                                       <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
-                                     </TopPrice>
-                                     <SelectButton type="button" onClick={(e)=>{ e.stopPropagation(); setServicesStep('subscription') }}>
-                                       Выбрать
-                                     </SelectButton>
+                                     <MobileOnly>
+                                       <TopPrice>
+                                         <span className="amount">{s.price}</span>
+                                         <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
+                                       </TopPrice>
+                                       <SelectButton type="button" onClick={(e)=>{ e.stopPropagation(); setServicesStep('subscription') }}>
+                                         Выбрать
+                                       </SelectButton>
+                                     </MobileOnly>
+                                     <DesktopOnly>
+                                       <ConfirmSlot>
+                                       <ConfirmButton
+                                         type="button"
+                                         className={inlineNextFor === s.id ? 'is-next' : ''}
+                                         aria-label={inlineNextFor === s.id ? 'Далее' : 'Выбрать'}
+                                         onClick={(e)=>{
+                                           e.stopPropagation();
+                                           if (inlineNextFor === s.id) { setServicesStep('subscription'); return }
+                                           const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
+                                           setServicesTier(tier)
+                                           setInlineNextFor(s.id)
+                                         }}
+                                       >
+                                         <span className="icon">✓</span>
+                                         <span className="label">Далее</span>
+                                       </ConfirmButton>
+                                       </ConfirmSlot>
+                                     </DesktopOnly>
                                    </RightCol>
                                  </PricingTop>
                                 {/* Для кого подходит */}
@@ -4453,7 +4675,7 @@ const MenuPage = () => {
                                   <Muted style={{ opacity: 0.7, marginTop: 6 }}>{s.notes.join(' • ')}</Muted>
                                 ) : null}
                               </PricingCard>
-                            ))
+                            )})
                           })()}
                           </PricingGrid>
                         </>
@@ -4476,13 +4698,74 @@ const MenuPage = () => {
                                 </IntroBody>
                               </SubscriptionIntro>
 
+                              {/* Вопрос-ответ (как в модалке "О себе") */}
+                              <AboutCaption>Вопрос‑ответ</AboutCaption>
+                              <FAQAccordionGreen>
+                                <details>
+                                  <summary>Что если у меня уже есть хостинг и домен?</summary>
+                                  <div className="faq-content"><div className="faq-content-inner">
+                                    <div className="faq-answer">
+                                      <p>Подключение возможно к существующему серверу или проект может быть перенесён на предоставленный хостинг — всё зависит от ваших предпочтений. В любом случае поддержка и обновления входят в подписку.</p>
+                                    </div>
+                                  </div></div>
+                                </details>
+                                <details>
+                                  <summary>А если не хватит часов?</summary>
+                                  <div className="faq-content"><div className="faq-content-inner">
+                                    <div className="faq-answer">
+                                      <p>Дополнительные часы можно докупить по фиксированной ставке (3000 р/час) либо перейти на тариф Pro. Вся работа фиксируется в отчёте по выполненным работам, в котором можно увидеть затраченное время.</p>
+                                    </div>
+                                  </div></div>
+                                </details>
+                                <details>
+                                  <summary>Накапливаются ли часы, если их не использовать?</summary>
+                                  <div className="faq-content"><div className="faq-content-inner">
+                                    <div className="faq-answer">
+                                      <p>Неиспользованные часы переносятся на следующий месяц в размере 50% от остатка на конец подписки. При этом, если вы решите отменить подписку, все неиспользованные часы сгорают.</p>
+                                    </div>
+                                  </div></div>
+                                </details>
+                                <details>
+                                  <summary>Как быстро происходит реакция на инциденты?</summary>
+                                  <div className="faq-content"><div className="faq-content-inner">
+                                    <div className="faq-answer">
+                                      <p>На тарифе Basic — в течение 2 рабочих дней. На тарифе Pro — в течение 4 рабочих часов. Задачи клиентов Pro всегда ставятся в приоритет.</p>
+                                    </div>
+                                  </div></div>
+                                </details>
+                                <details>
+                                  <summary>Как происходит старт работ и оплата?</summary>
+                                  <div className="faq-content"><div className="faq-content-inner">
+                                    <div className="faq-answer">
+                                      <p>После выбора тарифа заключается договор и выставляется счёт за месяц вперёд. Сразу после оплаты проект подключается к системе мониторинга, и начинаются работы по задачам.</p>
+                                    </div>
+                                  </div></div>
+                                </details>
+                                <details>
+                                  <summary>Какие гарантии качества и сроков?</summary>
+                                  <div className="faq-content"><div className="faq-content-inner">
+                                    <div className="faq-answer">
+                                      <p>Все условия фиксируются в официальном договоре: сроки реакции, объём работ и ответственность сторон. Вы получаете ежемесячный отчёт с результатами и рекомендациями, что обеспечивает прозрачность и контроль.</p>
+                                    </div>
+                                  </div></div>
+                                </details>
+                                <details>
+                                  <summary>Что если понадобится задача вне подписки?</summary>
+                                  <div className="faq-content"><div className="faq-content-inner">
+                                    <div className="faq-answer">
+                                      <p>Крупные задачи, которые не укладываются в лимит часов (например, новые интеграции или разработка функционала), оцениваются и согласовываются отдельно. При этом поддержка и мелкие доработки продолжают выполняться в рамках подписки.</p>
+                                    </div>
+                                  </div></div>
+                                </details>
+                              </FAQAccordionGreen>
+                            </div>
+
+                            {/* Правая колонка: шаг и таблица */}
+                            <div>
                               <StepNote>
                                 Шаг 2 из 2 — выберите подписку под задачу.
                               </StepNote>
-                            </div>
-
-                            {/* Таблица сравнения подписок — справа */}
-                            <ComparisonTable>
+                              <ComparisonTable>
                               <table className="comp-table">
                               <thead>
                                 <tr className="cta-row">
@@ -4574,8 +4857,9 @@ const MenuPage = () => {
                                   <td className="val"><span className="check">✓</span></td>
                                 </tr>
                               </tbody>
-                              </table>
+                            </table>
                             </ComparisonTable>
+                            </div>
 
                           </SubscriptionSplit>
 
