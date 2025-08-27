@@ -23,13 +23,13 @@ import { useDeviceDetection } from '../hooks/useDeviceDetection'
 
 const MenuContainer = styled.div`
   /* Ensure the menu immediately covers the viewport and hides previous page content during transitions */
-  position: fixed;
+  position: ${p => p.$windowScroll ? 'relative' : 'fixed'};
   top: 0;
   left: 0;
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
-  height: 100dvh;
+  height: ${p => p.$windowScroll ? 'auto' : '100dvh'};
   background: transparent; /* частицы видны через прозрачный фон */
   overflow-x: hidden;
   z-index: 100;
@@ -38,9 +38,7 @@ const MenuContainer = styled.div`
   box-sizing: border-box;
   
   /* Prevent layout shifts that cause visible seams */
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
   
   @media (max-width: 768px) {
     overflow-y: auto;
@@ -55,7 +53,7 @@ const Section = styled.section`
   position: relative;
   z-index: 2;
   background: transparent;
-  height: 100vh;
+  height: ${p => p.$windowScroll ? 'auto' : '100vh'};
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -130,20 +128,12 @@ const CloseButton = styled.button`
     transform: translateY(-2px);
   }
 
-  &:active {
-    transform: translateY(0) scale(0.985);
-  }
+  &:active { transform: translateY(0) scale(0.985); }
 
   /* make icon visually similar to nav buttons */
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
+  &::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
 `
 
-// Back button placed to the left of the CloseButton on the top-right
 const BackTopButton = styled(CloseButton)`
   right: calc(24px + var(--close-right-offset, 0px) + 44px + 8px);
   width: 44px;
@@ -155,15 +145,20 @@ const BackTopButton = styled(CloseButton)`
 
 const CardRow = styled.div`
   display: flex;
-  flex-direction: row;
+  flex-direction: ${p => p.$windowScroll ? 'column' : 'row'};
   width: 100%;
-  height: 100vh;
+  height: ${p => p.$windowScroll ? 'auto' : '100vh'};
   margin: 0;
   gap: 0; /* избегаем тонкой линии между карточками при анимации */
-  align-items: center;
-  flex-wrap: nowrap;
+  align-items: ${p => p.$windowScroll ? 'stretch' : 'center'};
+  flex-wrap: ${p => p.$windowScroll ? 'nowrap' : 'nowrap'};
   position: relative;
   z-index: 2; /* гарантируем, что карточки выше GlobalDither */
+
+  /* Window-scroll mode: показываем только открытую карточку */
+  ${p => p.$windowScroll ? `
+    & > div:not(.is-open) { display: none !important; }
+  ` : ''}
 
   @media (max-width: 1280px) and (min-width: 1025px) {
     flex-wrap: wrap;
@@ -181,7 +176,7 @@ const CardRow = styled.div`
 
 const Card = styled.div`
   position: relative;
-  width: 25%;
+  width: ${p => p.$windowScroll ? '100%' : '25%'};
   height: 100%;
   /* remove hard separators between cards to avoid visible seams on dark background */
   border-right: none;
@@ -278,10 +273,10 @@ const Card = styled.div`
   }
 
   &.is-open {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100dvh;
+    position: ${p => p.$windowScroll ? 'static' : 'fixed'};
+    inset: ${p => p.$windowScroll ? 'auto' : '0'};
+    width: ${p => p.$windowScroll ? '100%' : '100%'};
+    height: ${p => p.$windowScroll ? 'auto' : '100dvh'};
     z-index: 1001; /* выше GlobalDither */
     border-right: none;
     padding: 0; /* Без padding на контейнере во время Flip */
@@ -300,8 +295,8 @@ const Card = styled.div`
   justify-content: flex-start;
   padding-top: env(safe-area-inset-top, 0px);
 
-  /* По умолчанию (desktop): скрываем внутренние скроллы */
-  overflow-y: hidden;
+  /* По умолчанию (desktop): скрываем внутренние скроллы; в режиме прокрутки окна — показываем содержимое */
+  overflow-y: ${p => p.$windowScroll ? 'visible' : 'hidden'};
   /* Prevent horizontal overflow introduced by scrollbars on desktop */
   overflow-x: hidden;
 
@@ -787,13 +782,25 @@ const ServicesModalWrap = styled.div`
   position: relative;
   width: 100%;
   /* Desktop: occupy full viewport and avoid internal scrollbars */
-  height: 100vh;
+  height: ${p => p.$windowScroll ? 'auto' : '100vh'};
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 16px 16px 16px;
-  overflow: hidden;
+  /* Allow vertical scroll on desktop for tall content (subscription step) */
+  overflow-y: ${p => p.$windowScroll ? 'visible' : 'auto'};
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
+
+  /* Desktop scrollbar styling for visibility */
+  @media (min-width: 769px) {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(136,78,255,0.6) rgba(255,255,255,0.06);
+    &::-webkit-scrollbar { width: 10px; }
+    &::-webkit-scrollbar-track { background: rgba(255,255,255,0.06); }
+    &::-webkit-scrollbar-thumb { background: rgba(136,78,255,0.6); border-radius: 10px; }
+  }
 
   /* Desktop: start hidden to avoid flash before progressive reveal */
   @media (min-width: 769px) {
@@ -810,6 +817,83 @@ const ServicesModalWrap = styled.div`
     gap: 12px;
     overflow: auto;
   }
+`
+
+// Subscription explainer styled to match the About modal info look (left accent line, clean text)
+const SubscriptionIntro = styled.div`
+  position: relative;
+  color: #fff;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0 0 0 18px; /* space for left accent */
+  margin: 8px 0 12px 0;
+  text-align: left;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, rgba(136,78,255,0.0), rgba(136,78,255,0.9), rgba(136,78,255,0.0));
+    filter: blur(0.3px);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+`
+
+const IntroTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 8px;
+  h4 { margin: 0; font-size: clamp(18px, 2.6vw, 24px); font-weight: 500; }
+`
+
+const IntroPill = styled.span`
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+  white-space: nowrap;
+  position: relative;
+  padding-left: 0;
+  &:not(:first-of-type)::before { content: '•'; margin: 0 8px; color: rgba(255,255,255,0.4); }
+`
+
+const IntroGrid = styled.div`
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+
+  @media (max-width: 560px) { grid-template-columns: 1fr; }
+`
+
+const IntroItem = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+`
+
+const IconBubble = styled.div`
+  font-size: 16px; line-height: 1; width: auto; height: auto; background: transparent;
+`
+
+// Narrative body for subscription intro (mirrors AboutText sizing/color)
+const IntroBody = styled.div`
+  color: rgba(255,255,255,0.92);
+  font-size: clamp(14px, 1.6vw, 18px);
+  line-height: 1.75;
+  max-width: 70ch;
+  text-align: left;
+
+  p { margin: 0 0 10px 0; }
 `
 
 const PricingHeader = styled.div`
@@ -1289,10 +1373,18 @@ const Muted = styled.p`
 
 const PricingGrid = styled.div`
   display: grid; grid-template-columns: 1fr; gap: 0; width: 100%;
+  max-width: ${props => props.$narrow ? '1060px' : '100%'};
+  margin: 0 auto;
   justify-items: ${props => props.$center ? 'center' : 'stretch'};
+  justify-content: center;
   
   @media (min-width: 1024px) { 
-    grid-template-columns: ${props => props.$center ? '1fr' : 'repeat(3, 1fr)'}; 
+    grid-template-columns: ${props => {
+      if (props.$center) return '1fr'
+      if (props.$cols === 2) return 'repeat(2, 1fr)'
+      if (props.$cols === 4) return 'repeat(4, 1fr)'
+      return 'repeat(3, 1fr)'
+    }}; 
   }
   
   @media (max-width: 768px) {
@@ -1306,19 +1398,20 @@ const PricingGrid = styled.div`
 `
 
 const PricingCard = styled.div`
-  text-align: left; border-radius: 0; padding: 16px; cursor: pointer; color: #fff;
+  text-align: left; border-radius: 0; padding: 14px; cursor: pointer; color: #fff;
   background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.12);
   backdrop-filter: blur(2px);
-  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
   display: flex; flex-direction: column; gap: 8px; height: 100%;
 
   @media (min-width: 1024px) {
-  /* Desktop: убираем внешние левые/правые края, оставляем только разделители между колонками */
+  /* Desktop: только внутренние разделители — симметрично и без внешних краёв */
+  border-left: none;
   border-right: none;
-  /* для первых в ряду (1,4,7,...) убираем левый край */
-  &:nth-child(3n+1) { border-left: none; }
-  /* для остальных показываем левый разделитель */
-  &:not(:nth-child(3n+1)) { border-left: 1px solid rgba(255,255,255,0.12); }
+  /* Разделитель справа у 1-й и 2-й колонок (в каждой строке) */
+  &:nth-child(3n+1),
+  &:nth-child(3n+2) { border-right: 1px solid rgba(255,255,255,0.12); }
+  /* 3-я колонка без правого края */
   }
   
   @media (max-width: 768px) {
@@ -1336,15 +1429,17 @@ const PricingCard = styled.div`
   }
   
   &:hover { 
-    border-color: rgba(255,255,255,0.2); 
-    background: rgba(0,0,0,0.36); 
-    box-shadow: 0 8px 24px rgba(0,0,0,0.25); 
+  border-color: rgba(255,255,255,0.28); 
+  background: rgba(0,0,0,0.36); 
+  box-shadow: 0 10px 26px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06) inset; 
+  transform: translateY(-2px);
   }
   
   &.featured { 
-    background: rgba(0,0,0,0.34); 
-    border-color: rgba(255,255,255,0.22); 
-    box-shadow: 0 10px 28px rgba(0,0,0,0.28); 
+  background: linear-gradient(180deg, rgba(136,78,255,0.12), rgba(0,0,0,0.28));
+  border-color: rgba(136,78,255,0.45);
+  box-shadow: 0 12px 30px rgba(136,78,255,0.18), 0 8px 24px rgba(0,0,0,0.28);
+  transform: translateY(-2px);
   }
 
   /* Non-selected tiers: show on desktop but subtly, hide on small screens */
@@ -1360,7 +1455,7 @@ const PricingCard = styled.div`
 `
 
 const CardSectionTitle = styled.div`
-  margin-top: 8px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.75);
+  margin-top: 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.9);
   
   @media (max-width: 768px) {
     margin-top: 10px;
@@ -1375,6 +1470,18 @@ const SectionBlock = styled.div`
 const SelectButton = styled.button`
   padding: 12px 18px; font-size: 15px; border: 2px solid var(--primary-red);
   background: var(--primary-red); color: var(--black); cursor: pointer; border-radius: 0;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  &:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0,0,0,0.35) }
+  &:active { transform: translateY(0) scale(0.985) }
+  
+  ${props => props.$variant === 'outline' && `
+    background: transparent; color: #fff; border-color: rgba(255,255,255,0.7);
+    &:hover { background: rgba(255,255,255,0.12); }
+  `}
+  ${props => props.$variant === 'contrast' && `
+    background: #FFD400; color: #111; border-color: #FFD400;
+    &:hover { background: #ffde33; }
+  `}
 `
 const RightCol = styled.div`
   display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
@@ -1385,8 +1492,8 @@ const RightCol = styled.div`
 `
 const PricingHead = styled.div`
   display: flex; flex-direction: column; gap: 8px;
-  h4 { margin: 0; font-size: 18px; font-weight: 600; }
-  p { margin: 0; font-size: 13px; opacity: 0.9; }
+  h4 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  p { margin: 0; font-size: 13px; opacity: 0.85; }
 
   @media (max-width: 768px) {
     gap: 6px;
@@ -1408,7 +1515,7 @@ const PricingTop = styled.div`
 const TopPrice = styled.div`
   display: flex; align-items: baseline; gap: 8px; white-space: nowrap;
   align-self: flex-start; margin-top: -8px;
-  .amount { font-size: 28px; font-weight: 600; line-height: 1; }
+  .amount { font-size: 30px; font-weight: 800; line-height: 1; }
   .period { font-size: 12px; opacity: 0.8; line-height: 1; position: relative; top: 0; }
 
   @media (max-width: 768px) {
@@ -1494,6 +1601,75 @@ const ServiceActions = styled.div`
 
 const Divider = styled.hr`
   border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 10px 0;
+`
+
+// Comparison table for subscription plans
+const ComparisonTable = styled.div`
+  width: 100%;
+  max-width: 1060px; /* narrow and centered */
+  margin: 8px auto 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  .comp-table { 
+    width: 100%; 
+    min-width: 760px; 
+    border-collapse: separate; 
+    border-spacing: 0; 
+    background: rgba(0,0,0,0.18);
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    padding: 12px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.14);
+  }
+  thead th.feat { text-align: left; }
+
+  tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
+  tbody tr:nth-child(even) { background: rgba(255,255,255,0.04); }
+
+  td { 
+    padding: 12px; 
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-right: 1px solid rgba(255,255,255,0.06);
+    vertical-align: middle;
+  }
+  td:last-child { border-right: none; }
+  td.feat { 
+    color: rgba(255,255,255,0.95);
+    font-size: 14px; 
+    text-align: left; 
+    min-width: 260px;
+  }
+  td.val { text-align: center; white-space: nowrap; }
+  .check { color: #fff; font-weight: 700; font-size: 16px; display: inline-block; margin-right: 6px; }
+  .dash { color: rgba(255,255,255,0.35); display: inline-block; margin-right: 6px; }
+  small { color: rgba(255,255,255,0.85); font-size: 12px; }
+`
+
+const ComparisonCTARow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  width: 100%;
+  max-width: 1060px; /* match table width */
+  margin-left: auto;
+  margin-right: auto;
+  align-items: center;
+  justify-content: center;
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 `
 
 const ProjectsRow = styled.div`
@@ -2505,6 +2681,84 @@ const MenuPage = () => {
     document.addEventListener('click', onDocClick, true)
     return () => document.removeEventListener('click', onDocClick, true)
   }, [openedIndex])
+
+  // Desktop-only: ensure scroll behavior depending on mode
+  useEffect(() => {
+    if (openedIndex !== 2) return
+    if (isTouchRef.current) return
+    const container = servicesModalRef.current
+    if (!container) return
+
+    const windowScrollMode = servicesStep === 'subscription' // enable full page scroll for subscription step
+    if (!windowScrollMode) {
+      // Focus the container so keyboard scrolling works (PgUp/PgDn/Home/End)
+      try { container.setAttribute('tabindex', '-1'); container.focus({ preventScroll: true }) } catch {}
+    }
+
+    // Prevent body scroll only in internal-scroll mode
+    const prevOverflow = document.body.style.overflow
+    const prevPad = document.body.style.paddingRight
+    if (!windowScrollMode) {
+      try {
+        const bodyScrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+        document.body.style.overflow = 'hidden'
+        document.body.style.paddingRight = `${bodyScrollbarWidth}px`
+      } catch {}
+    }
+
+    // Move close/back buttons to not overlap with internal scrollbar
+    const applyCloseOffset = () => {
+      try {
+        const innerScrollbarWidth = container.offsetWidth - container.clientWidth
+        const offset = Math.max(0, innerScrollbarWidth - 2) + 4
+        document.documentElement.style.setProperty('--close-right-offset', `${offset}px`)
+      } catch {}
+    }
+    if (!windowScrollMode) {
+      applyCloseOffset()
+      const onResize = () => applyCloseOffset()
+      window.addEventListener('resize', onResize)
+    }
+
+    // Ensure wheel scrolling always moves the container
+    let onResize = null
+    const onWheelScroll = (e) => {
+      if (windowScrollMode) return // let the window scroll freely
+      const canScroll = container.scrollHeight > container.clientHeight
+      if (!canScroll) return
+      container.scrollTop += (e.deltaY || 0)
+      e.stopPropagation()
+      if (typeof e.preventDefault === 'function') e.preventDefault()
+    }
+    if (!windowScrollMode) container.addEventListener('wheel', onWheelScroll, { passive: false })
+
+    // Keyboard scrolling support
+    const onKeyDown = (e) => {
+      if (windowScrollMode) return // allow default window scrolling
+      const key = e.key
+      const line = 40
+      const page = container.clientHeight * 0.9
+      if (['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(key)) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (key === 'ArrowDown' || key === ' ') container.scrollTop += line
+        else if (key === 'ArrowUp') container.scrollTop -= line
+        else if (key === 'PageDown') container.scrollTop += page
+        else if (key === 'PageUp') container.scrollTop -= page
+        else if (key === 'Home') container.scrollTop = 0
+        else if (key === 'End') container.scrollTop = container.scrollHeight
+      }
+    }
+    if (!windowScrollMode) container.addEventListener('keydown', onKeyDown)
+
+    return () => {
+    try { container.removeEventListener('wheel', onWheelScroll) } catch {}
+    try { container.removeEventListener('keydown', onKeyDown) } catch {}
+    try { document.body.style.overflow = prevOverflow; document.body.style.paddingRight = prevPad } catch {}
+    try { document.documentElement.style.removeProperty('--close-right-offset') } catch {}
+    try { if (onResize) window.removeEventListener('resize', onResize) } catch {}
+    }
+  }, [openedIndex, servicesStep])
 
   // animate category change: slide out current, swap content, slide in new
   const isProjectsAnimatingRef = useRef(false)
@@ -3610,7 +3864,9 @@ const MenuPage = () => {
 
     const onWheelToHome = (e) => {
       if (isTransitioningRef.current) return
+      // allow normal page scroll when Services subscription is open
       if (isModalOpenRef.current) return
+      if (openedIndex === 2 && servicesStep === 'subscription') return
       const deltaY = e.deltaY || 0
       // Навигация только при заметной прокрутке вверх
       if (deltaY >= -12) return
@@ -3630,7 +3886,7 @@ const MenuPage = () => {
 
     window.addEventListener('wheel', onWheelToHome, { passive: false })
     return () => window.removeEventListener('wheel', onWheelToHome)
-  }, [navigate])
+  }, [navigate, openedIndex, servicesStep])
 
   const handleMenuClick = (item) => {
     if (isTransitioningRef.current) return
@@ -3671,17 +3927,18 @@ const MenuPage = () => {
     })
   }
 
+  const windowScroll = openedIndex === 2 && servicesStep === 'subscription'
   return (
-    <MenuContainer>
+    <MenuContainer $windowScroll={windowScroll}>
       <CustomCursor />
 
       {/* Удалён левый edge для возврата домой, чтобы не перекрывать первую карточку */}
 
-      <Section ref={menuRef}>
+  <Section ref={menuRef} $windowScroll={windowScroll}>
         <GlobalDither ref={globalDitherRef} aria-hidden="true">
           <Dither style={{ position: 'absolute', inset: 0 }} waveColor={waveColors[globalDitherColorIndex]} enableMouseInteraction={true} trackWindowMouse={true} mouseRadius={0.4} />
         </GlobalDither>
-        <CardRow>
+  <CardRow $windowScroll={windowScroll}>
           {cards.map((card, index) => (
             <React.Fragment key={index}>
               <Card
@@ -3998,8 +4255,8 @@ const MenuPage = () => {
                   )}
 
                   {openedIndex === index && index === 2 && (
-                    <ServicesModalWrap className="services-modal" ref={servicesModalRef}>
-                      <ProjectsTopTitle>Услуги</ProjectsTopTitle>
+                    <ServicesModalWrap className="services-modal" ref={servicesModalRef} $windowScroll={windowScroll}>
+                      <ProjectsTopTitle>{servicesStep === 'subscription' ? 'Подписка' : 'Услуги'}</ProjectsTopTitle>
                       <PricingHeader>
                         {/* Desktop navigation (hidden on subscription step) */}
                         {servicesStep === 'pick' && (
@@ -4079,20 +4336,15 @@ const MenuPage = () => {
                       </PricingHeader>
 
                       {/* Шаги услуг: 1) выбор услуги, 2) выбор подписки */}
-                      <div style={{width: '100%', display: 'grid', gap: 8, margin: '8px 0'}}>
-                        {servicesStep === 'pick' ? (
-                          <div style={{textAlign:'center', color:'#fff', opacity:0.9, fontSize:14}}>
-                            Шаг 1 из 2 — выберите услугу.
-                          </div>
-                        ) : (
-                          <div style={{textAlign:'center', color:'#fff', opacity:0.9, fontSize:14}}>
-                            Шаг 2 из 2 — выберите подписку под задачу.
-                          </div>
-                        )}
-                      </div>
 
                       {servicesStep === 'pick' ? (
-                        <PricingGrid ref={servicesGridRef} $center={servicesCategory === 'automation'}>
+                        <>
+                          <div style={{width: '100%', display: 'grid', gap: 8, margin: '8px 0'}}>
+                            <div style={{textAlign:'center', color:'#fff', opacity:0.9, fontSize:14}}>
+                              Шаг 1 из 2 — выберите услугу.
+                            </div>
+                          </div>
+                          <PricingGrid ref={servicesGridRef} $center={servicesCategory === 'automation'} $narrow>
                           {(() => {
                             const list = servicesCategory === 'automation' ? servicesAutomation : (servicesCategory === 'web' ? servicesWeb : servicesBots)
                             const sel = servicesTier === 'basic' ? 0 : servicesTier === 'optimal' ? 1 : 2
@@ -4162,62 +4414,94 @@ const MenuPage = () => {
                               </PricingCard>
                             ))
                           })()}
-                        </PricingGrid>
+                          </PricingGrid>
+                        </>
                       ) : (
                         <>
-                          {/* Эксплейнер подписки */}
-                          <div style={{
-                            color:'#fff', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.16)',
-                            borderRadius:12, padding:'14px 16px', margin:'8px 0 12px 0', display:'grid', gap:8
-                          }}>
-                            <div style={{fontSize:16, fontWeight:600}}>Что такое подписка и почему это выгодно</div>
-                            <ul style={{margin:0, padding:'0 0 0 18px', display:'grid', gap:6, opacity:0.95}}>
-                              <li>Экономия до 30–40% по сравнению с разовыми работами и наймом в штат.</li>
-                              <li>Фиксированный объём часов в месяц под ваши задачи — предсказуемый бюджет.</li>
-                              <li>Приоритет в очереди: быстрые фиксы, мониторинг и сопровождение.</li>
-                              <li>Непрерывное развитие: регулярно внедряем улучшения и новые фичи.</li>
-                              <li>Гибкость: можно повышать/понижать план по мере роста.</li>
-                            </ul>
+                          {/* Эксплейнер подписки — лаконичным текстом */}
+                          <SubscriptionIntro>
+                            <IntroTitleRow>
+                              <IconBubble>✨</IconBubble>
+                              <h4>Что такое подписка?</h4>
+                            </IntroTitleRow>
+                            <IntroBody>
+                              <p>
+                                Подписка — это простой и прозрачный способ получать поддержку и развитие продукта без лишней рутины.
+                                Вы заранее понимаете объём работ и скорость реакции, а задачи выполняются регулярно и приоритетно.
+                                Это чаще выгоднее разовых работ и найма, гибко масштабируется под рост и сопровождается отчётами.
+                              </p>
+                            </IntroBody>
+                          </SubscriptionIntro>
+
+                          <div style={{width: '100%', display: 'grid', gap: 8, margin: '8px 0'}}>
+                            <div style={{textAlign:'center', color:'#fff', opacity:0.9, fontSize:14}}>
+                              Шаг 2 из 2 — выберите подписку под задачу.
+                            </div>
                           </div>
 
-                          {/* Планы подписки */}
-                          <PricingGrid>
-                            {[
-                              { id:'support', title:'Support', desc:'Поддержка и мелкие задачи', price:'от 29 000 ₽', hours:'до 8 ч/мес', bullets:['Фиксы и мелкие правки','Мониторинг и стабильность','Консультации и проверка гипотез'] },
-                              { id:'growth', title:'Growth', desc:'Развитие и интеграции', price:'от 59 000 ₽', hours:'до 20 ч/мес', recommended:true, bullets:['Новые блоки/экраны','Интеграции/UX‑улучшения','Проактивные рекомендации'] },
-                              { id:'pro', title:'Pro', desc:'Активная разработка', price:'от 99 000 ₽', hours:'до 40 ч/мес', bullets:['Фичи каждую неделю','Автоматизация и масштабирование','Техдолг и оптимизации'] },
-                            ].map(plan => (
-                              <PricingCard key={plan.id} className={plan.recommended ? 'featured' : ''} style={{position:'relative'}}>
-                                {plan.recommended && (
-                                  <div style={{position:'absolute', top:10, left:10, color:'#fff', fontSize:12, padding:'4px 8px', border:'1px solid rgba(255,255,255,0.28)', background:'rgba(255,255,255,0.12)', borderRadius:8}}>Рекомендуем</div>
-                                )}
-                                <PricingTop>
-                                  <PricingHead>
-                                    <h4>{plan.title}</h4>
-                                    <p>{plan.desc}</p>
-                                  </PricingHead>
-                                  <RightCol>
-                                    <TopPrice>
-                                      <span className="amount">{plan.price}</span>
-                                      <span className="period"> / месяц</span>
-                                    </TopPrice>
-                                    <div style={{fontSize:12, opacity:0.85, marginTop:-4}}>{plan.hours}</div>
-                                  </RightCol>
-                                </PricingTop>
-                                <Divider />
-                                <CardSectionTitle>Что входит</CardSectionTitle>
-                                <SectionBlock>
-                                  <Bullets>
-                                    {plan.bullets.map(b => (<li key={b}>{b}</li>))}
-                                  </Bullets>
-                                </SectionBlock>
-                                <Divider />
-                                <div style={{display:'flex', justifyContent:'flex-end', marginTop:8}}>
-                                  <SelectButton type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: `Интересует подписка ${plan.title}.` }); setIsProjectModalOpen(true); }}>Выбрать план</SelectButton>
-                                </div>
-                              </PricingCard>
-                            ))}
-                          </PricingGrid>
+                          {/* Таблица сравнения подписок — как на скриншоте */}
+                          <ComparisonTable>
+                            <table className="comp-table">
+                              <thead>
+                                <tr>
+                                  <th className="feat">Преимущества</th>
+                                  <th>Без подписки</th>
+                                  <th>Basic</th>
+                                  <th>Pro</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td className="feat">Развертывание проекта на сервере</td>
+                                  <td className="val"><span className="check">✓</span></td>
+                                  <td className="val"><span className="check">✓</span></td>
+                                  <td className="val"><span className="check">✓</span></td>
+                                </tr>
+                                <tr>
+                                  <td className="feat">Хостинг+SSL</td>
+                                  <td className="val"><span className="check">—</span></td>
+                                  <td className="val"><span className="check">✓</span></td>
+                                  <td className="val"><span className="check">✓</span></td>
+                                </tr>
+                                <tr>
+                                  <td className="feat">Хостинг+SSL</td>
+                                  <td className="val"><span className="check">—</span></td>
+                                  <td className="val"><span className="check">✓</span></td>
+                                  <td className="val"><span className="check">✓</span></td>
+                                </tr>
+                                <tr>
+                                  <td className="feat">Задачи в месяц</td>
+                                  <td className="val"><span className="dash">—</span></td>
+                                  <td className="val"><span className="check">5</span></td>
+                                  <td className="val"><span className="check">10</span></td>
+                                </tr>
+                                <tr>
+                                  <td className="feat">Обновление зависимостей/библиотек</td>
+                                  <td className="val"><span className="check">—</span></td>
+                                  <td className="val"><span className="check">Раз в месяц</span></td>
+                                  <td className="val"><span className="check">Два раза в месяц</span></td>
+                                </tr>
+                                <tr>
+                                  <td className="feat">Расширенная аналитика</td>
+                                  <td className="val"><span className="dash">—</span></td>
+                                  <td className="val"><span className="check">✓</span></td>
+                                  <td className="val"><span className="check">✓</span></td>
+                                </tr>
+                                <tr>
+                                  <td className="feat">Время реагирования</td>
+                                  <td className="val"><span className="dash">—</span></td>
+                                  <td className="val"><span className="check">до 2 рабочих дней</span></td>
+                                  <td className="val"><span className="check">✓</span><small>реакция ≤ 4 ч в рамках рабочего дня</small></td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </ComparisonTable>
+
+                          <ComparisonCTARow>
+                            <SelectButton type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует разовый проект (без подписки).' }); setIsProjectModalOpen(true); }}>Разовый проект →</SelectButton>
+                            <SelectButton $variant="outline" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Basic.' }); setIsProjectModalOpen(true); }}>Выбрать Basic</SelectButton>
+                            <SelectButton $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Pro.' }); setIsProjectModalOpen(true); }}>Заказать Pro →</SelectButton>
+                          </ComparisonCTARow>
                         </>
                       )}
                     </ServicesModalWrap>
