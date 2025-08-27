@@ -1473,6 +1473,8 @@ const SelectButton = styled.button`
   transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
   &:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0,0,0,0.35) }
   &:active { transform: translateY(0) scale(0.985) }
+  .btn-text { display: block; }
+  .btn-subtext { display: block; font-size: 12px; opacity: 0.85; line-height: 1.15; margin-top: 2px; }
   
   ${props => props.$variant === 'outline' && `
     background: transparent; color: #fff; border-color: rgba(255,255,255,0.7);
@@ -1481,6 +1483,10 @@ const SelectButton = styled.button`
   ${props => props.$variant === 'contrast' && `
     background: #FFD400; color: #111; border-color: #FFD400;
     &:hover { background: #ffde33; }
+  `}
+  ${props => props.$variant === 'white' && `
+    background: #fff; color: #111; border-color: #fff;
+    &:hover { background: #f7f7f7; }
   `}
 `
 const RightCol = styled.div`
@@ -1607,7 +1613,7 @@ const Divider = styled.hr`
 const ComparisonTable = styled.div`
   width: 100%;
   max-width: 1060px; /* narrow and centered */
-  margin: 8px auto 12px;
+  margin: 8px 0 12px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 
@@ -1621,7 +1627,7 @@ const ComparisonTable = styled.div`
 
   thead th {
     position: sticky;
-    top: 0;
+    top: 0; /* default; overridden for header-row below */
     z-index: 1;
     background: rgba(255,255,255,0.06);
     color: #fff;
@@ -1631,8 +1637,23 @@ const ComparisonTable = styled.div`
     letter-spacing: 0.02em;
     padding: 12px 12px;
     border-bottom: 1px solid rgba(255,255,255,0.14);
+  .plan-title { display: inline-block; }
+  .plan-price { display: block; font-weight: 500; font-size: 12px; opacity: 0.8; margin-top: 4px; letter-spacing: 0.01em; }
   }
   thead th.feat { text-align: left; }
+
+  /* Row with column-aligned CTA buttons above headers */
+  thead tr.cta-row th { 
+    top: 0; 
+    background: rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    padding: 8px 10px;
+    height: 76px; /* room for 2-line buttons */
+    z-index: 2;
+  }
+  thead tr.cta-row th.feat { background: transparent; border-bottom: none; }
+  thead tr.header-row th { top: 76px; z-index: 1; }
+  .select-cta { width: 100%; }
 
   tbody tr:nth-child(odd) { background: rgba(255,255,255,0.02); }
   tbody tr:nth-child(even) { background: rgba(255,255,255,0.04); }
@@ -1670,6 +1691,26 @@ const ComparisonCTARow = styled.div`
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
+`
+
+// Two-column layout for subscription step: left text, right table
+const SubscriptionSplit = styled.div`
+  display: grid;
+  grid-template-columns: 1fr minmax(520px, 1.2fr);
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+`
+
+const StepNote = styled.div`
+  color: #fff;
+  opacity: 0.9;
+  font-size: 14px;
+  margin: 8px 0 0 0;
 `
 
 const ProjectsRow = styled.div`
@@ -4351,7 +4392,7 @@ const MenuPage = () => {
                             return list.map((s, i) => (
                               <PricingCard
                                 key={s.id}
-                                className={`${servicesTier === 'optimal' ? 'featured' : ''} ${i !== sel ? 'tier-hidden' : ''}`}
+                                className={`${servicesTier === 'optimal' ? 'featured' : ''} ${(servicesStep !== 'pick' && i !== sel) ? 'tier-hidden' : ''}`}
                                 style={{ cursor: 'default' }}
                               >
                                  <PricingTop>
@@ -4418,36 +4459,63 @@ const MenuPage = () => {
                         </>
                       ) : (
                         <>
-                          {/* Эксплейнер подписки — лаконичным текстом */}
-                          <SubscriptionIntro>
-                            <IntroTitleRow>
-                              <IconBubble>✨</IconBubble>
-                              <h4>Что такое подписка?</h4>
-                            </IntroTitleRow>
-                            <IntroBody>
-                              <p>
-                                Подписка — это простой и прозрачный способ получать поддержку и развитие продукта без лишней рутины.
-                                Вы заранее понимаете объём работ и скорость реакции, а задачи выполняются регулярно и приоритетно.
-                                Это чаще выгоднее разовых работ и найма, гибко масштабируется под рост и сопровождается отчётами.
-                              </p>
-                            </IntroBody>
-                          </SubscriptionIntro>
+                          <SubscriptionSplit>
+                            <div>
+                              {/* Эксплейнер подписки — лаконичным текстом */}
+                              <SubscriptionIntro>
+                                <IntroTitleRow>
+                                  <IconBubble>✨</IconBubble>
+                                  <h4>Что такое подписка?</h4>
+                                </IntroTitleRow>
+                                <IntroBody>
+                                  <p>
+                                    Подписка — это простой и прозрачный способ получать поддержку и развитие продукта без лишней рутины.
+                                    Вы заранее понимаете объём работ и скорость реакции, а задачи выполняются регулярно и приоритетно.
+                                    Это чаще выгоднее разовых работ и найма, гибко масштабируется под рост и сопровождается отчётами.
+                                  </p>
+                                </IntroBody>
+                              </SubscriptionIntro>
 
-                          <div style={{width: '100%', display: 'grid', gap: 8, margin: '8px 0'}}>
-                            <div style={{textAlign:'center', color:'#fff', opacity:0.9, fontSize:14}}>
-                              Шаг 2 из 2 — выберите подписку под задачу.
+                              <StepNote>
+                                Шаг 2 из 2 — выберите подписку под задачу.
+                              </StepNote>
                             </div>
-                          </div>
 
-                          {/* Таблица сравнения подписок — как на скриншоте */}
-                          <ComparisonTable>
-                            <table className="comp-table">
+                            {/* Таблица сравнения подписок — справа */}
+                            <ComparisonTable>
+                              <table className="comp-table">
                               <thead>
-                                <tr>
+                                <tr className="cta-row">
+                                  <th className="feat"></th>
+                                  <th>
+                                    <SelectButton className="select-cta" $variant="white" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует разовый проект (без подписки).' }); setIsProjectModalOpen(true); }}>
+                                      <span className="btn-text">Выбрать</span>
+                                    </SelectButton>
+                                  </th>
+                                  <th>
+                                    <SelectButton className="select-cta" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Basic.' }); setIsProjectModalOpen(true); }}>
+                                      <span className="btn-text">Выбрать</span>
+                                      <span className="btn-subtext">30 000 ₽/мес</span>
+                                    </SelectButton>
+                                  </th>
+                                  <th>
+                                    <SelectButton className="select-cta" $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Pro.' }); setIsProjectModalOpen(true); }}>
+                                      <span className="btn-text">Выбрать</span>
+                                      <span className="btn-subtext">60 000 ₽/мес</span>
+                                    </SelectButton>
+                                  </th>
+                                </tr>
+                                <tr className="header-row">
                                   <th className="feat">Преимущества</th>
-                                  <th>Без подписки</th>
-                                  <th>Basic</th>
-                                  <th>Pro</th>
+                                  <th>
+                                    <span className="plan-title">Без подписки</span>
+                                  </th>
+                                  <th>
+                                    <span className="plan-title">Basic</span>
+                                  </th>
+                                  <th>
+                                    <span className="plan-title">Pro</span>
+                                  </th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -4464,16 +4532,22 @@ const MenuPage = () => {
                                   <td className="val"><span className="check">✓</span></td>
                                 </tr>
                                 <tr>
-                                  <td className="feat">Хостинг+SSL</td>
-                                  <td className="val"><span className="check">—</span></td>
+                                  <td className="feat">Отчёт посещаемости</td>
+                                  <td className="val"><span className="dash">—</span></td>
                                   <td className="val"><span className="check">✓</span></td>
                                   <td className="val"><span className="check">✓</span></td>
                                 </tr>
                                 <tr>
-                                  <td className="feat">Задачи в месяц</td>
-                                  <td className="val"><span className="dash">—</span></td>
-                                  <td className="val"><span className="check">5</span></td>
+                                  <td className="feat">Часы работы (улучшения UX/UI, редактирования, изменения и т.д.)</td>
+                                  <td className="val"><span className="check">—</span></td>
                                   <td className="val"><span className="check">10</span></td>
+                                  <td className="val"><span className="check">25</span></td>
+                                </tr>
+                                <tr>
+                                  <td className="feat">Создание резервных копий</td>
+                                  <td className="val"><span className="check">—</span></td>
+                                  <td className="val"><span className="check">1 раз в месяц</span></td>
+                                  <td className="val"><span className="check">2 раза в месяц</span></td>
                                 </tr>
                                 <tr>
                                   <td className="feat">Обновление зависимостей/библиотек</td>
@@ -4482,26 +4556,29 @@ const MenuPage = () => {
                                   <td className="val"><span className="check">Два раза в месяц</span></td>
                                 </tr>
                                 <tr>
-                                  <td className="feat">Расширенная аналитика</td>
+                                  <td className="feat">Реакция на инциденты</td>
                                   <td className="val"><span className="dash">—</span></td>
-                                  <td className="val"><span className="check">✓</span></td>
+                                  <td className="val"><span className="check">2 рабочих дня</span></td>
+                                  <td className="val"><span className="check">4 рабочих часа</span></td>
+                                </tr>
+                                <tr>
+                                  <td className="feat">Приоритетная помощь в работе</td>
+                                  <td className="val"><span className="dash">—</span></td>
+                                  <td className="val"><span className="check">—</span></td>
                                   <td className="val"><span className="check">✓</span></td>
                                 </tr>
                                 <tr>
-                                  <td className="feat">Время реагирования</td>
+                                  <td className="feat">Личные консультации и рекомендации</td>
                                   <td className="val"><span className="dash">—</span></td>
-                                  <td className="val"><span className="check">до 2 рабочих дней</span></td>
-                                  <td className="val"><span className="check">✓</span><small>реакция ≤ 4 ч в рамках рабочего дня</small></td>
+                                  <td className="val"><span className="check">—</span></td>
+                                  <td className="val"><span className="check">✓</span></td>
                                 </tr>
                               </tbody>
-                            </table>
-                          </ComparisonTable>
+                              </table>
+                            </ComparisonTable>
 
-                          <ComparisonCTARow>
-                            <SelectButton type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует разовый проект (без подписки).' }); setIsProjectModalOpen(true); }}>Разовый проект →</SelectButton>
-                            <SelectButton $variant="outline" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Basic.' }); setIsProjectModalOpen(true); }}>Выбрать Basic</SelectButton>
-                            <SelectButton $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Pro.' }); setIsProjectModalOpen(true); }}>Заказать Pro →</SelectButton>
-                          </ComparisonCTARow>
+                          </SubscriptionSplit>
+
                         </>
                       )}
                     </ServicesModalWrap>
@@ -4520,7 +4597,14 @@ const MenuPage = () => {
                 {openedIndex === index && servicesStep === 'subscription' && (
                   <BackTopButton
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); setServicesStep('pick') }}
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setServicesStep('pick');
+                      // remove any dimming on sibling cards when returning
+                      requestAnimationFrame(() => {
+                        cardRefs.current.forEach(el => el && el.classList && el.classList.remove('dimmed'))
+                      })
+                    }}
                     aria-label="Назад"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
