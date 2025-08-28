@@ -365,7 +365,7 @@ const CardContent = styled.div`
     gap: 8px;
     padding: 0 8px;
     ${Card}.is-open & {
-      padding: 24px 12px;
+  padding: 24px 0; /* убираем боковые отступы для full-bleed */
     }
   }
 `
@@ -830,9 +830,10 @@ const ServicesModalWrap = styled.div`
     /* Mobile: allow content to scroll inside modal */
     height: auto;
     min-height: 100dvh;
-    padding: 12px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 12px 0 calc(16px + env(safe-area-inset-bottom, 0px));
     gap: 12px;
     overflow: auto;
+  /* full-bleed: боковые поля убраны */
   }
 `
 
@@ -1406,7 +1407,9 @@ const PricingGrid = styled.div`
   
   @media (max-width: 768px) {
     gap: 8px;
-    padding: 0 8px;
+  /* Full-bleed on mobile: remove inner padding; parent offsets */
+  padding: 0;
+    justify-items: stretch;
   }
   
   /* убрать сплошную верхнюю линию из границ карточек */
@@ -1442,11 +1445,12 @@ const PricingCard = styled.div`
   @media (max-width: 768px) {
     padding: 16px 14px;
     gap: 10px;
-    border-radius: 12px;
+    border-radius: 0; /* прямые углы */
     margin-bottom: 0;
     border: 1px solid rgba(255,255,255,0.15);
+    width: 100%; /* occupy full grid width */
     
-    /* Restore individual borders on mobile */
+    /* Restore individual borders on mobile (kept for lists; harmless for single card) */
     & + & { 
       border-left: 1px solid rgba(255,255,255,0.15); 
       margin-top: 0;
@@ -1724,7 +1728,7 @@ const ComparisonTable = styled.div`
     border-collapse: separate;
     border-spacing: 0;
     background: rgba(0,0,0,0.18);
-    border-radius: 12px; /* soften edges over the shadow */
+  border-radius: 12px; /* soften edges over the shadow */
     overflow: hidden;
   }
 
@@ -1799,6 +1803,9 @@ const ComparisonTable = styled.div`
 
   /* Mobile tweaks */
   @media (max-width: 768px) {
+  /* Full-bleed on mobile: parent handles side margins; remove rounding */
+  .comp-table { border-radius: 0; }
+  &::before { border-radius: 0; }
     th, td { padding: 12px 10px; line-height: 1.4; }
     th.feat, td.feat { font-size: 14px; min-width: 200px; }
     td.val { white-space: normal; }
@@ -4576,62 +4583,63 @@ const MenuPage = () => {
                             </div>
                           </div>
                           {/* Верхняя кнопка "Далее" убрана по требованию; переходим через морф в карточке */}
-                          <PricingGrid ref={servicesGridRef} $center={servicesCategory === 'automation'} $narrow>
+                          <PricingGrid ref={servicesGridRef} $center $narrow>
                           {(() => {
                             const list = servicesCategory === 'automation' ? servicesAutomation : (servicesCategory === 'web' ? servicesWeb : servicesBots)
                             const sel = servicesTier === 'basic' ? 0 : servicesTier === 'optimal' ? 1 : 2
-                            return list.map((s, i) => {
-                              // Uniform subtle green accent for all tiers
-                              const accentRGB = '52,211,153' // emerald-like
-                              return (
+                            const s = list[sel] || list[0]
+                            if (!s) return null
+                            // Uniform subtle green accent for all tiers
+                            const accentRGB = '52,211,153' // emerald-like
+                            return (
                               <PricingCard
                                 key={s.id}
-                                className={`${i === sel ? 'featured' : ''} ${(servicesStep !== 'pick' && i !== sel) ? 'tier-hidden' : ''}`}
+                                className={'featured'}
                                 style={{ cursor: 'default' }}
                                 $accentRGB={accentRGB}
                               >
-                                 <PricingTop>
-                                   <PricingHead>
-                                     <h4>{s.title}</h4>
-                                     <DesktopOnly>
-                                       <HeadingPrice>
-                                         <span className="amount">{s.price}</span>
-                                         <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
-                                       </HeadingPrice>
-                                     </DesktopOnly>
-                                     <p>{s.desc}</p>
-                                   </PricingHead>
-                                   <RightCol>
-                                     <MobileOnly>
-                                       <TopPrice>
-                                         <span className="amount">{s.price}</span>
-                                         <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
-                                       </TopPrice>
-                                       <SelectButton type="button" onClick={(e)=>{ e.stopPropagation(); setServicesStep('subscription') }}>
-                                         Выбрать
-                                       </SelectButton>
-                                     </MobileOnly>
-                                     <DesktopOnly>
-                                       <ConfirmSlot>
-                                       <ConfirmButton
-                                         type="button"
-                                         className={inlineNextFor === s.id ? 'is-next' : ''}
-                                         aria-label={inlineNextFor === s.id ? 'Далее' : 'Выбрать'}
-                                         onClick={(e)=>{
-                                           e.stopPropagation();
-                                           if (inlineNextFor === s.id) { setServicesStep('subscription'); return }
-                                           const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
-                                           setServicesTier(tier)
-                                           setInlineNextFor(s.id)
-                                         }}
-                                       >
-                                         <span className="icon">✓</span>
-                                         <span className="label">Далее</span>
-                                       </ConfirmButton>
-                                       </ConfirmSlot>
-                                     </DesktopOnly>
-                                   </RightCol>
-                                 </PricingTop>
+                                <PricingTop>
+                                  <PricingHead>
+                                    <h4>{s.title}</h4>
+                                    <DesktopOnly>
+                                      <HeadingPrice>
+                                        <span className="amount">{s.price}</span>
+                                        <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
+                                      </HeadingPrice>
+                                    </DesktopOnly>
+                                    <p>{s.desc}</p>
+                                  </PricingHead>
+                                  <RightCol>
+                                    <MobileOnly>
+                                      <TopPrice>
+                                        <span className="amount">{s.price}</span>
+                                        <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
+                                      </TopPrice>
+                                      <SelectButton type="button" onClick={(e)=>{ e.stopPropagation(); setServicesStep('subscription') }}>
+                                        Выбрать
+                                      </SelectButton>
+                                    </MobileOnly>
+                                    <DesktopOnly>
+                                      <ConfirmSlot>
+                                        <ConfirmButton
+                                          type="button"
+                                          className={inlineNextFor === s.id ? 'is-next' : ''}
+                                          aria-label={inlineNextFor === s.id ? 'Далее' : 'Выбрать'}
+                                          onClick={(e)=>{
+                                            e.stopPropagation();
+                                            if (inlineNextFor === s.id) { setServicesStep('subscription'); return }
+                                            const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
+                                            setServicesTier(tier)
+                                            setInlineNextFor(s.id)
+                                          }}
+                                        >
+                                          <span className="icon">✓</span>
+                                          <span className="label">Далее</span>
+                                        </ConfirmButton>
+                                      </ConfirmSlot>
+                                    </DesktopOnly>
+                                  </RightCol>
+                                </PricingTop>
                                 {/* Для кого подходит */}
                                 <Divider />
                                 <CardSectionTitle>Для кого подходит</CardSectionTitle>
@@ -4675,7 +4683,7 @@ const MenuPage = () => {
                                   <Muted style={{ opacity: 0.7, marginTop: 6 }}>{s.notes.join(' • ')}</Muted>
                                 ) : null}
                               </PricingCard>
-                            )})
+                            )
                           })()}
                           </PricingGrid>
                         </>
