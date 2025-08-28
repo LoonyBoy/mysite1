@@ -796,8 +796,8 @@ const HomePage = () => {
         </MainHeading>
         <DescriptionContainer className="description-container">
           <Description>
-            Веб-разработчик, специализирующийся на создании современных 
-            интерактивных сайтов и приложений с фокусом на UX/UI и производительность.
+            Помогаю бизнесу работать быстрее и прибыльнее: 
+            сайты, чат-боты и автоматизации, созданные под ваши цели.
           </Description>
           <ButtonsContainer>
             <CreateProjectButton 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react'
+import React, { useEffect, useRef, useState, useMemo, Suspense } from 'react'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Flip } from 'gsap/Flip'
 import styled from 'styled-components'
@@ -8,16 +8,18 @@ import { useNavigate } from 'react-router-dom'
 import { useParticles } from '../components/GlobalParticleManager'
 import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
-import ProjectModal from '../components/ProjectModal'
+// Lazy components to reduce initial bundle
+const ProjectModal = React.lazy(() => import('../components/ProjectModal'))
 import useParticleControl from '../hooks/useParticleControl'
-import Dither from '../../dither.jsx'; // Adjusted to new file extension
-import DesktopModalAnimations from '../utils/DesktopModalAnimations'
+const DitherLazy = React.lazy(() => import('../../dither.jsx')) // Adjusted to new file extension
+// DesktopModalAnimations will be dynamically imported when needed
 // Иконки каналов связи (используются в hover-оверлее «Контакты»)
 import telegramIcon from '../images/telegram.svg'
 import whatsappIcon from '../images/whatsapp.svg'
 import emailIcon from '../images/email.svg'
 
 import { useDeviceDetection } from '../hooks/useDeviceDetection'
+import ErrorBoundary from '../components/ErrorBoundary'
 // ProjectsScrollStack не используем в новой версии модалки
 
 
@@ -855,7 +857,8 @@ const SubscriptionIntro = styled.div`
     top: 0;
     bottom: 0;
     width: 2px;
-    background: linear-gradient(180deg, rgba(136,78,255,0.0), rgba(136,78,255,0.9), rgba(136,78,255,0.0));
+  /* dark green accent */
+  background: linear-gradient(180deg, rgba(16,128,96,0.0), rgba(16,128,96,0.95), rgba(16,128,96,0.0));
     filter: blur(0.3px);
     opacity: 0.9;
     pointer-events: none;
@@ -1391,14 +1394,15 @@ const Muted = styled.p`
 
 const PricingGrid = styled.div`
   display: grid; grid-template-columns: 1fr; gap: 0; width: 100%;
-  max-width: ${props => props.$narrow ? '1060px' : '100%'};
+  /* Single card layout: keep it pleasantly narrow on desktop */
+  max-width: ${props => props.$single ? '820px' : (props.$narrow ? '1060px' : '100%')};
   margin: 0 auto;
-  justify-items: ${props => props.$center ? 'center' : 'stretch'};
+  justify-items: ${props => (props.$center || props.$single) ? 'center' : 'stretch'};
   justify-content: center;
   
   @media (min-width: 1024px) { 
     grid-template-columns: ${props => {
-      if (props.$center) return '1fr'
+      if (props.$center || props.$single) return '1fr'
       if (props.$cols === 2) return 'repeat(2, 1fr)'
       if (props.$cols === 4) return 'repeat(4, 1fr)'
       return 'repeat(3, 1fr)'
@@ -1532,6 +1536,9 @@ const PricingHead = styled.div`
     gap: 6px;
     h4 { font-size: 17px; }
     p { font-size: 13px; line-height: 1.4; }
+  /* Stretch header block to full card width on mobile so the price+button row spans the right edge */
+  width: 100%;
+  align-self: stretch;
   }
 `
 
@@ -1565,6 +1572,27 @@ const HeadingPrice = styled(TopPrice)`
   @media (max-width: 1023px) { display: none; }
 `
 
+/* Mobile price under title */
+const MobilePriceUnderTitle = styled(TopPrice)`
+  margin-top: 4px;
+  @media (min-width: 1024px) { display: none; }
+  .amount { font-size: 24px; }
+  .period { font-size: 11px; }
+  /* Make it flex to allow button on the right */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+`
+
+/* Mobile price text wrapper */
+const MobilePriceText = styled.div`
+  display: flex; 
+  align-items: baseline; 
+  gap: 8px; 
+  white-space: nowrap;
+`
+
 const PriceRow = styled.div`
   display: flex; align-items: baseline; gap: 6px;
   .amount { font-size: 24px; font-weight: 500; }
@@ -1576,8 +1604,10 @@ const ConfirmButton = styled(CloseButton)`
   position: relative;
   top: 0; right: 0; left: 0; bottom: 0;
   width: 44px; height: 44px;
-  z-index: auto;
+  z-index: 3; /* above decorations within card header */
   @media (max-width: 1023px) { display: none; }
+  /* Desktop: no vertical offset */
+  transform: none;
 
   /* compact state: only the icon is visible; label removed from layout */
   overflow: hidden;
@@ -1602,6 +1632,8 @@ const ConfirmButton = styled(CloseButton)`
     color: var(--black); 
     border-color: var(--primary-red);
     justify-content: center;
+  /* Keep position unchanged in next state on desktop */
+  transform: none;
   }
   &.is-next .icon { display: none; }
   &.is-next .label { position: static; opacity: 1; pointer-events: auto; }
@@ -1622,6 +1654,55 @@ const ConfirmSlot = styled.div`
   display: inline-flex;
   align-items: center;
   justify-content: flex-end; /* align the small 44px button to the right edge */
+`
+
+// Mobile version of confirm button
+const MobileConfirmButton = styled(CloseButton)`
+  position: relative;
+  top: 0; right: 0; left: 0; bottom: 0;
+  width: 44px; height: 44px;
+  z-index: 3; /* ensure above potential decorative overlays */
+  @media (min-width: 1024px) { display: none; }
+  /* Поднимаем кнопку умеренно для мобильной версии */
+  transform: translateY(-15px);
+
+  /* compact state: only the icon is visible; label removed from layout */
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 180ms ease, background 180ms ease, color 180ms ease, border-color 180ms ease;
+
+  .icon { opacity: 1; transition: opacity 140ms ease; }
+  .label { 
+    position: absolute; 
+    opacity: 0; 
+  pointer-events: none; /* keep clicks on the button element */ 
+    white-space: nowrap; 
+    font-size: 14px; 
+    transition: opacity 140ms ease; 
+  }
+
+  &.is-next { 
+    width: 112px; 
+    background: var(--primary-red); 
+    color: var(--black); 
+    border-color: var(--primary-red);
+    justify-content: center;
+    transform: translateY(-15px);
+  }
+  &.is-next .icon { display: none; }
+  &.is-next .label { position: static; opacity: 1; pointer-events: auto; }
+`
+
+// Mobile version of confirm slot
+const MobileConfirmSlot = styled.div`
+  width: 112px; /* equals expanded width of MobileConfirmButton */
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end; /* align the small 44px button to the right edge */
+  @media (min-width: 1024px) { display: none; }
 `
 
 const Bullets = styled.ul`
@@ -1833,14 +1914,108 @@ const ComparisonCTARow = styled.div`
 const SubscriptionSplit = styled.div`
   display: grid;
   grid-template-columns: 1fr minmax(520px, 1.2fr);
+  grid-template-areas: 'left right';
   gap: 24px;
   align-items: start;
   width: 100%;
   overflow: hidden; /* no inner scrollbars; page scrolls */
+  & > div:nth-child(1) { grid-area: left; }
+  & > div:nth-child(2) { grid-area: right; }
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
+    grid-template-areas: 
+      'right'
+      'left';
     gap: 18px;
   }
+`
+
+// Mobile subscription UI: tabs + stacked card
+const MobilePlansWrap = styled.div`
+  display: none;
+  @media (max-width: 1023px) {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+  }
+`
+
+const PlanTabs = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin-bottom: 10px;
+`
+
+const PlanTabButton = styled.button`
+  appearance: none;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: ${(p) => (p.$active ? 'var(--primary-red)' : 'transparent')};
+  color: ${(p) => (p.$active ? 'var(--black)' : '#fff')};
+  border-radius: 0;
+  padding: 10px 8px;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.1;
+  text-align: center;
+  min-height: 48px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease, transform 120ms ease;
+  &:active { transform: scale(0.98); }
+  .sub { font-weight: 500; font-size: 12px; opacity: ${(p)=>p.$active?0.95:0.85}; }
+  /* Remove double borders between adjacent buttons */
+  border-left-width: 0;
+  &:first-child { border-left-width: 1px; }
+  &:last-child { border-right-width: 1px; }
+`
+
+const PlanCard = styled.div`
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  @media (max-width: 1023px) { border-radius: 0; }
+`
+
+const PlanHeader = styled.div`
+  display: flex; align-items: center; justify-content: space-between;
+  .title { font-size: 16px; font-weight: 600; }
+  .price { font-size: 14px; opacity: 0.9; }
+  @media (max-width: 1023px) { border-radius: 0; }
+`
+
+const FeatureList = styled.ul`
+  list-style: none; margin: 0; padding: 0; display: grid; gap: 8px;
+`
+
+const FeatureItem = styled.li`
+  display: flex; align-items: baseline; gap: 8px;
+  .label { color: rgba(255,255,255,0.9); font-size: 14px; line-height: 1.35; }
+  .value { margin-left: auto; font-size: 14px; opacity: 0.95; }
+  .ok { color: #fff; font-weight: 700; }
+  .dash { color: rgba(255,255,255,0.4); }
+`
+
+const PlanCTA = styled(SelectButton)`
+  width: 100%; margin-top: 4px; border-radius: 10px;
+  @media (max-width: 1023px) { border-radius: 0; max-width: 260px; justify-self: center; }
+`
+
+// Sticky CTA at the bottom on mobile
+const StickyCTABar = styled.div`
+  position: sticky;
+  bottom: 0;
+  padding: 10px 0 8px;
+  background: linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.0));
+  backdrop-filter: none;
+  z-index: 5;
+  @media (min-width: 1024px) { display: none; }
+  .inner { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .hint { text-align: center; font-size: 12px; opacity: 0.9; color: #fff; }
 `
 
 const StepNote = styled.div`
@@ -2252,6 +2427,7 @@ const waveColors = [
   [0.03, 0.45, 0.22], // 5: WhatsApp — насыщенный зелёный
   [0.55, 0.45, 0.06], // 6: Email — мягкий жёлтый
 ];
+// Вынесено из компонента, чтобы не пересоздавать на каждый рендер
 const menuItems = [
   {
     label: "Home",
@@ -2297,6 +2473,54 @@ const menuItems = [
   }
 ]
 
+// Крупные структуры данных вынесены за пределы компонента
+const servicesWeb = [
+  { id: 'basic', title: 'Базовый', desc: 'Лендинг/одностраничник для презентации услуг/продуктов', price: 'от 70 000 ₽',
+    features: ['Дизайн по готовому шаблону','До 5 блоков/секций','Адаптивная верстка','Базовое SEO (мета‑теги, скорость)','Форма обратной связи','Кросс‑браузерное тестирование','Безопасность: SSL, GDPR/ФЗ‑152','Развертывание на сервере','1 месяц техподдержки'],
+    extras: ['Кастомный дизайн: +15 000 ₽','Свыше 5 блоков: +5 000 ₽ за блок','Хостинг/домен: +10 000 ₽ за год'],
+    notes: [], timeline: 'Сроки: 1–2 недели', tech: 'Технологии: HTML, CSS, JavaScript, React' },
+  { id: 'optimal', title: 'Стандарт', desc: 'Многостраничный сайт с интеграциями и анимациями', price: 'от 130 000 ₽',
+    features: ['Всё из "Базовый"','Кастомный дизайн','До 10 страниц','Анимации и интерактив','База данных/CRM, админ‑панель','Калькуляторы и формы','Платежная система','Личный кабинет клиента/администратора','Email/мессенджер-уведомления','2 месяца техподдержки'],
+    extras: ['Доп. страница: 10 000 ₽ за страницу','Расширенная аналитика: +10 000 ₽','Мультиязычность: +15 000 ₽ за язык'],
+    notes: ['Хостинг на 3 месяца включён'], timeline: 'Сроки: 3–6 недель', tech: 'Технологии: HTML, Tailwind CSS, JavaScript, React, Framer Motion / GSAP, MySQL/PostgreSQL' },
+  { id: 'premium', title: 'Премиум', desc: 'Сложное веб‑приложение с продвинутой логикой', price: 'от 250 000 ₽',
+    features: ['Всё из «Стандарт»','Сложная логика: WebSockets/AI','Полная SEO‑оптимизация','Мультиязычность (2+ языка)','Сложные интеграции: CRM/ERP/облако','Авто‑тесты (unit/нагрузочные)','6 месяцев техподдержки','Документация и инструкции'],
+    extras: ['Миграции/перенос: от 20 000 ₽','Обучение персонала: от 15 000 ₽'], notes: ['Хостинг/домен по договоренности'],
+    timeline: 'Сроки: 5–12 недель', tech: 'Технологии: Next.js, TypeScript, Nest.js, MongoDB, Docker, WebSockets' },
+]
+
+const servicesBots = [
+  { id: 'bot-basic', title: 'Базовый', desc: 'FAQ/поддержка, сбор заявок, простые сценарии', price: 'от 40 000 ₽',
+    features: ['Telegram/WhatsApp бот','Сценарии вопросов‑ответов','Формы заявок с уведомлениями','Интеграция с Google Sheets/CRM','Базовая аналитика','Развертывание и настройка','1 месяц техподдержки'],
+    extras: ['Подключение оплат: от 10 000 ₽','Импорт/экспорт базы: от 5 000 ₽'], notes: [], timeline: 'Сроки: 1–2 недели', tech: 'Технологии: Python/Node.js, aiogram/grammY, Google Sheets/CRM' },
+  { id: 'bot-optimal', title: 'Стандарт', desc: 'Продажи/записи, оплаты, админ‑панель', price: 'от 90 000 ₽',
+    features: ['Всё из "Базовый"','Оплаты (СБП/карты)','Админ‑панель для контента','Личный кабинет клиента','Интеграции с CRM/БД','Уведомления и рассылки','2 месяца техподдержки'],
+    extras: ['Сегментация рассылок: +10 000 ₽','А/Б‑тесты сценариев: +10 000 ₽'], notes: ['Хостинг на 3 месяца включён'], timeline: 'Сроки: 3–5 недель', tech: 'Технологии: Node.js/Python, PostgreSQL, CloudPayments/ЮKassa' },
+  { id: 'bot-premium', title: 'Премиум', desc: 'Сложная логика, интеграции и realtime', price: 'от 180 000 ₽',
+    features: ['Сложные сценарии и роли','WebSockets для live‑обновлений','Полная аналитика и сегментация','Интеграции: CRM/ERP/облако','Авто‑тесты и мониторинг','6 месяцев техподдержки','Документация и инструкции'],
+    extras: ['Нейро‑модули (NLP): от 30 000 ₽','Миграции/перенос: от 20 000 ₽'], notes: ['Хостинг/домен по договоренности'], timeline: 'Сроки: 4–8 недель', tech: 'Технологии: Node.js/Python, PostgreSQL, WebSockets' },
+]
+
+const servicesAutomation = [
+  { id: 'auto-custom', title: 'Программы/Софт', desc: 'Программы, интеграции, автоматизация процессов под задачу', price: 'Custom',
+    features: ['Анализ задачи и проектирование','Интеграции с CRM/ERP/Sheets/API','Скрипты, ETL, отчёты и уведомления','Реал‑тайм при необходимости','Документация и обучение'],
+    extras: [], notes: ['Стоимость обсуждается после брифинга'], timeline: 'Сроки: зависят от объёма', tech: 'Технологии: Python/Node.js, Google API, PostgreSQL' },
+]
+
+const projectsRows = {
+  web: [
+    { id: 'lightlab', title: 'Light Lab', description: 'Онлайн‑бронирование слотов в фотостудии (витрина залов, корзина, ЛК, админка)', href: '/project/lightlab', image: '/images/lightlab.png', tech: ['React 19', 'Router 7', 'MUI', 'Framer Motion', 'Node/Express', 'Socket.IO', 'MySQL'], year: '2025', role: 'Full‑stack', features: ['Часы‑слоты с проверкой конфликтов', 'Динамическое ценообразование и промокоды', 'Live‑обновления через Socket.IO', 'Админ‑панель: клиенты/цены/услуги/брони', 'Загрузка и оптимизация фото (sharp/multer)', 'REST API + события bookingChange'] },
+    { id: 'raykhan', title: 'Raykhan', description: 'SPA интернет‑магазин премиальных духов с 3D‑фоном и анимациями', href: '#', image: '/images/raykhan.png', tech: ['React 18', 'Framer Motion', 'GSAP', 'Three.js'], year: '2025', role: 'Front‑end', features: ['WebGL Silk‑фон', 'Каталог/карточки товаров'] },
+  ],
+  bots: [
+    { id: 'tg-shop', status: 'done', title: 'Бот "Худеем с Войтенко!"', description: 'Продажа подписок и консультаций с автопродлением (CloudPayments)', href: '/project/voytenko', image: '/images/botdieta.png', tech: ['Python', 'aiogram 3', 'MySQL', 'CloudPayments'], year: '2025', role: 'Back‑end', features: ['Подписки и автопродление', 'Webhooks CloudPayments'] },
+    { id: 'wa-support', status: 'done', title: 'KLAMbot', description: 'Документооборот и статусы по объектам/альбомам. Google Sheets + уведомления.', href: '#', image: '/images/klambot.png', tech: ['Python', 'PTB v20+', 'Google Sheets API', 'aiosmtplib'], year: '2025', role: 'Automation', features: ['Интеграция с Google Sheets', 'Раскраска статусов и уведомления'] },
+  ],
+  tools: [
+    { id: 'wb-integrator', status: 'done', title: 'WB Авто-акции', description: 'Интеграция с Wildberries + Google Sheets: акции, маржа, выгрузки', href: '#', image: '/images/WB.png', tech: ['Python', 'Requests', 'Pandas', 'Google Sheets API'], year: '2025', role: 'Automation', features: ['Расчёт маржи и отбор в акции', 'Выгрузки в Google Sheets'] },
+  ],
+}
+
 const MenuPage = () => {
   const menuRef = useRef(null)
   const navigate = useNavigate()
@@ -2307,8 +2531,10 @@ const MenuPage = () => {
   useEffect(() => {
     console.log('MenuPage: Particles state', { camera: !!camera, particlesVisible })
   }, [camera, particlesVisible])
+  useEffect(() => { setIsMounted(true) }, [])
   const [hoveredIndex, setHoveredIndex] = useState(null)
   const [globalDitherColorIndex, setGlobalDitherColorIndex] = useState(0)
+  const [isMounted, setIsMounted] = useState(false)
   const globalDitherRef = useRef(null)
   const hoverTimelinesRef = useRef([])
   // убрали таймеры дебаунса — из‑за них терялись hover‑события
@@ -2341,12 +2567,16 @@ const MenuPage = () => {
   // Project creation modal (same behavior as on HomePage)
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   const [prefill, setPrefill] = useState(null)
+  // Mobile subscription tab state: 'none' | 'basic' | 'optimal'
+  const [mobilePlan, setMobilePlan] = useState('optimal')
   const [showSubscriptionInfo, setShowSubscriptionInfo] = useState(false)
   const [isProjectModalAnimationReady, setIsProjectModalAnimationReady] = useState(false)
   const bodyLockRef = useRef({ scrollY: 0, prevStyles: {} })
 
   // Lock body scroll while ProjectModal is open (copied from HomePage)
   useEffect(() => {
+  // Pause particles while project modal is open
+  try { setParticleSpeed?.(isProjectModalOpen ? 0 : 1.0) } catch {}
     const lockBody = () => {
       const scrollY = window.scrollY || window.pageYOffset || 0
       const body = document.body
@@ -2550,6 +2780,14 @@ const MenuPage = () => {
     } catch { return false }
   })())
   const { isMobile } = useDeviceDetection()
+  // Some environments may provide isMobile as a boolean-like value; guard calls
+  const isMobileFlag = useMemo(() => {
+    try {
+      return typeof isMobile === 'function' ? !!isMobile() : !!isMobile
+    } catch {
+      return false
+    }
+  }, [isMobile])
   const getNextCategory = (dir) => {
     const idx = serviceCategories.indexOf(servicesCategory)
     const nextIdx = (idx + (dir === 'next' ? 1 : -1) + serviceCategories.length) % serviceCategories.length
@@ -2983,9 +3221,20 @@ const MenuPage = () => {
 
   useEffect(() => {
     // If tier changes externally (e.g., via mobile nav), ensure morph state doesn't linger on a mismatched card
-    if (inlineNextFor && inlineNextFor !== servicesTier) setInlineNextFor(null)
+    // Compare using normalized tier names so IDs like 'bot-optimal' match servicesTier 'optimal'.
+    if (!inlineNextFor) return;
+    const toTier = (id) => {
+      if (!id) return null;
+      if (id.includes('premium')) return 'premium';
+      if (id.includes('optimal')) return 'optimal';
+      if (id.includes('basic')) return 'basic';
+      return null; // e.g., automation 'auto-custom' — don't auto-clear based on tier
+    };
+    const normalized = toTier(inlineNextFor);
+    if (!normalized) return;
+    if (normalized !== servicesTier) setInlineNextFor(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [servicesTier])
+  }, [servicesTier, inlineNextFor])
 
   // Allow ESC to cancel inline-next morph on desktop while pick step is open
   useEffect(() => {
@@ -3139,188 +3388,7 @@ const MenuPage = () => {
     { title: 'Контакты' }
   ]
 
-  // Прайс‑планы для модалки "Услуги" — веб/приложения
-  const servicesWeb = [
-    {
-      id: 'basic', title: 'Базовый',
-      desc: 'Лендинг/одностраничник для презентации услуг/продуктов',
-      price: 'от 70 000 ₽',
-      features: [
-        'Дизайн по готовому шаблону',
-        'До 5 блоков/секций',
-        'Адаптивная верстка',
-        'Базовое SEO (мета‑теги, скорость)',
-        'Форма обратной связи',
-        'Кросс‑браузерное тестирование',
-        'Безопасность: SSL, GDPR/ФЗ‑152',
-        'Развертывание на сервере',
-        '1 месяц техподдержки',
-      ],
-      extras: [
-        'Кастомный дизайн: +15 000 ₽',
-        'Свыше 5 блоков: +5 000 ₽ за блок',
-        'Хостинг/домен: +10 000 ₽ за год',
-      ],
-      notes: [
-
-      ],
-      timeline: 'Сроки: 1–2 недели',
-      tech: 'Технологии: HTML, CSS, JavaScript, React'
-    },
-    {
-      id: 'optimal', title: 'Стандарт',
-      desc: 'Многостраничный сайт с интеграциями и анимациями',
-      price: 'от 130 000 ₽',
-      features: [
-        'Всё из "Базовый"',
-        'Кастомный дизайн',
-        'До 10 страниц',
-        'Анимации и интерактив',
-        'База данных/CRM, админ‑панель',
-        'Калькуляторы и формы',
-        'Платежная система',
-        'Личный кабинет клиента/администратора',
-        'Email/мессенджер-уведомления',
-        '2 месяца техподдержки',
-      ],
-      extras: [
-        'Доп. страница: 10 000 ₽ за страницу',
-        'Расширенная аналитика: +10 000 ₽',
-        'Мультиязычность: +15 000 ₽ за язык',
-      ],
-      notes: [
-        'Хостинг на 3 месяца включён',
-      ],
-      timeline: 'Сроки: 3–6 недель',
-      tech: 'Технологии: HTML, Tailwind CSS, JavaScript, React, Framer Motion / GSAP, MySQL/PostgreSQL'
-    },
-    {
-      id: 'premium', title: 'Премиум',
-      desc: 'Сложное веб‑приложение с продвинутой логикой',
-      price: 'от 250 000 ₽',
-      features: [
-        'Всё из «Стандарт»',
-        'Сложная логика: WebSockets/AI',
-        'Полная SEO‑оптимизация',
-        'Мультиязычность (2+ языка)',
-        'Сложные интеграции: CRM/ERP/облако',
-        'Авто‑тесты (unit/нагрузочные)',
-        '6 месяцев техподдержки',
-        'Документация и инструкции',
-      ],
-      extras: [
-        'Миграции/перенос: от 20 000 ₽',
-        'Обучение персонала: от 15 000 ₽',
-      ],
-      notes: [
-        'Хостинг/домен по договоренности',
-      ],
-      timeline: 'Сроки: 5–12 недель',
-      tech: 'Технологии: Next.js, TypeScript, Nest.js, MongoDB, Docker, WebSockets'
-    },
-  ]
-
-  // Прайс‑планы для модалки "Услуги" — боты/автоматизации
-  const servicesBots = [
-    {
-      id: 'bot-basic', title: 'Базовый',
-      desc: 'FAQ/поддержка, сбор заявок, простые сценарии',
-      price: 'от 40 000 ₽',
-      features: [
-        'Telegram/WhatsApp бот',
-        'Сценарии вопросов‑ответов',
-        'Формы заявок с уведомлениями',
-        'Интеграция с Google Sheets/CRM',
-        'Базовая аналитика',
-        'Развертывание и настройка',
-        '1 месяц техподдержки',
-      ],
-      extras: [
-        'Подключение оплат: от 10 000 ₽',
-        'Импорт/экспорт базы: от 5 000 ₽',
-      ],
-      notes: [],
-      timeline: 'Сроки: 1–2 недели',
-      tech: 'Технологии: Python/Node.js, aiogram/grammY, Google Sheets/CRM'
-    },
-    {
-      id: 'bot-optimal', title: 'Стандарт',
-      desc: 'Продажи/записи, оплаты, админ‑панель',
-      price: 'от 90 000 ₽',
-      features: [
-        'Всё из "Базовый"',
-        'Оплаты (СБП/карты)',
-        'Админ‑панель для контента',
-        'Личный кабинет клиента',
-        'Интеграции с CRM/БД',
-        'Уведомления и рассылки',
-        '2 месяца техподдержки',
-      ],
-      extras: [
-        'Сегментация рассылок: +10 000 ₽',
-        'А/Б‑тесты сценариев: +10 000 ₽',
-      ],
-      notes: ['Хостинг на 3 месяца включён'],
-      timeline: 'Сроки: 3–5 недель',
-      tech: 'Технологии: Node.js/Python, PostgreSQL, CloudPayments/ЮKassa'
-    },
-    {
-      id: 'bot-premium', title: 'Премиум',
-      desc: 'Сложная логика, интеграции и realtime',
-      price: 'от 180 000 ₽',
-      features: [
-        'Сложные сценарии и роли',
-        'WebSockets для live‑обновлений',
-        'Полная аналитика и сегментация',
-        'Интеграции: CRM/ERP/облако',
-        'Авто‑тесты и мониторинг',
-        '6 месяцев техподдержки',
-        'Документация и инструкции',
-      ],
-      extras: [
-        'Нейро‑модули (NLP): от 30 000 ₽',
-        'Миграции/перенос: от 20 000 ₽',
-      ],
-      notes: ['Хостинг/домен по договоренности'],
-      timeline: 'Сроки: 4–8 недель',
-      tech: 'Технологии: Node.js/Python, PostgreSQL, WebSockets'
-    },
-  ]
-
-  // Прайс‑планы: программы / автоматизация (одна карточка, по договоренности)
-  const servicesAutomation = [
-    {
-      id: 'auto-custom',
-      title: 'По договоренности',
-      desc: 'Программы, интеграции, автоматизация процессов под задачу',
-      price: 'Custom',
-      features: [
-        'Анализ задачи и проектирование',
-        'Интеграции с CRM/ERP/Sheets/API',
-        'Скрипты, ETL, отчёты и уведомления',
-        'Реал‑тайм при необходимости',
-        'Документация и обучение',
-      ],
-      extras: [],
-      notes: ['Стоимость обсуждается после брифинга'],
-      timeline: 'Сроки: зависят от объёма',
-      tech: 'Технологии: Python/Node.js, Google API, PostgreSQL',
-    }
-  ]
-
-  const projectsRows = {
-    web: [
-      { id: 'lightlab', title: 'Light Lab', description: 'Онлайн‑бронирование слотов в фотостудии (витрина залов, корзина, ЛК, админка)', href: '/project/lightlab', image: '/images/lightlab.png', tech: ['React 19', 'Router 7', 'MUI', 'Framer Motion', 'Node/Express', 'Socket.IO', 'MySQL'], year: '2025', role: 'Full‑stack', features: ['Часы‑слоты с проверкой конфликтов', 'Динамическое ценообразование и промокоды', 'Live‑обновления через Socket.IO', 'Админ‑панель: клиенты/цены/услуги/брони', 'Загрузка и оптимизация фото (sharp/multer)', 'REST API + события bookingChange'] },
-      { id: 'raykhan', title: 'Raykhan', description: 'SPA интернет‑магазин премиальных духов с 3D‑фоном и анимациями', href: '#', image: '/images/raykhan.png', tech: ['React 18', 'Framer Motion', 'GSAP', 'Three.js'], year: '2025', role: 'Front‑end', features: ['WebGL Silk‑фон', 'Каталог/карточки товаров'] },
-    ],
-    bots: [
-  { id: 'tg-shop', status: 'done', title: 'Бот "Худеем с Войтенко!"', description: 'Продажа подписок и консультаций с автопродлением (CloudPayments)', href: '/project/voytenko', image: '/images/botdieta.png', tech: ['Python', 'aiogram 3', 'MySQL', 'CloudPayments'], year: '2025', role: 'Back‑end', features: ['Подписки и автопродление', 'Webhooks CloudPayments'] },
-  { id: 'wa-support', status: 'done', title: 'KLAMbot', description: 'Документооборот и статусы по объектам/альбомам. Google Sheets + уведомления.', href: '#', image: '/images/klambot.png', tech: ['Python', 'PTB v20+', 'Google Sheets API', 'aiosmtplib'], year: '2025', role: 'Automation', features: ['Интеграция с Google Sheets', 'Раскраска статусов и уведомления'] },
-    ],
-    tools: [
-  { id: 'wb-integrator', status: 'done', title: 'WB Авто-акции', description: 'Интеграция с Wildberries + Google Sheets: акции, маржа, выгрузки', href: '#', image: '/images/WB.png', tech: ['Python', 'Requests', 'Pandas', 'Google Sheets API'], year: '2025', role: 'Automation', features: ['Расчёт маржи и отбор в акции', 'Выгрузки в Google Sheets'] },
-    ],
-  }
+  // Данные сервисов и проектов вынесены за компонент (см. верх файла)
 
   // Утилита: мгновенно останавливает анимации dither и возвращает слой к базовому состоянию
   const resetGlobalDither = (props = null) => {
@@ -3346,8 +3414,11 @@ const MenuPage = () => {
     raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
         try {
-          if (document.fonts && typeof document.fonts.ready?.then === 'function') {
-            document.fonts.ready.then(() => { t = setTimeout(settle, 20) })
+          const hasFonts = typeof document !== 'undefined' && document.fonts
+          const ready = hasFonts ? document.fonts.ready : null
+          const hasThen = !!(ready && typeof ready.then === 'function')
+          if (hasThen) {
+            ready.then(() => { t = setTimeout(settle, 20) })
           } else {
             t = setTimeout(settle, 20)
           }
@@ -3359,12 +3430,21 @@ const MenuPage = () => {
     return () => { try { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); clearTimeout(t) } catch {} }
   }, [openedIndex])
 
-  // Init desktop animations helper (no-op on mobile/reduced motion)
+  // Init desktop animations helper (no-op on mobile/reduced motion) with dynamic import
   useEffect(() => {
-    try {
-      desktopAnimatorRef.current = new DesktopModalAnimations()
-    } catch {}
-    return () => { desktopAnimatorRef.current = null }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const mod = await import('../utils/DesktopModalAnimations')
+        const Ctor = mod && mod.default
+        if (!cancelled && typeof Ctor === 'function') {
+          desktopAnimatorRef.current = new Ctor()
+        }
+      } catch (e) {
+        // ignore – desktop animations are optional
+      }
+    })()
+    return () => { cancelled = true; desktopAnimatorRef.current = null }
   }, [])
 
   const handleHover = (index, isHovering) => {
@@ -3824,23 +3904,6 @@ const MenuPage = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const onMove = (e) => {
-      mousePosRef.current = { x: e.clientX, y: e.clientY }
-      // если модалки нет — проверяем, не находимся ли мы над текущей карточкой и не потерян ли hover
-      if (!isModalOpenRef.current && !isTouchRef.current) {
-        for (let i = 0; i < cardRefs.current.length; i++) {
-          const c = cardRefs.current[i]
-          if (!c) continue
-          const r = c.getBoundingClientRect()
-          const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom
-          if (inside && hoveredIndex !== i) {
-            handleHover(i, true)
-            break
-          }
-        }
-      }
-    }
-    window.addEventListener('mousemove', onMove, { passive: true })
 
     // Немедленная анимация fade-in при загрузке (на мобилке мягче/короче)
     cards.forEach((_, index) => {
@@ -3901,9 +3964,7 @@ const MenuPage = () => {
 
     // Удалён обработчик левего edge, чтобы не блокировать hover первой карточки
 
-    return () => {
-      // Очистка анимаций
-      window.removeEventListener('mousemove', onMove)
+  return () => {
       
       // Очистка debounce таймеров
       if (servicesNavDebounceRef.current) {
@@ -4174,7 +4235,13 @@ const MenuPage = () => {
 
   <Section ref={menuRef} $windowScroll={windowScroll}>
         <GlobalDither ref={globalDitherRef} aria-hidden="true">
-          <Dither style={{ position: 'absolute', inset: 0 }} waveColor={waveColors[globalDitherColorIndex]} enableMouseInteraction={true} trackWindowMouse={true} mouseRadius={0.4} />
+          {isMounted && (
+            <ErrorBoundary fallback={null}>
+              <Suspense fallback={null}>
+                <DitherLazy style={{ position: 'absolute', inset: 0 }} waveColor={waveColors[globalDitherColorIndex]} enableMouseInteraction={true} trackWindowMouse={true} mouseRadius={0.4} />
+              </Suspense>
+            </ErrorBoundary>
+          )}
         </GlobalDither>
   <CardRow $windowScroll={windowScroll}>
           {cards.map((card, index) => (
@@ -4182,8 +4249,8 @@ const MenuPage = () => {
               <Card
                 ref={(el) => (cardRefs.current[index] = el)}
                 className={`card-${index}`}
-    onMouseEnter={() => { handleHover(index, true) }}
-    onMouseLeave={() => { handleHover(index, false) }}
+                onPointerEnter={() => { handleHover(index, true) }}
+                onPointerLeave={() => { handleHover(index, false) }}
                 onClick={(e) => {
                   if (index === 3) {
                     e.stopPropagation();
@@ -4583,42 +4650,80 @@ const MenuPage = () => {
                             </div>
                           </div>
                           {/* Верхняя кнопка "Далее" убрана по требованию; переходим через морф в карточке */}
-                          <PricingGrid ref={servicesGridRef} $center $narrow>
+                          <PricingGrid
+                            ref={servicesGridRef}
+                            $center={isMobileFlag}
+                            $narrow={isMobileFlag}
+                            $single={!isMobileFlag && (servicesCategory === 'automation')}
+                          >
                           {(() => {
                             const list = servicesCategory === 'automation' ? servicesAutomation : (servicesCategory === 'web' ? servicesWeb : servicesBots)
                             const sel = servicesTier === 'basic' ? 0 : servicesTier === 'optimal' ? 1 : 2
-                            const s = list[sel] || list[0]
-                            if (!s) return null
-                            // Uniform subtle green accent for all tiers
                             const accentRGB = '52,211,153' // emerald-like
-                            return (
+                            // Mobile: один выбранный план; Desktop: все планы
+                            const renderCard = (s, isFeatured) => (
                               <PricingCard
                                 key={s.id}
-                                className={'featured'}
-                                style={{ cursor: 'default' }}
+                                className={isFeatured ? 'featured' : 'tier-hidden'}
                                 $accentRGB={accentRGB}
+                                onClick={(e)=>{
+                                  // Clicking anywhere on the card behaves like clicking the morph button
+                                  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+                                  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+                                  if (inlineNextFor === s.id) { setServicesStep('subscription'); return; }
+                                  const tier = s.id.includes('premium') ? 'premium' : (s.id.includes('optimal') ? 'optimal' : 'basic');
+                                  setServicesTier(tier);
+                                  setInlineNextFor(s.id);
+                                }}
                               >
                                 <PricingTop>
                                   <PricingHead>
                                     <h4>{s.title}</h4>
                                     <DesktopOnly>
                                       <HeadingPrice>
-                                        <span className="amount">{s.price}</span>
-                                        <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
+                                        {s.price === 'Custom' ? (
+                                          <span className="amount">По договоренности</span>
+                                        ) : (
+                                          <>
+                                            <span className="amount">{s.price}</span>
+                                            <span className="period"> / проект</span>
+                                          </>
+                                        )}
                                       </HeadingPrice>
                                     </DesktopOnly>
+                                    <MobileOnly>
+                                      <MobilePriceUnderTitle>
+                                        <MobilePriceText>
+                                          {s.price === 'Custom' ? (
+                                            <span className="amount">По договоренности</span>
+                                          ) : (
+                                            <>
+                                              <span className="amount">{s.price}</span>
+                                              <span className="period"> / проект</span>
+                                            </>
+                                          )}
+                                        </MobilePriceText>
+                                        <MobileConfirmButton
+                                          type="button"
+                                          className={inlineNextFor === s.id ? 'is-next' : ''}
+                                          aria-label={inlineNextFor === s.id ? 'Далее' : 'Выбрать'}
+                                          onClick={(e)=>{
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (inlineNextFor === s.id) { setServicesStep('subscription'); return }
+                                            const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
+                                            setServicesTier(tier)
+                                            setInlineNextFor(s.id)
+                                          }}
+                                        >
+                                          <span className="icon">✓</span>
+                                          <span className="label">Далее</span>
+                                        </MobileConfirmButton>
+                                      </MobilePriceUnderTitle>
+                                    </MobileOnly>
                                     <p>{s.desc}</p>
                                   </PricingHead>
                                   <RightCol>
-                                    <MobileOnly>
-                                      <TopPrice>
-                                        <span className="amount">{s.price}</span>
-                                        <span className="period">{s.price === 'Custom' ? ' / по договоренности' : ' / проект'}</span>
-                                      </TopPrice>
-                                      <SelectButton type="button" onClick={(e)=>{ e.stopPropagation(); setServicesStep('subscription') }}>
-                                        Выбрать
-                                      </SelectButton>
-                                    </MobileOnly>
                                     <DesktopOnly>
                                       <ConfirmSlot>
                                         <ConfirmButton
@@ -4626,6 +4731,7 @@ const MenuPage = () => {
                                           className={inlineNextFor === s.id ? 'is-next' : ''}
                                           aria-label={inlineNextFor === s.id ? 'Далее' : 'Выбрать'}
                                           onClick={(e)=>{
+                                            e.preventDefault();
                                             e.stopPropagation();
                                             if (inlineNextFor === s.id) { setServicesStep('subscription'); return }
                                             const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
@@ -4647,9 +4753,9 @@ const MenuPage = () => {
                                   <Bullets>
                                     {(() => {
                                       const audMap = {
-                                        basic: ['Лендинги и промо‑сайты', 'Стартапы/MVP', 'Личные проекты'],
-                                        optimal: ['Сайты компаний и каталоги', 'Небольшие интернет‑магазины', 'CRM/формы/личные кабинеты'],
-                                        premium: ['Сложные веб‑приложения', 'SaaS/реал‑тайм', 'Высокие нагрузки'],
+                                        basic: ['Для запуска рекламы и быстрых продаж с лендинга', 'Для стартапов, которым нужен сайт', 'Для экспертов и личных проектов, чтобы выделиться без лишних затрат'],
+                                        optimal: ['Для компаний, которым нужен полноценный сайт с разделами и сервисами', 'Для бизнеса, который хочет принимать платежи и собирать заявки онлайн', 'Для проектов, где важен удобный личный кабинет и автоматизация процессов'],
+                                        premium: ['Для IT-стартапов и SaaS-проектов, где важна сложная логика и масштабируемость', 'Для сервисов с высокой нагрузкой, реальным временем и интеграциями', 'Для бизнеса, где сайт — это не «визитка», а основной инструмент заработка'],
                                         'bot-basic': ['FAQ и поддержка', 'Сбор лидов', 'Простые сценарии'],
                                         'bot-optimal': ['Продажи/записи', 'Оплаты и админ‑панель', 'Интеграции с CRM'],
                                         'bot-premium': ['Сложные сценарии', 'Realtime/аналитика', 'Масштабирование'],
@@ -4683,7 +4789,15 @@ const MenuPage = () => {
                                   <Muted style={{ opacity: 0.7, marginTop: 6 }}>{s.notes.join(' • ')}</Muted>
                                 ) : null}
                               </PricingCard>
-                            )
+                            );
+
+                            if (isMobileFlag || list.length === 1) {
+                              const s = list[sel] || list[0]
+                              if (!s) return null
+                              return renderCard(s, true)
+                            }
+
+                            return list.map((s, idx) => renderCard(s, idx === sel))
                           })()}
                           </PricingGrid>
                         </>
@@ -4773,24 +4887,124 @@ const MenuPage = () => {
                               <StepNote>
                                 Шаг 2 из 2 — выберите подписку под задачу.
                               </StepNote>
+                              <MobileOnly>
+                                <MobilePlansWrap>
+                                  {(() => {
+                                    const active = mobilePlan // 'none' | 'basic' | 'optimal'
+                                    const toTitle = (t) => t === 'basic' ? 'Basic' : 'Pro'
+                                    const flat = {
+                                      none: {
+                                        title: 'Без подписки', price: null,
+                                        feats: [
+                                          ['Развертывание проекта на сервере', '✓'],
+                                          ['Хостинг+SSL', '—'],
+                                          ['Отчёт посещаемости', '—'],
+                                          ['Часы работы', '—'],
+                                          ['Создание резервных копий', '—'],
+                                          ['Обновление зависимостей/библиотек', '—'],
+                                          ['Реакция на инциденты', '—'],
+                                          ['Приоритетная помощь в работе', '—'],
+                                          ['Личные консультации и рекомендации', '—'],
+                                        ]
+                                      },
+                                      basic: {
+                                        title: 'Basic', price: '30 000 ₽/мес',
+                                        feats: [
+                                          ['Развертывание проекта на сервере', '✓'],
+                                          ['Хостинг+SSL', '✓'],
+                                          ['Отчёт посещаемости', '✓'],
+                                          ['Часы работы', '10 ч/мес'],
+                                          ['Создание резервных копий', '1×/мес'],
+                                          ['Обновление зависимостей/библиотек', '1×/мес'],
+                                          ['Реакция на инциденты', '2 раб. дня'],
+                                          ['Приоритетная помощь в работе', '—'],
+                                          ['Личные консультации и рекомендации', '—'],
+                                        ]
+                                      },
+                                      optimal: {
+                                        title: 'Pro', price: '60 000 ₽/мес',
+                                        feats: [
+                                          ['Развертывание проекта на сервере', '✓'],
+                                          ['Хостинг+SSL', '✓'],
+                                          ['Отчёт посещаемости', '✓'],
+                                          ['Часы работы', '25 ч/мес'],
+                                          ['Создание резервных копий', '2×/мес'],
+                                          ['Обновление зависимостей/библиотек', '2×/мес'],
+                                          ['Реакция на инциденты', '4 раб. часа'],
+                                          ['Приоритетная помощь в работе', '✓'],
+                                          ['Личные консультации и рекомендации', '✓'],
+                                        ]
+                                      }
+                                    }
+            const current = flat[active] || flat.optimal
+                                    return (
+                                      <>
+                                        <PlanTabs>
+              <PlanTabButton $active={active==='none'} onClick={(e)=>{ e.stopPropagation(); setMobilePlan('none') }}>
+                                            Без подписки
+                                          </PlanTabButton>
+              <PlanTabButton $active={active==='basic'} onClick={(e)=>{ e.stopPropagation(); setMobilePlan('basic'); setServicesTier('basic') }}>
+                                            Basic
+                                            <span className="sub">30 000 ₽/мес</span>
+                                          </PlanTabButton>
+              <PlanTabButton $active={active==='optimal'} onClick={(e)=>{ e.stopPropagation(); setMobilePlan('optimal'); setServicesTier('optimal') }}>
+                                            Pro
+                                            <span className="sub">60 000 ₽/мес</span>
+                                          </PlanTabButton>
+                                        </PlanTabs>
+                                        <PlanCard>
+                                          <PlanHeader>
+                                            <span className="title">{current.title}</span>
+                                            {current.price && <span className="price">{current.price}</span>}
+                                          </PlanHeader>
+                                          <FeatureList>
+                                            {current.feats.map(([label, val]) => (
+                                              <FeatureItem key={label}>
+                                                <span className="label">{label}</span>
+                                                <span className="value">{val === '✓' ? <span className="ok">✓</span> : (val === '—' ? <span className="dash">—</span> : val)}</span>
+                                              </FeatureItem>
+                                            ))}
+                                          </FeatureList>
+                                        </PlanCard>
+                                        <StickyCTABar>
+                                          <div className="inner">
+                                            {active==='none' && (
+                                              <PlanCTA $variant="white" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует разовый проект (без подписки).', hideBack: true }); setIsProjectModalOpen(true); }}>Оставить заявку</PlanCTA>
+                                            )}
+                                            {active==='basic' && (
+                                              <PlanCTA type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Оформить Basic (30 000 ₽/мес).', hideBack: true }); setIsProjectModalOpen(true); }}>Оформить Basic</PlanCTA>
+                                            )}
+                                            {active==='optimal' && (
+                                              <PlanCTA $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Оформить Pro (60 000 ₽/мес).', hideBack: true }); setIsProjectModalOpen(true); }}>Оформить Pro</PlanCTA>
+                                            )}
+                                            <div className="hint">Можно отменить в любой момент</div>
+                                          </div>
+                                        </StickyCTABar>
+                                      </>
+                                    )
+                                  })()}
+                                </MobilePlansWrap>
+                              </MobileOnly>
+
+                              <DesktopOnly>
                               <ComparisonTable>
                               <table className="comp-table">
                               <thead>
                                 <tr className="cta-row">
                                   <th className="feat"></th>
                                   <th>
-                                    <SelectButton className="select-cta" $variant="white" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует разовый проект (без подписки).' }); setIsProjectModalOpen(true); }}>
+                                    <SelectButton className="select-cta" $variant="white" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует разовый проект (без подписки).', hideBack: true }); setIsProjectModalOpen(true); }}>
                                       <span className="btn-text">Выбрать</span>
                                     </SelectButton>
                                   </th>
                                   <th>
-                                    <SelectButton className="select-cta" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Basic.' }); setIsProjectModalOpen(true); }}>
+                                    <SelectButton className="select-cta" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Basic.', hideBack: true }); setIsProjectModalOpen(true); }}>
                                       <span className="btn-text">Выбрать</span>
                                       <span className="btn-subtext">30 000 ₽/мес</span>
                                     </SelectButton>
                                   </th>
                                   <th>
-                                    <SelectButton className="select-cta" $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Pro.' }); setIsProjectModalOpen(true); }}>
+                                    <SelectButton className="select-cta" $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Pro.', hideBack: true }); setIsProjectModalOpen(true); }}>
                                       <span className="btn-text">Выбрать</span>
                                       <span className="btn-subtext">60 000 ₽/мес</span>
                                     </SelectButton>
@@ -4867,6 +5081,7 @@ const MenuPage = () => {
                               </tbody>
                             </table>
                             </ComparisonTable>
+                            </DesktopOnly>
                             </div>
 
                           </SubscriptionSplit>
@@ -4913,16 +5128,20 @@ const MenuPage = () => {
         </CardRow>
       </Section>
 
-      <ProjectModal
-        isOpen={isProjectModalOpen}
-        prefill={prefill}
-        startAnimation={isProjectModalAnimationReady}
-        onClose={() => {
-          setIsProjectModalAnimationReady(false)
-          setIsProjectModalOpen(false)
-          setPrefill(null)
-        }}
-      />
+      <ErrorBoundary fallback={null}>
+        <Suspense fallback={null}>
+          <ProjectModal
+            isOpen={isProjectModalOpen}
+            prefill={prefill}
+            startAnimation={isProjectModalAnimationReady}
+            onClose={() => {
+              setIsProjectModalAnimationReady(false)
+              setIsProjectModalOpen(false)
+              setPrefill(null)
+            }}
+          />
+        </Suspense>
+      </ErrorBoundary>
 
       <MobileNavigation />
     </MenuContainer>
