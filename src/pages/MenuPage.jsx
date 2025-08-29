@@ -2565,7 +2565,7 @@ const servicesBots = [
       'Развёртывание и настройка',
       '1 месяц поддержки (исправление багов)'
     ],
-    extras: ['Подключение оплат: от 10 000 ₽','Импорт/экспорт базы: от 5 000 ₽'], notes: [], timeline: 'Сроки: 1–2 недели', tech: 'Python/Node.js, aiogram/grammY, Google Sheets/CRM' },
+    extras: ['Подключение оплат: от 10 000 ₽','Импорт/экспорт базы: от 5 000 ₽'], notes: [], timeline: 'Сроки: 1–2 недели', tech: 'Python/Node.js, aiogram/grammY, SQLite/Google Sheets, Webhooks, базовые CRM-интеграции (AmoCRM/Bitrix24)' },
   { id: 'bot-optimal', title: 'Стандарт', desc: 'Продажи/записи, оплаты, админ‑панель', price: 'от 90 000 ₽',
     features: [
       'Всё из «Базовый»',
@@ -2576,7 +2576,7 @@ const servicesBots = [
       'Интеграции с CRM и базами данных',
       '1 месяц поддержки (исправление багов)'
     ],
-    extras: ['Сегментация рассылок: +10 000 ₽','А/Б‑тесты сценариев: +10 000 ₽'], timeline: 'Сроки: 3–5 недель', tech: 'Node.js/Python, PostgreSQL, CloudPayments/ЮKassa' },
+    extras: ['Сегментация рассылок: +10 000 ₽','А/Б‑тесты сценариев: +10 000 ₽'], timeline: 'Сроки: 3–5 недель', tech: 'Node.js/Python (aiogram/grammY), PostgreSQL, Redis, Telegram Bot API, интеграции (ЮKassa/CloudPayments/СБП, CRM API), Docker/VPS.' },
   { id: 'bot-premium', title: 'Премиум', desc: 'Сложная логика, интеграции и realtime', price: 'от 180 000 ₽',
     features: [
       'Полноценное Telegram Mini App (бот‑приложение внутри мессенджера)',
@@ -2589,7 +2589,7 @@ const servicesBots = [
       'Документация и инструкции для клиента (техдок по запросу)',
       '1 месяц поддержки (исправление багов)'
     ],
-    timeline: 'Сроки: 4–8 недель', tech: 'Node.js/Python, PostgreSQL, WebSockets' },
+    timeline: 'Сроки: 4–8 недель', tech: 'Next.js/React (Telegram WebApp SDK), Node.js/Nest.js, TypeScript, PostgreSQL/MongoDB, Redis, WebSockets, интеграции (ЮKassa/CloudPayments/СБП/крипто, CRM/ERP API), Docker/Kubernetes.' },
 ]
 
 const servicesAutomation = [
@@ -2654,6 +2654,22 @@ const MenuPage = () => {
   const serviceCategories = ['web', 'bots', 'automation']
   const [servicesTier, setServicesTier] = useState('optimal')
   const [servicesStep, setServicesStep] = useState('pick') // 'pick' | 'subscription'
+  // --- Добавлено: отслеживаем выбранную услугу и отправляем выбор в Telegram ---
+  const [selectedServiceId, setSelectedServiceId] = useState(null)
+  const lastTelegramSentRef = useRef(null)
+  const findServiceById = (id) => {
+    if (!id) return null
+    return [...servicesWeb, ...servicesBots, ...servicesAutomation].find(s => s.id === id)
+  }
+  const categoryLabelByServiceId = (id) => {
+    if (!id) return ''
+    if (servicesWeb.some(s=>s.id===id)) return '🌐 Сайты/Веб-приложения'
+    if (servicesBots.some(s=>s.id===id)) return '🤖 Боты'
+    if (servicesAutomation.some(s=>s.id===id)) return '⚙️ Автоматизация'
+    return ''
+  }
+  // Больше не отправляем сразу в Telegram — сохраняем выбор для ProjectModal
+  const [selectedSubscriptionLabel, setSelectedSubscriptionLabel] = useState(null)
 
   // Project creation modal (same behavior as on HomePage)
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
@@ -4773,7 +4789,7 @@ const MenuPage = () => {
                                   // Clicking anywhere on the card behaves like clicking the morph button
                                   if (e && typeof e.preventDefault === 'function') e.preventDefault();
                                   if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-                                  if (inlineNextFor === s.id) { setServicesStep('subscription'); return; }
+                                  if (inlineNextFor === s.id) { setSelectedServiceId(s.id); setServicesStep('subscription'); return; }
                                   const tier = s.id.includes('premium') ? 'premium' : (s.id.includes('optimal') ? 'optimal' : 'basic');
                                   setServicesTier(tier);
                                   prefetchSubscriptionAssets();
@@ -4814,7 +4830,7 @@ const MenuPage = () => {
                                           onClick={(e)=>{
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            if (inlineNextFor === s.id) { setServicesStep('subscription'); return }
+                                            if (inlineNextFor === s.id) { setSelectedServiceId(s.id); setServicesStep('subscription'); return }
                                             const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
                                             setServicesTier(tier)
                                             prefetchSubscriptionAssets();
@@ -4843,7 +4859,7 @@ const MenuPage = () => {
                                           onClick={(e)=>{
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            if (inlineNextFor === s.id) { setServicesStep('subscription'); return }
+                                            if (inlineNextFor === s.id) { setSelectedServiceId(s.id); setServicesStep('subscription'); return }
                                             const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
                                             setServicesTier(tier)
                                             prefetchSubscriptionAssets();
@@ -5083,13 +5099,13 @@ const MenuPage = () => {
                                         <StickyCTABar>
                                           <div className="inner">
                                             {active==='none' && (
-                                              <PlanCTA $variant="white" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует разовый проект (без подписки).', hideBack: true }); setIsProjectModalOpen(true); }}>Оставить заявку</PlanCTA>
+                                              <PlanCTA $variant="white" type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Разовый проект'); const service = findServiceById(selectedServiceId); const baseDesc = 'Разовый проект (без подписки)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>Оставить заявку</PlanCTA>
                                             )}
                                             {active==='basic' && (
-                                              <PlanCTA type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Оформить Basic (30 000 ₽/мес).', hideBack: true }); setIsProjectModalOpen(true); }}>Оформить Basic</PlanCTA>
+                                              <PlanCTA type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Basic 30 000 ₽/мес'); const service = findServiceById(selectedServiceId); const baseDesc = 'Подписка Basic (30 000 ₽/мес)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>Оформить Basic</PlanCTA>
                                             )}
                                             {active==='optimal' && (
-                                              <PlanCTA $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Оформить Pro (60 000 ₽/мес).', hideBack: true }); setIsProjectModalOpen(true); }}>Оформить Pro</PlanCTA>
+                                              <PlanCTA $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Pro 60 000 ₽/мес'); const service = findServiceById(selectedServiceId); const baseDesc = 'Подписка Pro (60 000 ₽/мес)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>Оформить Pro</PlanCTA>
                                             )}
                                             <div className="hint">Можно отменить в любой момент</div>
                                           </div>
@@ -5107,18 +5123,18 @@ const MenuPage = () => {
                                 <tr className="cta-row">
                                   <th className="feat"></th>
                                   <th>
-                                    <SelectButton className="select-cta" $variant="white" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует разовый проект (без подписки).', hideBack: true }); setIsProjectModalOpen(true); }}>
+                                    <SelectButton className="select-cta" $variant="white" type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Разовый проект'); const service = findServiceById(selectedServiceId); const baseDesc = 'Разовый проект (без подписки)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>
                                       <span className="btn-text">Выбрать</span>
                                     </SelectButton>
                                   </th>
                                   <th>
-                                    <SelectButton className="select-cta" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Basic.', hideBack: true }); setIsProjectModalOpen(true); }}>
+                                    <SelectButton className="select-cta" type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Basic 30 000 ₽/мес'); const service = findServiceById(selectedServiceId); const baseDesc = 'Подписка Basic (30 000 ₽/мес)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>
                                       <span className="btn-text">Выбрать</span>
                                       <span className="btn-subtext">30 000 ₽/мес</span>
                                     </SelectButton>
                                   </th>
                                   <th>
-                                    <SelectButton className="select-cta" $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setPrefill({ step:'contact', description: 'Интересует подписка Pro.', hideBack: true }); setIsProjectModalOpen(true); }}>
+                                    <SelectButton className="select-cta" $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Pro 60 000 ₽/мес'); const service = findServiceById(selectedServiceId); const baseDesc = 'Подписка Pro (60 000 ₽/мес)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>
                                       <span className="btn-text">Выбрать</span>
                                       <span className="btn-subtext">60 000 ₽/мес</span>
                                     </SelectButton>

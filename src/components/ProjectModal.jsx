@@ -808,21 +808,45 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
     // Здравствуйте, меня зовут ...!
     // Мне нужен такой-то проект: (категория + опции)
     // Мой номер телефона: ...
-    let message = `Здравствуйте, меня зовут ${formData.name}!\n\n`
-    // Project line
-    message += `Мне нужно ${category}\n\n`
-    if (selectedSubcats.length > 0) {
-      message += `Дополнительные опции:\n${selectedSubcats.join(', ')}`
+    let message = `Привет! 👋 Меня зовут ${formData.name}.\n\n`
+    // Project line (если пользователь выбрал категорию внутри модалки)
+    if (category) {
+      message += `Мне нужен проект: ${category}\n`
     }
-    message += `\n\n`
+    if (selectedSubcats.length > 0) {
+      message += `Опции: ${selectedSubcats.join(', ')}\n`
+    }
+    // Перенос после блока выбора внутри модалки
+    message += `\n`
 
-    // Optional short description
+    // Optional short description (от пользователя)
     if (formData.description.trim()) {
-      message += `Коротко о проекте: ${formData.description}\n\n`
+      message += `Описание: ${formData.description}\n\n`
+    }
+    // Prefill из MenuPage (у нас там строка вида: 'Интересует подписка ...\nВыбрана услуга: ...')
+    if (prefill?.description) {
+      // Разобьём и удалим дубли (если пользователь вставил то же в описание)
+      const lines = prefill.description.split(/\n+/).map(l=>l.trim()).filter(Boolean)
+      const cleaned = []
+      for (const l of lines) {
+        if (!cleaned.includes(l)) cleaned.push(l)
+      }
+      if (cleaned.length) {
+        // Пытаемся отделить подписку и услугу
+  const serviceLine = cleaned.find(l=>/^Услуга:/i.test(l) || /^Выбрана услуга:/i.test(l))
+        const subLine = cleaned.find(l=>/подписка/i.test(l) || /разовый проект/i.test(l))
+        if (serviceLine || subLine) {
+          message += `Мой выбор на сайте:\n`
+          if (serviceLine) message += `• ${serviceLine.replace(/Выбрана услуга:\s*/i,'').replace(/^[Уу]слуга:\s*/,'Услуга: ')}\n`
+          if (subLine) message += `• ${subLine.replace(/Интересует\s*/i,'').replace(/^Оформить\s*/i,'Подписка: ')}\n`
+          message += `\n`
+        }
+      }
     }
 
     // Phone
-    message += `Мой номер телефона: ${formData.phone}`
+    message += `Связь: ${formData.phone}`
+    message += `\n\nБуду рад обсудить детали! 🚀`
 
     return encodeURIComponent(message)
   }
