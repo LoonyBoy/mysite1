@@ -1389,7 +1389,7 @@ const BadgePill = styled.div`
 `
 
 const Muted = styled.p`
-  margin: 0; font-size: 13px; opacity: 0.8; text-align: center; color: #fff;
+  margin: 0; font-size: 13px; opacity: 0.8; text-align: ${p => (p.$alignLeft ? 'left' : 'center')}; color: #fff;
 `
 
 const PricingGrid = styled.div`
@@ -1486,10 +1486,10 @@ const PricingCard = styled.div`
 `
 
 const CardSectionTitle = styled.div`
-  margin-top: 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.9);
+  margin-top: 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.9);
   
   @media (max-width: 768px) {
-    margin-top: 10px;
+    margin-top: 8px;
     font-size: 11px;
     letter-spacing: 0.1em;
   }
@@ -1753,6 +1753,55 @@ const Bullets = styled.ul`
   }
 `
 
+// Tooltip dictionary for complex terms in features
+// Specific phrases (basic package) first to ensure they match before generic fallbacks
+const TERM_HINTS = {
+  'адаптивная верстка под все устройства': 'Сайт одинаково удобно открывается на телефоне, планшете и компьютере.',
+  'подключение аналитики': 'Можно видеть, кто заходит на сайт, откуда и что они делают (Яндекс.Метрика/GA).',
+  'базовое seo': 'Сайт быстрее грузится и лучше понимается поисковиками (теги, скорость загрузки).',
+  'кросс-браузерное тестирование': 'Сайт работает одинаково хорошо в Chrome, Safari, Firefox и других браузерах.',
+  'ssl и базовая защита данных': 'Сайт открывается по безопасному протоколу https:// и не пугает пользователей.',
+  'развертывание на сервере': 'Сайт будет загружен и настроен на хостинге, доступен по домену.',
+  '1 месяц поддержки': 'Если всплывут ошибки, я их исправлю бесплатно в течение месяца (только багфиксы).',
+
+  // Standard package specific
+  'анимации: от базовых скроллов': 'Сайт оживает: плавные появления, движения и при желании зрелищные спецэффекты.',
+  'crm/база данных + админ-панел': 'Удобный личный кабинет, где можно управлять заявками, клиентами и контентом.',
+  'калькуляторы, формы заявок, квизы': 'Интерактивные инструменты, чтобы пользователи оставляли данные или считали стоимость услуг.',
+  'платёжные системы': 'Приём онлайн-оплат прямо на сайте, без лишних движений.',
+  'личный кабинет клиента/администратора': 'Пользователь видит свои заказы/услуги, админ управляет всем сайтом в одном месте.',
+  'email/мессенджер-уведомления': 'Автоматические письма или сообщения клиентам и администратору о заказах и событиях.',
+
+  // Pro package specific
+  'сложная логика: чаты': 'Сайт работает как полноценное приложение: онлайн‑чаты, умные функции и готовность к высоким нагрузкам.',
+  'полная seo': 'Сайт полностью подготавливается к продвижению: структура, скорость, мета‑теги, микроразметка, тексты.',
+  'мультиязычность (2 языка)': 'Сайт сразу доступен для разных стран и аудиторий.',
+  'интеграции с crm/erp/облачными сервисами': 'Обмен данными между сайтом и бизнес‑системами (Bitrix24, AmoCRM, SAP и др.), без ручной рутины.',
+  'базовое нагрузочное тестирование': 'Проверка, выдержит ли сайт большие наплывы посетителей: скорость и стабильность под трафиком.',
+  'документация и инструкции для клиента': 'Простая инструкция для работы с сайтом + подробная техдокументация для разработчиков при необходимости.',
+
+  // Generic fallbacks (remain after specifics)
+  'ssl': 'SSL — шифрование соединения и сертификат HTTPS для безопасности трафика.',
+  'seo': 'SEO — оптимизация сайта для поиска: мета‑теги, структура, скорость, индексация.',
+  'crm': 'CRM — система для учёта лидов/клиентов и автоматизации продаж.',
+  'erp': 'ERP — система планирования ресурсов предприятия и внутренних процессов.',
+  'cloudpayments': 'CloudPayments — платёжный шлюз для приема оплат картами и подписок.',
+  'юkassa': 'ЮKassa — популярный платёжный сервис для приёма оплат онлайн.',
+  'сбп': 'СБП — Система быстрых платежей, мгновенные переводы по QR/ссылке.',
+  'websocket': 'WebSockets — двусторонняя связь в реальном времени без перезагрузок.',
+  'websockets': 'WebSockets — двусторонняя связь в реальном времени без перезагрузок.',
+  'webhooks': 'Webhooks — события от внешних сервисов, приходящие HTTP‑запросом.',
+  'api': 'API — программный интерфейс для интеграций с другими системами.',
+  'rest api': 'REST API — стандартные HTTP‑методы/формат для интеграции сервисов.',
+  'etl': 'ETL — Extract‑Transform‑Load: загрузка, преобразование и перенос данных.',
+  'админ-панел': 'Админ‑панель — раздел для управления контентом и настройками.',
+  'личный кабинет': 'Личный кабинет — персональный раздел пользователя с данными и действиями.',
+  'нагрузоч': 'Нагрузочное тестирование — проверка производительности под трафиком.',
+  'аналитик': 'Аналитика — Метрика/GA: отслеживание посещаемости и конверсий.',
+  'мультиязыч': 'Мультиязычность — поддержка нескольких языков интерфейса/контента.',
+  'email': 'Email‑уведомления — автоматические письма о событиях и статусах.',
+}
+
 const ServiceActions = styled.div`
   margin-top: 8px; display: flex; gap: 10px;
   button { font-size: 12px; padding: 6px 10px; border-radius: 10px; cursor: pointer; }
@@ -1773,14 +1822,14 @@ const ServiceActions = styled.div`
 `
 
 const Divider = styled.hr`
-  border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 10px 0;
+  border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 8px 0;
 `
 
 // Comparison table for subscription plans
 const ComparisonTable = styled.div`
   width: 100%;
   max-width: 1060px; /* narrow and centered */
-  margin: 8px 0 12px;
+  margin: 8px 0 16px;
   /* Do not allow inner scrolling; the page will scroll instead */
   overflow: hidden;
   position: relative; /* enable shadow backdrop */
@@ -1817,7 +1866,7 @@ const ComparisonTable = styled.div`
   th, td {
     color: #fff;
     text-align: center;
-    padding: 14px 12px;
+  padding: 16px 16px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
     border-right: 1px solid rgba(255,255,255,0.06);
     vertical-align: middle;
@@ -1844,8 +1893,8 @@ const ComparisonTable = styled.div`
   /* Value cells */
   td.val { text-align: center; white-space: nowrap; }
 
-  .check { color: #fff; font-weight: 700; font-size: 16px; display: inline-block; margin-right: 6px; }
-  .dash { color: rgba(255,255,255,0.35); display: inline-block; margin-right: 6px; }
+  .check { color: #fff; font-weight: 700; font-size: 16px; display: inline-block; margin-right: 8px; }
+  .dash { color: rgba(255,255,255,0.35); display: inline-block; margin-right: 8px; }
   small { color: rgba(255,255,255,0.85); font-size: 12px; }
 
   /* Sticky headers */
@@ -1859,18 +1908,18 @@ const ComparisonTable = styled.div`
     top: 0;
     background: rgba(255,255,255,0.04);
     border-bottom: 1px solid rgba(255,255,255,0.12);
-    padding: 10px 12px;
-    height: 76px; /* room for 2-line buttons */
+  padding: 16px 16px;
+  height: 80px; /* room for 2-line buttons (8px grid) */
     z-index: 4;
   }
   thead tr.cta-row th.feat { background: transparent; border-bottom: none; }
   thead tr.header-row th {
-    top: 76px;
+  top: 80px;
     z-index: 3;
     font-size: 16px;
     font-weight: 600;
     letter-spacing: 0.02em;
-    padding: 14px 12px;
+  padding: 16px 16px;
   }
   thead th.feat { text-align: left; }
 
@@ -1887,7 +1936,7 @@ const ComparisonTable = styled.div`
   /* Full-bleed on mobile: parent handles side margins; remove rounding */
   .comp-table { border-radius: 0; }
   &::before { border-radius: 0; }
-    th, td { padding: 12px 10px; line-height: 1.4; }
+  th, td { padding: 8px 8px; line-height: 1.4; }
     th.feat, td.feat { font-size: 14px; min-width: 200px; }
     td.val { white-space: normal; }
     thead tr.header-row th { font-size: 15px; }
@@ -1897,8 +1946,8 @@ const ComparisonTable = styled.div`
 const ComparisonCTARow = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 12px;
+  gap: 16px;
+  margin-top: 16px;
   width: 100%;
   max-width: 1060px; /* match table width */
   margin-left: auto;
@@ -2476,35 +2525,59 @@ const menuItems = [
 // Крупные структуры данных вынесены за пределы компонента
 const servicesWeb = [
   { id: 'basic', title: 'Базовый', desc: 'Лендинг/одностраничник для презентации услуг/продуктов', price: 'от 70 000 ₽',
-    features: ['Дизайн по готовому шаблону','До 5 блоков/секций','Адаптивная верстка','Базовое SEO (мета‑теги, скорость)','Форма обратной связи','Кросс‑браузерное тестирование','Безопасность: SSL, GDPR/ФЗ‑152','Развертывание на сервере','1 месяц техподдержки'],
-    extras: ['Кастомный дизайн: +15 000 ₽','Свыше 5 блоков: +5 000 ₽ за блок','Хостинг/домен: +10 000 ₽ за год'],
-    notes: [], timeline: 'Сроки: 1–2 недели', tech: 'Технологии: HTML, CSS, JavaScript, React' },
+    features: ['Кастомный дизайн','До 5 блоков/секций','Адаптивная верстка под все устройства','Подключение аналитики (Яндекс.Метрика/GA)','Базовое SEO (теги, скорость загрузки)','Кросс‑браузерное тестирование','SSL и базовая защита данных','Развертывание на сервере','1 месяц поддержки (только багфиксы)'],
+    notes: [], timeline: 'Сроки: 1–2 недели', tech: 'HTML, CSS, JavaScript, React' },
   { id: 'optimal', title: 'Стандарт', desc: 'Многостраничный сайт с интеграциями и анимациями', price: 'от 130 000 ₽',
-    features: ['Всё из "Базовый"','Кастомный дизайн','До 10 страниц','Анимации и интерактив','База данных/CRM, админ‑панель','Калькуляторы и формы','Платежная система','Личный кабинет клиента/администратора','Email/мессенджер-уведомления','2 месяца техподдержки'],
-    extras: ['Доп. страница: 10 000 ₽ за страницу','Расширенная аналитика: +10 000 ₽','Мультиязычность: +15 000 ₽ за язык'],
-    notes: ['Хостинг на 3 месяца включён'], timeline: 'Сроки: 3–6 недель', tech: 'Технологии: HTML, Tailwind CSS, JavaScript, React, Framer Motion / GSAP, MySQL/PostgreSQL' },
+    features: ['Всё из "Базовый"','До 10 страниц','Анимации: от базовых скроллов до эффектных «вау» при необходимости','CRM/База данных + админ-панель (самописная дороже, по согласованию)','Калькуляторы, формы заявок, квизы','Платёжные системы (ЮKassa, CloudPayments, криптовалюта и т.д.)','Личный кабинет клиента/администратора','Email/мессенджер-уведомления','1 месяц поддержки (только багфиксы)'],
+    timeline: 'Сроки: 3–6 недель', tech: 'HTML, Tailwind CSS, JavaScript, React, Framer Motion / GSAP, Ruby, MySQL/PostgreSQL' },
   { id: 'premium', title: 'Премиум', desc: 'Сложное веб‑приложение с продвинутой логикой', price: 'от 250 000 ₽',
-    features: ['Всё из «Стандарт»','Сложная логика: WebSockets/AI','Полная SEO‑оптимизация','Мультиязычность (2+ языка)','Сложные интеграции: CRM/ERP/облако','Авто‑тесты (unit/нагрузочные)','6 месяцев техподдержки','Документация и инструкции'],
-    extras: ['Миграции/перенос: от 20 000 ₽','Обучение персонала: от 15 000 ₽'], notes: ['Хостинг/домен по договоренности'],
-    timeline: 'Сроки: 5–12 недель', tech: 'Технологии: Next.js, TypeScript, Nest.js, MongoDB, Docker, WebSockets' },
+    features: ['Всё из «Стандарт»','Сложная логика: чаты в реальном времени, интеграция ИИ (автоматизация процессов), масштабируемые API','Полная SEO‑оптимизация','Мультиязычность (2 языка)','Интеграции с CRM/ERP/облачными сервисами (Bitrix24, AmoCRM, SAP и др.)','Базовое нагрузочное тестирование (проверка скорости и стабильности при трафике)','Документация и инструкции для клиента (техдок — по запросу)','1 месяц поддержки (только багфиксы)'],
+    timeline: 'Сроки: 5–12 недель', tech: 'Next.js, TypeScript, Nest.js, MongoDB, Docker, WebSockets' },
 ]
 
 const servicesBots = [
   { id: 'bot-basic', title: 'Базовый', desc: 'FAQ/поддержка, сбор заявок, простые сценарии', price: 'от 40 000 ₽',
-    features: ['Telegram/WhatsApp бот','Сценарии вопросов‑ответов','Формы заявок с уведомлениями','Интеграция с Google Sheets/CRM','Базовая аналитика','Развертывание и настройка','1 месяц техподдержки'],
-    extras: ['Подключение оплат: от 10 000 ₽','Импорт/экспорт базы: от 5 000 ₽'], notes: [], timeline: 'Сроки: 1–2 недели', tech: 'Технологии: Python/Node.js, aiogram/grammY, Google Sheets/CRM' },
+    features: [
+      'Telegram/WhatsApp бот',
+      'FAQ и сценарии вопросов-ответов',
+      'Формы заявок с уведомлениями в чат/email',
+      'Простые сценарии (квиз, калькулятор, меню)',
+      'Интеграция с Google Sheets или CRM',
+      'Базовая статистика (заявки, активность пользователей)',
+      'Развёртывание и настройка',
+      '1 месяц поддержки (только багфиксы)'
+    ],
+    extras: ['Подключение оплат: от 10 000 ₽','Импорт/экспорт базы: от 5 000 ₽'], notes: [], timeline: 'Сроки: 1–2 недели', tech: 'Python/Node.js, aiogram/grammY, Google Sheets/CRM' },
   { id: 'bot-optimal', title: 'Стандарт', desc: 'Продажи/записи, оплаты, админ‑панель', price: 'от 90 000 ₽',
-    features: ['Всё из "Базовый"','Оплаты (СБП/карты)','Админ‑панель для контента','Личный кабинет клиента','Интеграции с CRM/БД','Уведомления и рассылки','2 месяца техподдержки'],
-    extras: ['Сегментация рассылок: +10 000 ₽','А/Б‑тесты сценариев: +10 000 ₽'], notes: ['Хостинг на 3 месяца включён'], timeline: 'Сроки: 3–5 недель', tech: 'Технологии: Node.js/Python, PostgreSQL, CloudPayments/ЮKassa' },
+    features: [
+      'Всё из «Базовый»',
+      'Приём платежей: карты, СБП, подписки, возвраты',
+      'Админ-панель прямо в боте (добавление контента, управление заказами)',
+      'Личный кабинет клиента (заказы, подписки, оплаты, данные)',
+      'Рассылки и уведомления без ограничений',
+      'Интеграции с CRM и базами данных',
+      '1 месяц поддержки (исправление багов)'
+    ],
+    extras: ['Сегментация рассылок: +10 000 ₽','А/Б‑тесты сценариев: +10 000 ₽'], timeline: 'Сроки: 3–5 недель', tech: 'Node.js/Python, PostgreSQL, CloudPayments/ЮKassa' },
   { id: 'bot-premium', title: 'Премиум', desc: 'Сложная логика, интеграции и realtime', price: 'от 180 000 ₽',
-    features: ['Сложные сценарии и роли','WebSockets для live‑обновлений','Полная аналитика и сегментация','Интеграции: CRM/ERP/облако','Авто‑тесты и мониторинг','6 месяцев техподдержки','Документация и инструкции'],
-    extras: ['Нейро‑модули (NLP): от 30 000 ₽','Миграции/перенос: от 20 000 ₽'], notes: ['Хостинг/домен по договоренности'], timeline: 'Сроки: 4–8 недель', tech: 'Технологии: Node.js/Python, PostgreSQL, WebSockets' },
+    features: [
+      'Полноценное Telegram Mini App (бот‑приложение внутри мессенджера)',
+      'Современный UI/UX дизайн в стиле мобильного приложения',
+      'Личный кабинет пользователя (заказы, подписки, баланс, настройки)',
+      'Приём платежей (карты, СБП, криптовалюта, подписки, возвраты)',
+      'Интеграции с CRM/ERP/облачными сервисами (Bitrix24, AmoCRM, SAP и др.)',
+      'Расширенная аналитика и статистика по пользователям',
+      'Push/уведомления внутри Telegram',
+      'Документация и инструкции для клиента (техдок по запросу)',
+      '1 месяц поддержки (исправление багов)'
+    ],
+    timeline: 'Сроки: 4–8 недель', tech: 'Node.js/Python, PostgreSQL, WebSockets' },
 ]
 
 const servicesAutomation = [
   { id: 'auto-custom', title: 'Программы/Софт', desc: 'Программы, интеграции, автоматизация процессов под задачу', price: 'Custom',
     features: ['Анализ задачи и проектирование','Интеграции с CRM/ERP/Sheets/API','Скрипты, ETL, отчёты и уведомления','Реал‑тайм при необходимости','Документация и обучение'],
-    extras: [], notes: ['Стоимость обсуждается после брифинга'], timeline: 'Сроки: зависят от объёма', tech: 'Технологии: Python/Node.js, Google API, PostgreSQL' },
+    extras: [], notes: ['Стоимость обсуждается после брифинга'], timeline: 'Сроки: зависят от объёма', tech: 'Python/Node.js, Google API, PostgreSQL' },
 ]
 
 const projectsRows = {
@@ -4561,7 +4634,7 @@ const MenuPage = () => {
 
                   {openedIndex === index && index === 2 && (
                     <ServicesModalWrap className="services-modal" ref={servicesModalRef} $windowScroll={windowScroll}>
-                      <ProjectsTopTitle>{servicesStep === 'subscription' ? 'Подписка' : 'Услуги'}</ProjectsTopTitle>
+                      <ProjectsTopTitle>{servicesStep === 'subscription' ? 'Подписка' : 'Пакеты услуг'}</ProjectsTopTitle>
                       <PricingHeader>
                         {/* Desktop navigation (hidden on subscription step) */}
                         {servicesStep === 'pick' && (
@@ -4722,6 +4795,11 @@ const MenuPage = () => {
                                       </MobilePriceUnderTitle>
                                     </MobileOnly>
                                     <p>{s.desc}</p>
+                                    {s.timeline ? (
+                                      <div style={{ textAlign: 'left', marginTop: 6 }}>
+                                        <Muted $alignLeft>{s.timeline}</Muted>
+                                      </div>
+                                    ) : null}
                                   </PricingHead>
                                   <RightCol>
                                     <DesktopOnly>
@@ -4756,9 +4834,9 @@ const MenuPage = () => {
                                         basic: ['Для запуска рекламы и быстрых продаж с лендинга', 'Для стартапов, которым нужен сайт', 'Для экспертов и личных проектов, чтобы выделиться без лишних затрат'],
                                         optimal: ['Для компаний, которым нужен полноценный сайт с разделами и сервисами', 'Для бизнеса, который хочет принимать платежи и собирать заявки онлайн', 'Для проектов, где важен удобный личный кабинет и автоматизация процессов'],
                                         premium: ['Для IT-стартапов и SaaS-проектов, где важна сложная логика и масштабируемость', 'Для сервисов с высокой нагрузкой, реальным временем и интеграциями', 'Для бизнеса, где сайт — это не «визитка», а основной инструмент заработка'],
-                                        'bot-basic': ['FAQ и поддержка', 'Сбор лидов', 'Простые сценарии'],
-                                        'bot-optimal': ['Продажи/записи', 'Оплаты и админ‑панель', 'Интеграции с CRM'],
-                                        'bot-premium': ['Сложные сценарии', 'Realtime/аналитика', 'Масштабирование'],
+                                        'bot-basic': ['Для компаний и экспертов, которые хотят быстро запустить простой бот', 'Для бизнеса, которому нужен автоматический сбор заявок и лидов', 'Для проектов, где важна оперативная поддержка клиентов'],
+                                        'bot-optimal': ['Для бизнеса, который хочет продавать и принимать оплату прямо в мессенджере', 'Для компаний, где важно автоматизировать записи, заказы и работу с клиентами', 'Для сервисов, которым нужен личный кабинет и управление данными пользователей'],
+                                        'bot-premium': ['Для бизнеса и стартапов, которым нужен полноценный сервис внутри Telegram (Mini App)', 'Для проектов, где бот — это не чат с кнопками, а мобильное приложение прямо в мессенджере', 'Для компаний, которым важна сложная логика, интеграции и масштабируемость'],
                                         'auto-custom': ['Интеграции и автоматизация', 'ETL/отчёты', 'Индивидуальные задачи']
                                       }
                                       const items = audMap[s.id] || []
@@ -4768,14 +4846,13 @@ const MenuPage = () => {
                                 </SectionBlock>
                                 <Divider />
                                 <CardSectionTitle>Что входит</CardSectionTitle>
-                                <SectionBlock $minHeight={256}>
+                                <SectionBlock $minHeight={96}>
                                   <Bullets>
                                     {s.features.map(f => {
-                                      const map = { /* ...same mapping... */ }
                                       const norm = (s) => s.toLowerCase().replace(/\u2011/g, '-')
-                                      const key = Object.keys(map).find(k => norm(f).includes(norm(k)))
+                                      const key = Object.keys(TERM_HINTS).find(k => norm(f).includes(k))
                                       const text = key ? (
-                                        <span className="term" tabIndex={0} role="button" aria-label="Подсказка" data-hint={map[key]} onClick={handleTermToggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTermToggle(e) } }}>{f}</span>
+                                        <span className="term" tabIndex={0} role="button" aria-label="Подсказка" data-hint={TERM_HINTS[key]} onClick={handleTermToggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTermToggle(e) } }}>{f}</span>
                                       ) : f
                                       return (<li key={f}>{text}</li>)
                                     })}
@@ -4783,8 +4860,12 @@ const MenuPage = () => {
                                 </SectionBlock>
                                 {/* Блок "Доп. услуги" убран по требованию */}
                                 <Divider />
-                                <Muted style={{ marginTop: 6 }}>{s.timeline}</Muted>
-                                <Muted style={{ opacity: 0.7 }}>{s.tech}</Muted>
+                                <CardSectionTitle>Технологии</CardSectionTitle>
+                                <SectionBlock>
+                                  <div style={{ textAlign: 'left' }}>
+                                    <Muted $alignLeft style={{ opacity: 0.7 }}>{s.tech}</Muted>
+                                  </div>
+                                </SectionBlock>
                                 {s.notes?.length ? (
                                   <Muted style={{ opacity: 0.7, marginTop: 6 }}>{s.notes.join(' • ')}</Muted>
                                 ) : null}
