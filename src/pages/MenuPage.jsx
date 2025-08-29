@@ -1779,6 +1779,24 @@ const TERM_HINTS = {
   'интеграции с crm/erp/облачными сервисами': 'Обмен данными между сайтом и бизнес‑системами (Bitrix24, AmoCRM, SAP и др.), без ручной рутины.',
   'базовое нагрузочное тестирование': 'Проверка, выдержит ли сайт большие наплывы посетителей: скорость и стабильность под трафиком.',
   'документация и инструкции для клиента': 'Простая инструкция для работы с сайтом + подробная техдокументация для разработчиков при необходимости.',
+  'faq и сценарии вопросов-ответов': 'Бот сам отвечает на частые вопросы.',
+  'формы заявок с уведомлениями в чат/email': 'Заявки от пользователей приходят напрямую вам.',
+  'простые сценарии (квиз, калькулятор, меню)': 'Мини-диалоги для вовлечения и сбора данных.',
+  'простые сценарии': 'Мини-диалоги для вовлечения и сбора данных.',
+  'интеграция с google sheets или crm': 'Данные автоматически сохраняются в таблицу или CRM.',
+  'базовая статистика (заявки, активность пользователей)': 'Отслеживание заявок и активности.',
+  'развёртывание и настройка': 'Бот полностью готов к работе «под ключ».',
+  'приём платежей: карты, сбп, подписки, возвраты': 'Бот принимает оплату и оформляет подписки.',
+  'приём платежей (карты, сбп, криптовалюта, подписки, возвраты)': 'Максимальная гибкость в оплатах (карты, СБП, криптовалюта, подписки, возвраты).',
+  'админ-панель прямо в боте': 'Удобное управление контентом и заказами прямо из мессенджера.',
+  'личный кабинет клиента': 'Пользователь видит свои заказы, подписки и оплаты.',
+  'рассылки и уведомления без ограничений': 'Массовые сообщения клиентам в пару кликов.',
+  'интеграции с crm и базами данных': 'Синхронизация с учётом заказов и клиентов.',
+  'полноценное telegram mini app': 'Бот превращается в приложение внутри Telegram.',
+  'современный ui/ux дизайн': 'Интерфейс как у мобильного приложения: удобный и понятный.',
+  'интеграции с crm/erp/облачными сервисами': 'Связь с корпоративными системами (Bitrix24, SAP и др.).',
+  'расширенная аналитика и статистика по пользователям': 'Отслеживание поведения и сегментация аудитории.',
+  'push/уведомления внутри telegram': 'Напоминания и новости прямо в мессенджере.',
 
   // Generic fallbacks (remain after specifics)
   'ssl': 'SSL — шифрование соединения и сертификат HTTPS для безопасности трафика.',
@@ -2545,7 +2563,7 @@ const servicesBots = [
       'Интеграция с Google Sheets или CRM',
       'Базовая статистика (заявки, активность пользователей)',
       'Развёртывание и настройка',
-      '1 месяц поддержки (только багфиксы)'
+      '1 месяц поддержки (исправление багов)'
     ],
     extras: ['Подключение оплат: от 10 000 ₽','Импорт/экспорт базы: от 5 000 ₽'], notes: [], timeline: 'Сроки: 1–2 недели', tech: 'Python/Node.js, aiogram/grammY, Google Sheets/CRM' },
   { id: 'bot-optimal', title: 'Стандарт', desc: 'Продажи/записи, оплаты, админ‑панель', price: 'от 90 000 ₽',
@@ -2730,6 +2748,18 @@ const MenuPage = () => {
       }
     } catch (e) { }
   }, [])
+
+  // Prefetch heavy modules used by the subscription/modal step to avoid delay
+  const prefetchSubscriptionAssets = () => {
+    try {
+      // Warm up React.lazy chunks without awaiting — network will fetch and cache
+      import('../components/ProjectModal') // modal form
+      import('../utils/DesktopModalAnimations') // optional desktop animations
+      import('../../dither.jsx') // visual background effects
+    } catch (e) {
+      // ignore errors — prefetch is best-effort
+    }
+  }
 
   // On initial mount, ensure no accidental force-hover on mobile
   useEffect(() => {
@@ -4746,6 +4776,7 @@ const MenuPage = () => {
                                   if (inlineNextFor === s.id) { setServicesStep('subscription'); return; }
                                   const tier = s.id.includes('premium') ? 'premium' : (s.id.includes('optimal') ? 'optimal' : 'basic');
                                   setServicesTier(tier);
+                                  prefetchSubscriptionAssets();
                                   setInlineNextFor(s.id);
                                 }}
                               >
@@ -4786,6 +4817,7 @@ const MenuPage = () => {
                                             if (inlineNextFor === s.id) { setServicesStep('subscription'); return }
                                             const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
                                             setServicesTier(tier)
+                                            prefetchSubscriptionAssets();
                                             setInlineNextFor(s.id)
                                           }}
                                         >
@@ -4814,6 +4846,7 @@ const MenuPage = () => {
                                             if (inlineNextFor === s.id) { setServicesStep('subscription'); return }
                                             const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
                                             setServicesTier(tier)
+                                            prefetchSubscriptionAssets();
                                             setInlineNextFor(s.id)
                                           }}
                                         >
