@@ -10,6 +10,7 @@ import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
 // Lazy components to reduce initial bundle
 const ProjectModal = React.lazy(() => import('../components/ProjectModal'))
+const ServicesContentLazy = React.lazy(()=>import('../components/ServicesContent'))
 import useParticleControl from '../hooks/useParticleControl'
 const DitherLazy = React.lazy(() => import('../../dither.jsx')) // Adjusted to new file extension
 // DesktopModalAnimations will be dynamically imported when needed
@@ -1794,7 +1795,6 @@ const TERM_HINTS = {
   'интеграции с crm и базами данных': 'Синхронизация с учётом заказов и клиентов.',
   'полноценное telegram mini app': 'Бот превращается в приложение внутри Telegram.',
   'современный ui/ux дизайн': 'Интерфейс как у мобильного приложения: удобный и понятный.',
-  'интеграции с crm/erp/облачными сервисами': 'Связь с корпоративными системами (Bitrix24, SAP и др.).',
   'расширенная аналитика и статистика по пользователям': 'Отслеживание поведения и сегментация аудитории.',
   'push/уведомления внутри telegram': 'Напоминания и новости прямо в мессенджере.',
 
@@ -2615,7 +2615,7 @@ const projectsRows = {
 const MenuPage = () => {
   const menuRef = useRef(null)
   const navigate = useNavigate()
-  const { camera, setParticleProps, setHoveredRect, setParticleSpeed, particlesVisible } = useParticles()
+  const { camera, setParticleProps, setHoveredRect, setParticleSpeed, particlesVisible, pauseParticles, resumeParticles } = useParticles()
   const isTransitioningRef = useRef(false)
   
   // Логируем состояние частиц
@@ -2682,8 +2682,14 @@ const MenuPage = () => {
 
   // Lock body scroll while ProjectModal is open (copied from HomePage)
   useEffect(() => {
-  // Pause particles while project modal is open
-  try { setParticleSpeed?.(isProjectModalOpen ? 0 : 1.0) } catch {}
+  // Hard stop / resume background particles specifically for modal
+  try {
+    if (isProjectModalOpen) {
+      pauseParticles?.()
+    } else {
+      resumeParticles?.()
+    }
+  } catch {}
     const lockBody = () => {
       const scrollY = window.scrollY || window.pageYOffset || 0
       const body = document.body
@@ -2725,13 +2731,13 @@ const MenuPage = () => {
       lockBody()
     } else {
       unlockBody()
-      // only reset modal flag if no card modal is active
       if (openedIndex == null) isModalOpenRef.current = false
     }
 
     return () => {
       if (isProjectModalOpen) {
         unlockBody()
+        try { resumeParticles?.() } catch {}
       }
     }
   }, [isProjectModalOpen, openedIndex])
@@ -2766,12 +2772,18 @@ const MenuPage = () => {
   }, [])
 
   // Prefetch heavy modules used by the subscription/modal step to avoid delay
+  // One-shot flag for dynamic chunk preloading (ProjectModal, animations, dither)
+  const prefetchDoneRef = useRef(false)
+
   const prefetchSubscriptionAssets = () => {
+    if (prefetchDoneRef.current) return
+    prefetchDoneRef.current = true
     try {
       // Warm up React.lazy chunks without awaiting — network will fetch and cache
       import('../components/ProjectModal') // modal form
       import('../utils/DesktopModalAnimations') // optional desktop animations
       import('../../dither.jsx') // visual background effects
+  import('../components/ServicesContent') // services section
     } catch (e) {
       // ignore errors — prefetch is best-effort
     }
@@ -2783,6 +2795,26 @@ const MenuPage = () => {
       requestAnimationFrame(() => {
         cardRefs.current.forEach((c) => c && c.classList.remove('force-hover'))
       })
+    }
+  }, [])
+
+  // Idle prefetch so first modal open feels instant
+  useEffect(() => {
+    let idleId = null
+    let timeoutId = null
+    if (typeof window !== 'undefined') {
+      if ('requestIdleCallback' in window) {
+        idleId = window.requestIdleCallback(() => prefetchSubscriptionAssets())
+      } else {
+        // fallback: slight delay after mount
+        timeoutId = setTimeout(() => prefetchSubscriptionAssets(), 200)
+      }
+    }
+    return () => {
+      try {
+        if (idleId && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId)
+        if (timeoutId) clearTimeout(timeoutId)
+      } catch {}
     }
   }, [])
 
@@ -2948,234 +2980,50 @@ const MenuPage = () => {
 
   const onProjectsTouchMove = (e) => {
     if (!projectsTouchingRef.current) return
-    const x = (e.touches && e.touches[0] && e.touches[0].clientX) || 0
+    if (!e.touches || !e.touches.length) return
+    const x = e.touches[0].clientX
     const dx = x - (projectsTouchStartXRef.current || 0)
-    // follow finger: move whole pane (tabs + list)
-    try {
-      const pane = mobilePaneRef.current
-      if (pane) {
-        // throttle visual updates via requestAnimationFrame to avoid calling GSAP on every event
-        if (projectsTouchRAFRef.current) cancelAnimationFrame(projectsTouchRAFRef.current)
-        projectsTouchRAFRef.current = requestAnimationFrame(() => {
-          try {
-            // apply a small resistance when dragging past half the screen
-            const w = window.innerWidth || document.documentElement.clientWidth
-            const max = w * 0.5
-            let applied = dx
-            if (Math.abs(dx) > max) {
-              applied = dx > 0 ? max + (dx - max) * 0.2 : -max + (dx + max) * 0.2
-            }
-            pane.style.transform = `translate3d(${applied}px,0,0)`
-          } catch (err) { }
-        })
-      }
-    } catch { }
-    // store for velocity
-    projectsTouchLastTimeRef.current = performance.now()
     projectsTouchLastXRef.current = x
+    projectsTouchLastTimeRef.current = performance.now()
+    const pane = mobilePaneRef.current
+    if (!pane) return
+    if (projectsTouchRAFRef.current) cancelAnimationFrame(projectsTouchRAFRef.current)
+    projectsTouchRAFRef.current = requestAnimationFrame(() => {
+      try {
+        const resistance = Math.min(1, Math.max(-1, dx / (window.innerWidth * 0.6)))
+        const translateX = resistance * 40
+        gsap.set(pane, { x: translateX })
+      } catch {}
+    })
   }
 
   const onProjectsTouchEnd = (e) => {
     if (!projectsTouchingRef.current) return
     projectsTouchingRef.current = false
-    if (projectsTouchRAFRef.current) { cancelAnimationFrame(projectsTouchRAFRef.current); projectsTouchRAFRef.current = null }
-    const startX = projectsTouchStartXRef.current
-    const endX = (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientX) || null
-    if (startX == null || endX == null) return
+    const pane = mobilePaneRef.current
+    const startX = projectsTouchStartXRef.current || 0
+    const endX = projectsTouchLastXRef.current || startX
     const dx = endX - startX
     const dt = Math.max(1, performance.now() - projectsTouchLastTimeRef.current)
-    const vx = (endX - projectsTouchLastXRef.current) / dt
-    const threshold = 60 // px
-    const velocityThreshold = 0.3
-    const idx = projectsCategories.indexOf(projectsCategory)
-    let targetIdx = idx
-    let dir = 0
-    if (dx < -threshold || vx < -velocityThreshold) {
-      targetIdx = Math.min(projectsCategories.length - 1, idx + 1)
-      dir = -1
-    } else if (dx > threshold || vx > velocityThreshold) {
-      targetIdx = Math.max(0, idx - 1)
-      dir = 1
-    }
-    if (targetIdx === idx) {
-      // animate back to center of pane — use GSAP for smooth animation from current transform
-      try {
-        const p = mobilePaneRef.current
-        if (p) {
-          gsap.to(p, { x: 0, duration: 0.28, ease: 'power2.out', clearProps: 'willChange', onStart: () => { p.style.transition = '' } })
-        }
-      } catch { }
-      return
-    }
-    if (targetIdx === idx) {
-      try { const el = mobileListRef.current; if (el) gsap.to(el, { x: 0, duration: 0.28, ease: 'power2.out' }) } catch { }
-      return
-    }
-    const newCat = projectsCategories[targetIdx]
-    // animate change
-    changeProjectsCategory(newCat, dir)
-  }
+    const velocity = dx / dt // px per ms
+    const paneWidth = window.innerWidth
+    const threshold = paneWidth * 0.15
 
-  // Ripple effect for navigation buttons
-  const createRipple = (event, button) => {
-    const rect = button.getBoundingClientRect()
-    const size = Math.max(rect.width, rect.height)
-    const x = event.clientX - rect.left - size / 2
-    const y = event.clientY - rect.top - size / 2
-
-    const ripple = document.createElement('span')
-    ripple.className = 'ripple'
-    ripple.style.width = ripple.style.height = size + 'px'
-    ripple.style.left = x + 'px'
-    ripple.style.top = y + 'px'
-
-    button.appendChild(ripple)
-
-    setTimeout(() => {
-      if (ripple.parentNode) {
-        ripple.parentNode.removeChild(ripple)
-      }
-    }, 600)
-  }
-
-  // Handle navigation button click with animation
-  const handleNavButtonClick = (category, event) => {
-    if (projectsCategory === category) return
-
-    // Create ripple effect
-    createRipple(event, event.currentTarget)
-
-    // Add fade animation for nav buttons during transition
-    const navButtons = event.currentTarget.parentElement.querySelectorAll('button')
-    
-    // Fade out all buttons briefly
-    gsap.to(navButtons, {
-      opacity: 0.3,
-      duration: 0.15,
-      ease: 'power2.out',
-      onComplete: () => {
-        // Change category
-        changeProjectsCategory(category, 0, true)
-        
-        // Fade buttons back in
-        gsap.to(navButtons, {
-          opacity: 1,
-          duration: 0.25,
-          ease: 'power2.out'
-        })
-      }
-    })
-  }
-
-  // Projects navigation button click with services-like animations
-  const handleProjectsNavButtonClick = (category, event) => {
-    if (projectsCategory === category) return
-
-    // Immediately update UI state for instant visual feedback
-    setProjectsCategory(category)
-    pendingProjectsCategoryRef.current = category
-
-    // Clear any existing debounce
-    if (projectsNavDebounceRef.current) {
-      clearTimeout(projectsNavDebounceRef.current)
+    let direction = 0 // -1 = next, 1 = prev
+    if (Math.abs(dx) > threshold || Math.abs(velocity) > 0.4) {
+      direction = dx < 0 ? -1 : 1
     }
 
-    // Prevent UI animation conflicts
-    if (isProjectsUIUpdatingRef.current) return
-
-    // Create ripple effect
-    createRipple(event, event.currentTarget)
-
-    // Set UI updating flag
-    isProjectsUIUpdatingRef.current = true
-
-    // Add minimal fade animation for nav buttons
-    const navButtons = event.currentTarget.parentElement.querySelectorAll('button')
-    
-    // Quick fade for immediate feedback
-    gsap.to(navButtons, {
-      opacity: 0.7,
-      duration: 0.08,
-      ease: 'power2.out',
-      onComplete: () => {
-        gsap.to(navButtons, {
-          opacity: 1,
-          duration: 0.12,
-          ease: 'power2.out',
-          onComplete: () => {
-            isProjectsUIUpdatingRef.current = false
-          }
-        })
-      }
-    })
-
-    // Debounced processing (if any heavy work needed)
-    projectsNavDebounceRef.current = setTimeout(() => {
-      if (pendingProjectsCategoryRef.current === category) {
-        // placeholder for any async/backend work
-        pendingProjectsCategoryRef.current = null
-      }
-    }, 150)
-  }
-
-  // Handle services navigation button click with animation
-  const handleServicesNavButtonClick = (category, event) => {
-    if (servicesCategory === category) return
-  setStep1Interacted(true)
-    
-    // Immediately update UI state for instant visual feedback
-    setServicesCategory(category)
-    pendingServicesCategoryRef.current = category
-    
-    // Clear any existing debounce
-    if (servicesNavDebounceRef.current) {
-      clearTimeout(servicesNavDebounceRef.current)
+    // Animate pane back to center (or off and snap) then reset transform
+    if (pane) {
+      const targetX = 0
+      gsap.to(pane, { x: targetX, duration: 0.3, ease: 'power3.out' })
     }
-    
-    // Prevent UI animation conflicts
-    if (isServicesUIUpdatingRef.current) return
 
-    // Create ripple effect
-    createRipple(event, event.currentTarget)
-
-    // Set UI updating flag
-    isServicesUIUpdatingRef.current = true
-
-    // Add minimal fade animation for nav buttons
-    const navButtons = event.currentTarget.parentElement.querySelectorAll('button')
-    
-    // Quick fade for immediate feedback
-    gsap.to(navButtons, {
-      opacity: 0.7,
-      duration: 0.08,
-      ease: 'power2.out',
-      onComplete: () => {
-        gsap.to(navButtons, {
-          opacity: 1,
-          duration: 0.12,
-          ease: 'power2.out',
-          onComplete: () => {
-            isServicesUIUpdatingRef.current = false
-          }
-        })
-      }
-    })
-
-    // Debounced backend processing (heavy operations)
-    servicesNavDebounceRef.current = setTimeout(() => {
-      // Only process if this is still the pending category
-      if (pendingServicesCategoryRef.current === category) {
-        // Force any backend processing here if needed
-        // Switch category is already called above for immediate UI
-        
-        // Reset switching flag with extra delay to prevent conflicts
-        setTimeout(() => {
-          isServicesSwitchingRef.current = false
-        }, 200)
-        
-        pendingServicesCategoryRef.current = null
-      }
-    }, 150) // Longer delay for backend processing
+    // Potential category swipe change (placeholder: integrate with category switching if needed)
+    if (direction !== 0) {
+      // Example: switchProjectsCategory(direction === -1 ? 'next' : 'prev')
+    }
   }
 
   // Handle services tier navigation button click with animation  
@@ -3214,6 +3062,46 @@ const MenuPage = () => {
     tierNavDebounceRef.current = setTimeout(() => {
       // Any heavy tier processing here
     }, 50)
+  }
+
+  // Ripple helper (used by nav and tier buttons)
+  const createRipple = (event, button) => {
+    try {
+      const target = button || event.currentTarget
+      if (!target) return
+      const rect = target.getBoundingClientRect()
+      const diameter = Math.max(rect.width, rect.height)
+      const radius = diameter / 2
+      const circle = document.createElement('span')
+      circle.className = 'ripple'
+      circle.style.width = circle.style.height = `${diameter}px`
+      circle.style.left = `${(event.clientX || (rect.left + rect.width/2)) - rect.left - radius}px`
+      circle.style.top = `${(event.clientY || (rect.top + rect.height/2)) - rect.top - radius}px`
+      // Remove any existing ripple first
+      const existing = target.querySelector('.ripple')
+      if (existing) { try { existing.remove() } catch {} }
+      target.appendChild(circle)
+      setTimeout(() => { try { circle.remove() } catch {} }, 650)
+    } catch (e) { /* silent */ }
+  }
+
+  // Handle services category navigation (mobile & desktop tabs)
+  const handleServicesNavButtonClick = (cat, event) => {
+    if (servicesCategory === cat) return
+    // Guard concurrent animations
+    if (isServicesUIUpdatingRef.current) return
+    isServicesUIUpdatingRef.current = true
+    setStep1Interacted(true)
+    // Visual feedback
+    if (event) createRipple(event, event.currentTarget)
+    // Debounce rapid clicks
+    if (servicesNavDebounceRef.current) clearTimeout(servicesNavDebounceRef.current)
+    servicesNavDebounceRef.current = setTimeout(() => {
+      try { switchCategory(cat) } finally {
+        // allow further interactions shortly after animation start
+        setTimeout(() => { isServicesUIUpdatingRef.current = false }, 180)
+      }
+    }, 10)
   }
 
   // Toggle term tooltip (mobile/keyboard)
@@ -3567,6 +3455,11 @@ const MenuPage = () => {
   }, [])
 
   const handleHover = (index, isHovering) => {
+    // Hovering over the projects / services / contacts cards can trigger prefetch early
+    if (isHovering && (index === 1 || index === 2 || index === 3)) {
+      // Fire-and-forget; guarded inside prefetchSubscriptionAssets
+      prefetchSubscriptionAssets()
+    }
     // На сенсорных устройствах отключаем hover-анимации, чтобы контент не "съезжал"
     if (isTouchRef.current) return
     // Игнорируем любые hover-изменения, пока открыта/закрывается модалка
@@ -4679,546 +4572,100 @@ const MenuPage = () => {
                   )}
 
                   {openedIndex === index && index === 2 && (
-                    <ServicesModalWrap className="services-modal" ref={servicesModalRef} $windowScroll={windowScroll}>
-                      <ProjectsTopTitle>{servicesStep === 'subscription' ? 'Подписка' : 'Пакеты услуг'}</ProjectsTopTitle>
-                      <PricingHeader>
-                        {/* Desktop navigation (hidden on subscription step) */}
-                        {servicesStep === 'pick' && (
-                          <HeadingsRow style={{ marginBottom: 8, position: 'relative', display: 'none' }} className="desktop-only" ref={tabsRowRef}>
-                            <HeadingTab ref={tabWebRef} data-active={servicesCategory === 'web'} onClick={(e) => { e.stopPropagation(); switchCategory('web') }}>
-                              Сайты / Веб‑приложения
-                            </HeadingTab>
-                            <HeadingTab ref={tabBotsRef} data-active={servicesCategory === 'bots'} onClick={(e) => { e.stopPropagation(); switchCategory('bots') }}>
-                              Боты
-                            </HeadingTab>
-                            <HeadingTab ref={tabAutoRef} data-active={servicesCategory === 'automation'} onClick={(e) => { e.stopPropagation(); switchCategory('automation') }}>
-                              Программы / Софт
-                            </HeadingTab>
-                            <TabIndicator ref={indicatorRef} />
-                          </HeadingsRow>
-                        )}
-                        
-                        {/* Mobile navigation (hidden on subscription step) */}
-                        {servicesStep === 'pick' && (
-                          <MobileServicesNavigation data-testid="mobile-services-nav">
-                            <NavButton
-                              ref={servicesNavWebRef}
-                              className={servicesCategory === 'web' ? 'active' : ''}
-                              onClick={(e) => handleServicesNavButtonClick('web', e)}
-                              data-testid="services-nav-button-web"
-                            >
-                              Сайты
-                            </NavButton>
-                            <NavButton
-                              ref={servicesNavBotsRef}
-                              className={servicesCategory === 'bots' ? 'active' : ''}
-                              onClick={(e) => handleServicesNavButtonClick('bots', e)}
-                              data-testid="services-nav-button-bots"
-                            >
-                              Боты
-                            </NavButton>
-                            <NavButton
-                              ref={servicesNavAutoRef}
-                              className={servicesCategory === 'automation' ? 'active' : ''}
-                              onClick={(e) => handleServicesNavButtonClick('automation', e)}
-                              data-testid="services-nav-button-auto"
-                            >
-                              Софт
-                            </NavButton>
-                          </MobileServicesNavigation>
-                        )}
-                        
-                        {/* Mobile tier navigation (hidden on subscription step) */}
-                        {servicesStep === 'pick' && (
-                          <ServicesTierNavigation data-testid="mobile-services-tier-nav">
-                            <TierNavButton
-                              ref={servicesTierBasicRef}
-                              className={servicesTier === 'basic' ? 'active' : ''}
-                              onClick={(e) => handleServicesTierButtonClick('basic', e)}
-                              data-testid="services-tier-button-basic"
-                            >
-                              Базовый
-                            </TierNavButton>
-                            <TierNavButton
-                              ref={servicesTierOptimalRef}
-                              className={servicesTier === 'optimal' ? 'active' : ''}
-                              onClick={(e) => handleServicesTierButtonClick('optimal', e)}
-                              data-testid="services-tier-button-optimal"
-                            >
-                              Стандарт
-                            </TierNavButton>
-                            <TierNavButton
-                              ref={servicesTierPremiumRef}
-                              className={servicesTier === 'premium' ? 'active' : ''}
-                              onClick={(e) => handleServicesTierButtonClick('premium', e)}
-                              data-testid="services-tier-button-premium"
-                            >
-                              Премиум
-                            </TierNavButton>
-                          </ServicesTierNavigation>
-                        )}
-                      </PricingHeader>
-
-                      {/* Шаги услуг: 1) выбор услуги, 2) выбор подписки */}
-
-                      {servicesStep === 'pick' ? (
-                        <>
-                          <div style={{width: '100%', display: 'grid', gap: 8, margin: '8px 0'}}>
-                            <div style={{textAlign:'center', color:'#fff', opacity:0.9, fontSize:14}}>
-                              Шаг 1 из 2 — выберите услугу.
-                            </div>
-                          </div>
-                          {/* Верхняя кнопка "Далее" убрана по требованию; переходим через морф в карточке */}
-                          <PricingGrid
-                            ref={servicesGridRef}
-                            $center={isMobileFlag}
-                            $narrow={isMobileFlag}
-                            $single={!isMobileFlag && (servicesCategory === 'automation')}
-                          >
-                          {(() => {
-                            const list = servicesCategory === 'automation' ? servicesAutomation : (servicesCategory === 'web' ? servicesWeb : servicesBots)
-                            const sel = servicesTier === 'basic' ? 0 : servicesTier === 'optimal' ? 1 : 2
-                            const accentRGB = '52,211,153' // emerald-like
-                            // Mobile: один выбранный план; Desktop: все планы
-                            const renderCard = (s, isFeatured) => (
-                              <PricingCard
-                                key={s.id}
-                                className={isFeatured ? 'featured' : 'tier-hidden'}
-                                $accentRGB={accentRGB}
-                                onClick={(e)=>{
-                                  // Clicking anywhere on the card behaves like clicking the morph button
-                                  if (e && typeof e.preventDefault === 'function') e.preventDefault();
-                                  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-                                  if (inlineNextFor === s.id) { setSelectedServiceId(s.id); setServicesStep('subscription'); return; }
-                                  const tier = s.id.includes('premium') ? 'premium' : (s.id.includes('optimal') ? 'optimal' : 'basic');
-                                  setServicesTier(tier);
-                                  prefetchSubscriptionAssets();
-                                  setInlineNextFor(s.id);
-                                }}
-                              >
-                                <PricingTop>
-                                  <PricingHead>
-                                    <h4>{s.title}</h4>
-                                    <DesktopOnly>
-                                      <HeadingPrice>
-                                        {s.price === 'Custom' ? (
-                                          <span className="amount">По договоренности</span>
-                                        ) : (
-                                          <>
-                                            <span className="amount">{s.price}</span>
-                                            <span className="period"> / проект</span>
-                                          </>
-                                        )}
-                                      </HeadingPrice>
-                                    </DesktopOnly>
-                                    <MobileOnly>
-                                      <MobilePriceUnderTitle>
-                                        <MobilePriceText>
-                                          {s.price === 'Custom' ? (
-                                            <span className="amount">По договоренности</span>
-                                          ) : (
-                                            <>
-                                              <span className="amount">{s.price}</span>
-                                              <span className="period"> / проект</span>
-                                            </>
-                                          )}
-                                        </MobilePriceText>
-                                        <MobileConfirmButton
-                                          type="button"
-                                          className={inlineNextFor === s.id ? 'is-next' : ''}
-                                          aria-label={inlineNextFor === s.id ? 'Далее' : 'Выбрать'}
-                                          onClick={(e)=>{
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            if (inlineNextFor === s.id) { setSelectedServiceId(s.id); setServicesStep('subscription'); return }
-                                            const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
-                                            setServicesTier(tier)
-                                            prefetchSubscriptionAssets();
-                                            setInlineNextFor(s.id)
-                                          }}
-                                        >
-                                          <span className="icon">✓</span>
-                                          <span className="label">Далее</span>
-                                        </MobileConfirmButton>
-                                      </MobilePriceUnderTitle>
-                                    </MobileOnly>
-                                    <p>{s.desc}</p>
-                                    {s.timeline ? (
-                                      <div style={{ textAlign: 'left', marginTop: 6 }}>
-                                        <Muted $alignLeft>{s.timeline}</Muted>
-                                      </div>
-                                    ) : null}
-                                  </PricingHead>
-                                  <RightCol>
-                                    <DesktopOnly>
-                                      <ConfirmSlot>
-                                        <ConfirmButton
-                                          type="button"
-                                          className={inlineNextFor === s.id ? 'is-next' : ''}
-                                          aria-label={inlineNextFor === s.id ? 'Далее' : 'Выбрать'}
-                                          onClick={(e)=>{
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            if (inlineNextFor === s.id) { setSelectedServiceId(s.id); setServicesStep('subscription'); return }
-                                            const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
-                                            setServicesTier(tier)
-                                            prefetchSubscriptionAssets();
-                                            setInlineNextFor(s.id)
-                                          }}
-                                        >
-                                          <span className="icon">✓</span>
-                                          <span className="label">Далее</span>
-                                        </ConfirmButton>
-                                      </ConfirmSlot>
-                                    </DesktopOnly>
-                                  </RightCol>
-                                </PricingTop>
-                                {/* Для кого подходит */}
-                                <Divider />
-                                <CardSectionTitle>Для кого подходит</CardSectionTitle>
-                                <SectionBlock $minHeight={96}>
-                                  <Bullets>
-                                    {(() => {
-                                      const audMap = {
-                                        basic: ['Для запуска рекламы и быстрых продаж с лендинга', 'Для стартапов, которым нужен сайт', 'Для экспертов и личных проектов, чтобы выделиться без лишних затрат'],
-                                        optimal: ['Для компаний, которым нужен полноценный сайт с разделами и сервисами', 'Для бизнеса, который хочет принимать платежи и собирать заявки онлайн', 'Для проектов, где важен удобный личный кабинет и автоматизация процессов'],
-                                        premium: ['Для IT-стартапов и SaaS-проектов, где важна сложная логика и масштабируемость', 'Для сервисов с высокой нагрузкой, реальным временем и интеграциями', 'Для бизнеса, где сайт — это не «визитка», а основной инструмент заработка'],
-                                        'bot-basic': ['Для компаний и экспертов, которые хотят быстро запустить простой бот', 'Для бизнеса, которому нужен автоматический сбор заявок и лидов', 'Для проектов, где важна оперативная поддержка клиентов'],
-                                        'bot-optimal': ['Для бизнеса, который хочет продавать и принимать оплату прямо в мессенджере', 'Для компаний, где важно автоматизировать записи, заказы и работу с клиентами', 'Для сервисов, которым нужен личный кабинет и управление данными пользователей'],
-                                        'bot-premium': ['Для бизнеса и стартапов, которым нужен полноценный сервис внутри Telegram (Mini App)', 'Для проектов, где бот — это не чат с кнопками, а мобильное приложение прямо в мессенджере', 'Для компаний, которым важна сложная логика, интеграции и масштабируемость'],
-                                        'auto-custom': ['Интеграции и автоматизация', 'ETL/отчёты', 'Индивидуальные задачи']
-                                      }
-                                      const items = audMap[s.id] || []
-                                      return items.map(v => (<li key={v}>{v}</li>))
-                                    })()}
-                                  </Bullets>
-                                </SectionBlock>
-                                <Divider />
-                                <CardSectionTitle>Что входит</CardSectionTitle>
-                                <SectionBlock $minHeight={96}>
-                                  <Bullets>
-                                    {s.features.map(f => {
-                                      const norm = (s) => s.toLowerCase().replace(/\u2011/g, '-')
-                                      const key = Object.keys(TERM_HINTS).find(k => norm(f).includes(k))
-                                      const text = key ? (
-                                        <span className="term" tabIndex={0} role="button" aria-label="Подсказка" data-hint={TERM_HINTS[key]} onClick={handleTermToggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTermToggle(e) } }}>{f}</span>
-                                      ) : f
-                                      return (<li key={f}>{text}</li>)
-                                    })}
-                                  </Bullets>
-                                </SectionBlock>
-                                {/* Блок "Доп. услуги" убран по требованию */}
-                                <Divider />
-                                <CardSectionTitle>Технологии</CardSectionTitle>
-                                <SectionBlock>
-                                  <div style={{ textAlign: 'left' }}>
-                                    <Muted $alignLeft style={{ opacity: 0.7 }}>{s.tech}</Muted>
-                                  </div>
-                                </SectionBlock>
-                                {s.notes?.length ? (
-                                  <Muted style={{ opacity: 0.7, marginTop: 6 }}>{s.notes.join(' • ')}</Muted>
-                                ) : null}
-                              </PricingCard>
-                            );
-
-                            if (isMobileFlag || list.length === 1) {
-                              const s = list[sel] || list[0]
-                              if (!s) return null
-                              return renderCard(s, true)
-                            }
-
-                            return list.map((s, idx) => renderCard(s, idx === sel))
-                          })()}
-                          </PricingGrid>
-                        </>
-                      ) : (
-                        <>
-                          <SubscriptionSplit>
-                            <div>
-                              {/* Эксплейнер подписки — лаконичным текстом */}
-                              <SubscriptionIntro>
-                                <IntroTitleRow>
-                                  <IconBubble>✨</IconBubble>
-                                  <h4>Что такое подписка?</h4>
-                                </IntroTitleRow>
-                                <IntroBody>
-                                  <p>
-                                    Подписка — это простой и прозрачный способ получать поддержку и развитие продукта без лишней рутины.
-                                    Вы заранее понимаете объём работ и скорость реакции, а задачи выполняются регулярно и приоритетно.
-                                    Это чаще выгоднее разовых работ и найма, гибко масштабируется под рост и сопровождается отчётами.
-                                  </p>
-                                </IntroBody>
-                              </SubscriptionIntro>
-
-                              {/* Вопрос-ответ (как в модалке "О себе") */}
-                              <AboutCaption>Вопрос‑ответ</AboutCaption>
-                              <FAQAccordionGreen>
-                                <details>
-                                  <summary>Что если у меня уже есть хостинг и домен?</summary>
-                                  <div className="faq-content"><div className="faq-content-inner">
-                                    <div className="faq-answer">
-                                      <p>Подключение возможно к существующему серверу или проект может быть перенесён на предоставленный хостинг — всё зависит от ваших предпочтений. В любом случае поддержка и обновления входят в подписку.</p>
-                                    </div>
-                                  </div></div>
-                                </details>
-                                <details>
-                                  <summary>А если не хватит часов?</summary>
-                                  <div className="faq-content"><div className="faq-content-inner">
-                                    <div className="faq-answer">
-                                      <p>Дополнительные часы можно докупить по фиксированной ставке (3000 р/час) либо перейти на тариф Pro. Вся работа фиксируется в отчёте по выполненным работам, в котором можно увидеть затраченное время.</p>
-                                    </div>
-                                  </div></div>
-                                </details>
-                                <details>
-                                  <summary>Накапливаются ли часы, если их не использовать?</summary>
-                                  <div className="faq-content"><div className="faq-content-inner">
-                                    <div className="faq-answer">
-                                      <p>Неиспользованные часы переносятся на следующий месяц в размере 50% от остатка на конец подписки. При этом, если вы решите отменить подписку, все неиспользованные часы сгорают.</p>
-                                    </div>
-                                  </div></div>
-                                </details>
-                                <details>
-                                  <summary>Как быстро происходит реакция на инциденты?</summary>
-                                  <div className="faq-content"><div className="faq-content-inner">
-                                    <div className="faq-answer">
-                                      <p>На тарифе Basic — в течение 2 рабочих дней. На тарифе Pro — в течение 4 рабочих часов. Задачи клиентов Pro всегда ставятся в приоритет.</p>
-                                    </div>
-                                  </div></div>
-                                </details>
-                                <details>
-                                  <summary>Как происходит старт работ и оплата?</summary>
-                                  <div className="faq-content"><div className="faq-content-inner">
-                                    <div className="faq-answer">
-                                      <p>После выбора тарифа заключается договор и выставляется счёт за месяц вперёд. Сразу после оплаты проект подключается к системе мониторинга, и начинаются работы по задачам.</p>
-                                    </div>
-                                  </div></div>
-                                </details>
-                                <details>
-                                  <summary>Какие гарантии качества и сроков?</summary>
-                                  <div className="faq-content"><div className="faq-content-inner">
-                                    <div className="faq-answer">
-                                      <p>Все условия фиксируются в официальном договоре: сроки реакции, объём работ и ответственность сторон. Вы получаете ежемесячный отчёт с результатами и рекомендациями, что обеспечивает прозрачность и контроль.</p>
-                                    </div>
-                                  </div></div>
-                                </details>
-                                <details>
-                                  <summary>Что если понадобится задача вне подписки?</summary>
-                                  <div className="faq-content"><div className="faq-content-inner">
-                                    <div className="faq-answer">
-                                      <p>Крупные задачи, которые не укладываются в лимит часов (например, новые интеграции или разработка функционала), оцениваются и согласовываются отдельно. При этом поддержка и мелкие доработки продолжают выполняться в рамках подписки.</p>
-                                    </div>
-                                  </div></div>
-                                </details>
-                              </FAQAccordionGreen>
-                            </div>
-
-                            {/* Правая колонка: шаг и таблица */}
-                            <div>
-                              <StepNote>
-                                Шаг 2 из 2 — выберите подписку под задачу.
-                              </StepNote>
-                              <MobileOnly>
-                                <MobilePlansWrap>
-                                  {(() => {
-                                    const active = mobilePlan // 'none' | 'basic' | 'optimal'
-                                    const toTitle = (t) => t === 'basic' ? 'Basic' : 'Pro'
-                                    const flat = {
-                                      none: {
-                                        title: 'Без подписки', price: null,
-                                        feats: [
-                                          ['Развертывание проекта на сервере', '✓'],
-                                          ['Хостинг+SSL', '—'],
-                                          ['Отчёт посещаемости', '—'],
-                                          ['Часы работы', '—'],
-                                          ['Создание резервных копий', '—'],
-                                          ['Обновление зависимостей/библиотек', '—'],
-                                          ['Реакция на инциденты', '—'],
-                                          ['Приоритетная помощь в работе', '—'],
-                                          ['Личные консультации и рекомендации', '—'],
-                                        ]
-                                      },
-                                      basic: {
-                                        title: 'Basic', price: '30 000 ₽/мес',
-                                        feats: [
-                                          ['Развертывание проекта на сервере', '✓'],
-                                          ['Хостинг+SSL', '✓'],
-                                          ['Отчёт посещаемости', '✓'],
-                                          ['Часы работы', '10 ч/мес'],
-                                          ['Создание резервных копий', '1×/мес'],
-                                          ['Обновление зависимостей/библиотек', '1×/мес'],
-                                          ['Реакция на инциденты', '2 раб. дня'],
-                                          ['Приоритетная помощь в работе', '—'],
-                                          ['Личные консультации и рекомендации', '—'],
-                                        ]
-                                      },
-                                      optimal: {
-                                        title: 'Pro', price: '60 000 ₽/мес',
-                                        feats: [
-                                          ['Развертывание проекта на сервере', '✓'],
-                                          ['Хостинг+SSL', '✓'],
-                                          ['Отчёт посещаемости', '✓'],
-                                          ['Часы работы', '25 ч/мес'],
-                                          ['Создание резервных копий', '2×/мес'],
-                                          ['Обновление зависимостей/библиотек', '2×/мес'],
-                                          ['Реакция на инциденты', '4 раб. часа'],
-                                          ['Приоритетная помощь в работе', '✓'],
-                                          ['Личные консультации и рекомендации', '✓'],
-                                        ]
-                                      }
-                                    }
-            const current = flat[active] || flat.optimal
-                                    return (
-                                      <>
-                                        <PlanTabs>
-              <PlanTabButton $active={active==='none'} onClick={(e)=>{ e.stopPropagation(); setMobilePlan('none') }}>
-                                            Без подписки
-                                          </PlanTabButton>
-              <PlanTabButton $active={active==='basic'} onClick={(e)=>{ e.stopPropagation(); setMobilePlan('basic'); setServicesTier('basic') }}>
-                                            Basic
-                                            <span className="sub">30 000 ₽/мес</span>
-                                          </PlanTabButton>
-              <PlanTabButton $active={active==='optimal'} onClick={(e)=>{ e.stopPropagation(); setMobilePlan('optimal'); setServicesTier('optimal') }}>
-                                            Pro
-                                            <span className="sub">60 000 ₽/мес</span>
-                                          </PlanTabButton>
-                                        </PlanTabs>
-                                        <PlanCard>
-                                          <PlanHeader>
-                                            <span className="title">{current.title}</span>
-                                            {current.price && <span className="price">{current.price}</span>}
-                                          </PlanHeader>
-                                          <FeatureList>
-                                            {current.feats.map(([label, val]) => (
-                                              <FeatureItem key={label}>
-                                                <span className="label">{label}</span>
-                                                <span className="value">{val === '✓' ? <span className="ok">✓</span> : (val === '—' ? <span className="dash">—</span> : val)}</span>
-                                              </FeatureItem>
-                                            ))}
-                                          </FeatureList>
-                                        </PlanCard>
-                                        <StickyCTABar>
-                                          <div className="inner">
-                                            {active==='none' && (
-                                              <PlanCTA $variant="white" type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Разовый проект'); const service = findServiceById(selectedServiceId); const baseDesc = 'Разовый проект (без подписки)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>Оставить заявку</PlanCTA>
-                                            )}
-                                            {active==='basic' && (
-                                              <PlanCTA type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Basic 30 000 ₽/мес'); const service = findServiceById(selectedServiceId); const baseDesc = 'Подписка Basic (30 000 ₽/мес)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>Оформить Basic</PlanCTA>
-                                            )}
-                                            {active==='optimal' && (
-                                              <PlanCTA $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Pro 60 000 ₽/мес'); const service = findServiceById(selectedServiceId); const baseDesc = 'Подписка Pro (60 000 ₽/мес)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>Оформить Pro</PlanCTA>
-                                            )}
-                                            <div className="hint">Можно отменить в любой момент</div>
-                                          </div>
-                                        </StickyCTABar>
-                                      </>
-                                    )
-                                  })()}
-                                </MobilePlansWrap>
-                              </MobileOnly>
-
-                              <DesktopOnly>
-                              <ComparisonTable>
-                              <table className="comp-table">
-                              <thead>
-                                <tr className="cta-row">
-                                  <th className="feat"></th>
-                                  <th>
-                                    <SelectButton className="select-cta" $variant="white" type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Разовый проект'); const service = findServiceById(selectedServiceId); const baseDesc = 'Разовый проект (без подписки)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>
-                                      <span className="btn-text">Выбрать</span>
-                                    </SelectButton>
-                                  </th>
-                                  <th>
-                                    <SelectButton className="select-cta" type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Basic 30 000 ₽/мес'); const service = findServiceById(selectedServiceId); const baseDesc = 'Подписка Basic (30 000 ₽/мес)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>
-                                      <span className="btn-text">Выбрать</span>
-                                      <span className="btn-subtext">30 000 ₽/мес</span>
-                                    </SelectButton>
-                                  </th>
-                                  <th>
-                                    <SelectButton className="select-cta" $variant="contrast" type="button" onClick={(e)=>{ e.stopPropagation(); setSelectedSubscriptionLabel('Pro 60 000 ₽/мес'); const service = findServiceById(selectedServiceId); const baseDesc = 'Подписка Pro (60 000 ₽/мес)'; const cat = categoryLabelByServiceId(selectedServiceId); setPrefill({ step:'contact', description: `Выбор: ${baseDesc}\nУслуга: ${service?.title||'—'} (${cat || '—'})`, hideBack: true }); setIsProjectModalOpen(true); }}>
-                                      <span className="btn-text">Выбрать</span>
-                                      <span className="btn-subtext">60 000 ₽/мес</span>
-                                    </SelectButton>
-                                  </th>
-                                </tr>
-                                <tr className="header-row">
-                                  <th className="feat">Преимущества</th>
-                                  <th>
-                                    <span className="plan-title">Без подписки</span>
-                                  </th>
-                                  <th>
-                                    <span className="plan-title">Basic</span>
-                                  </th>
-                                  <th>
-                                    <span className="plan-title">Pro</span>
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td className="feat">Развертывание проекта на сервере</td>
-                                  <td className="val"><span className="check">✓</span></td>
-                                  <td className="val"><span className="check">✓</span></td>
-                                  <td className="val"><span className="check">✓</span></td>
-                                </tr>
-                                <tr>
-                                  <td className="feat">Хостинг+SSL</td>
-                                  <td className="val"><span className="check">—</span></td>
-                                  <td className="val"><span className="check">✓</span></td>
-                                  <td className="val"><span className="check">✓</span></td>
-                                </tr>
-                                <tr>
-                                  <td className="feat">Отчёт посещаемости</td>
-                                  <td className="val"><span className="dash">—</span></td>
-                                  <td className="val"><span className="check">✓</span></td>
-                                  <td className="val"><span className="check">✓</span></td>
-                                </tr>
-                                <tr>
-                                  <td className="feat">Часы работы (улучшения UX/UI, редактирования, изменения и т.д.)</td>
-                                  <td className="val"><span className="check">—</span></td>
-                                  <td className="val"><span className="check">10</span></td>
-                                  <td className="val"><span className="check">25</span></td>
-                                </tr>
-                                <tr>
-                                  <td className="feat">Создание резервных копий</td>
-                                  <td className="val"><span className="check">—</span></td>
-                                  <td className="val"><span className="check">1 раз в месяц</span></td>
-                                  <td className="val"><span className="check">2 раза в месяц</span></td>
-                                </tr>
-                                <tr>
-                                  <td className="feat">Обновление зависимостей/библиотек</td>
-                                  <td className="val"><span className="check">—</span></td>
-                                  <td className="val"><span className="check">Раз в месяц</span></td>
-                                  <td className="val"><span className="check">Два раза в месяц</span></td>
-                                </tr>
-                                <tr>
-                                  <td className="feat">Реакция на инциденты</td>
-                                  <td className="val"><span className="dash">—</span></td>
-                                  <td className="val"><span className="check">2 рабочих дня</span></td>
-                                  <td className="val"><span className="check">4 рабочих часа</span></td>
-                                </tr>
-                                <tr>
-                                  <td className="feat">Приоритетная помощь в работе</td>
-                                  <td className="val"><span className="dash">—</span></td>
-                                  <td className="val"><span className="check">—</span></td>
-                                  <td className="val"><span className="check">✓</span></td>
-                                </tr>
-                                <tr>
-                                  <td className="feat">Личные консультации и рекомендации</td>
-                                  <td className="val"><span className="dash">—</span></td>
-                                  <td className="val"><span className="check">—</span></td>
-                                  <td className="val"><span className="check">✓</span></td>
-                                </tr>
-                              </tbody>
-                            </table>
-                            </ComparisonTable>
-                            </DesktopOnly>
-                            </div>
-
-                          </SubscriptionSplit>
-
-                        </>
-                      )}
-                    </ServicesModalWrap>
+                    <Suspense fallback={
+                      <ServicesModalWrap className="services-modal" ref={servicesModalRef} $windowScroll={windowScroll}>
+                        <ProjectsTopTitle>Загрузка…</ProjectsTopTitle>
+                      </ServicesModalWrap>
+                    }>
+                      <ServicesContentLazy
+                        servicesStep={servicesStep}
+                        windowScroll={windowScroll}
+                        servicesModalRef={servicesModalRef}
+                        servicesCategory={servicesCategory}
+                        switchCategory={switchCategory}
+                        tabWebRef={tabWebRef}
+                        tabBotsRef={tabBotsRef}
+                        tabAutoRef={tabAutoRef}
+                        indicatorRef={indicatorRef}
+                        servicesTier={servicesTier}
+                        servicesTierBasicRef={servicesTierBasicRef}
+                        servicesTierOptimalRef={servicesTierOptimalRef}
+                        servicesTierPremiumRef={servicesTierPremiumRef}
+                        servicesGridRef={servicesGridRef}
+                        isMobileFlag={isMobileFlag}
+                        servicesAutomation={servicesAutomation}
+                        servicesWeb={servicesWeb}
+                        servicesBots={servicesBots}
+                        inlineNextFor={inlineNextFor}
+                        setInlineNextFor={setInlineNextFor}
+                        setSelectedServiceId={setSelectedServiceId}
+                        setServicesStep={setServicesStep}
+                        setServicesTier={setServicesTier}
+                        prefetchSubscriptionAssets={prefetchSubscriptionAssets}
+                        TERM_HINTS={TERM_HINTS}
+                        setPrefill={setPrefill}
+                        setIsProjectModalOpen={setIsProjectModalOpen}
+                        setSelectedSubscriptionLabel={setSelectedSubscriptionLabel}
+                        findServiceById={findServiceById}
+                        categoryLabelByServiceId={categoryLabelByServiceId}
+                        selectedServiceId={selectedServiceId}
+                        mobilePlan={mobilePlan}
+                        setMobilePlan={setMobilePlan}
+                        handleServicesNavButtonClick={handleServicesNavButtonClick}
+                        handleServicesTierButtonClick={handleServicesTierButtonClick}
+                        handleTermToggle={handleTermToggle}
+                        servicesNavWebRef={servicesNavWebRef}
+                        servicesNavBotsRef={servicesNavBotsRef}
+                        servicesNavAutoRef={servicesNavAutoRef}
+                        /* component references */
+                        ServicesModalWrap={ServicesModalWrap}
+                        ProjectsTopTitle={ProjectsTopTitle}
+                        PricingHeader={PricingHeader}
+                        HeadingsRow={HeadingsRow}
+                        HeadingTab={HeadingTab}
+                        MobileServicesNavigation={MobileServicesNavigation}
+                        NavButton={NavButton}
+                        ServicesTierNavigation={ServicesTierNavigation}
+                        TierNavButton={TierNavButton}
+                        PricingGrid={PricingGrid}
+                        PricingCard={PricingCard}
+                        PricingTop={PricingTop}
+                        PricingHead={PricingHead}
+                        DesktopOnly={DesktopOnly}
+                        HeadingPrice={HeadingPrice}
+                        MobileOnly={MobileOnly}
+                        MobilePriceUnderTitle={MobilePriceUnderTitle}
+                        MobilePriceText={MobilePriceText}
+                        MobileConfirmButton={MobileConfirmButton}
+                        SelectButton={SelectButton}
+                        Muted={Muted}
+                        Divider={Divider}
+                        CardSectionTitle={CardSectionTitle}
+                        SectionBlock={SectionBlock}
+                        Bullets={Bullets}
+                        RightCol={RightCol}
+                        ConfirmSlot={ConfirmSlot}
+                        ConfirmButton={ConfirmButton}
+                        SubscriptionSplit={SubscriptionSplit}
+                        SubscriptionIntro={SubscriptionIntro}
+                        IntroTitleRow={IntroTitleRow}
+                        IconBubble={IconBubble}
+                        IntroBody={IntroBody}
+                        AboutCaption={AboutCaption}
+                        FAQAccordionGreen={FAQAccordionGreen}
+                        StepNote={StepNote}
+                        MobilePlansWrap={MobilePlansWrap}
+                        PlanTabs={PlanTabs}
+                        PlanTabButton={PlanTabButton}
+                        PlanCard={PlanCard}
+                        PlanHeader={PlanHeader}
+                        FeatureList={FeatureList}
+                        FeatureItem={FeatureItem}
+                        StickyCTABar={StickyCTABar}
+                        PlanCTA={PlanCTA}
+                        ComparisonTable={ComparisonTable}
+                      />
+                    </Suspense>
                   )}
                 </CardContent>
                 {openedIndex === index && (

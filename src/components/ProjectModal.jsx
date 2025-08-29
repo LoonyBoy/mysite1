@@ -645,18 +645,18 @@ const subcategories = {
     { id: 2, text: 'Нужна база данных (хранение пользователей, заказов и т.д.)' },
     { id: 3, text: 'Нужна интеграция с CRM' },
     { id: 4, text: 'Нужна админ-панель для управления' },
-    { id: 5, text: 'Интеграция с Google Sheets' },
-    { id: 6, text: 'Вебхуки/API для сторонних сервисов' }
+    { id: 5, text: 'Вебхуки/API для сторонних сервисов' },
+    { id: 6, text: 'MiniApp (встраиваемое приложение)' },
+    { id: 7, text: 'Ещё кое-что, чего нет в списке' }
   ],
   2: [ // Сайт/веб-приложение
     { id: 1, text: 'Интернет-магазин с корзиной и оплатой' },
     { id: 2, text: 'Личный кабинет пользователей' },
-    { id: 3, text: 'Система авторизации и регистрации' },
-    { id: 4, text: 'Интеграция с базой данных' },
-    { id: 5, text: 'Адаптивный дизайн для мобильных' },
-    { id: 6, text: 'SEO-оптимизация' },
-    { id: 7, text: 'Система комментариев/отзывов' },
-    { id: 8, text: 'Многоязычность' }
+    { id: 3, text: 'Интеграция с базой данных' },
+    { id: 4, text: 'SEO-оптимизация' },
+    { id: 5, text: 'Система комментариев/отзывов' },
+    { id: 6, text: 'Адаптивный дизайн для мобильных устройств' },
+    { id: 7, text: 'Ещё кое-что, чего нет в списке' }
   ],
   3: [ // Обновление дизайна
     { id: 1, text: 'Современный минималистичный дизайн' },
@@ -664,7 +664,7 @@ const subcategories = {
     { id: 3, text: 'Адаптация под мобильные устройства' },
     { id: 4, text: 'Анимации и интерактивные элементы' },
     { id: 5, text: 'Ребрендинг и новая цветовая схема' },
-    { id: 6, text: 'Оптимизация скорости загрузки' }
+    { id: 6, text: 'Ещё кое-что, чего нет в списке' }
   ],
   4: [ // Автоматизация
     { id: 1, text: 'Автоматическая отправка email-рассылок' },
@@ -672,14 +672,14 @@ const subcategories = {
     { id: 3, text: 'Автоматизация социальных сетей' },
     { id: 4, text: 'Парсинг данных с сайтов' },
     { id: 5, text: 'Автоматические отчёты и аналитика' },
-    { id: 6, text: 'Чат-бот для сайта' }
+    { id: 6, text: 'Ещё кое-что, чего нет в списке' }
   ],
   5: [ // Что-то ещё
-    { id: 1, text: 'Консультация по технологиям' },
+    { id: 1, text: 'Консультация' },
     { id: 2, text: 'Аудит существующего проекта' },
     { id: 3, text: 'Техническая поддержка проекта' },
-    { id: 4, text: 'Обучение команды' },
-    { id: 5, text: 'Интеграция сторонних сервисов' }
+    { id: 4, text: 'Интеграция сторонних сервисов' },
+    { id: 5, text: 'Ещё кое-что, чего нет в списке' }
   ]
 }
 
@@ -926,14 +926,16 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                 </OptionsList>
                 <ContinueContainer>
                   {renderProgressIndicator()}
-                  <ContinueButton
-                    disabled={!selectedCategory}
-                    onClick={handleContinueToSubcategory}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Продолжить
-                  </ContinueButton>
+                  <ButtonGroup>
+                    <ContinueButton
+                      disabled={!selectedCategory}
+                      onClick={handleContinueToSubcategory}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Продолжить
+                    </ContinueButton>
+                  </ButtonGroup>
                 </ContinueContainer>
               </>
             )}
@@ -955,6 +957,7 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                   ))}
                 </OptionsList>
                 <ContinueContainer>
+                  {renderProgressIndicator()}
                   <ButtonGroup>
                     <ContinueButton
                       onClick={handleContinueToContact}
@@ -964,7 +967,6 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                       Продолжить
                     </ContinueButton>
                   </ButtonGroup>
-                  {renderProgressIndicator()}
                 </ContinueContainer>
               </>
             )}

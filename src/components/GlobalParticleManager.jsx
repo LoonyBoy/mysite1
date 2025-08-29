@@ -847,7 +847,26 @@ export const ParticleProvider = ({ children }) => {
     animateParticlesLightLabExit,
     hoveredRect,
     setHoveredRect,
-    setParticleProps // Added to expose the setter
+    setParticleProps, // Added to expose the setter
+    pauseParticles: () => {
+      // Save current speed (if not zero) and set speed to 0
+      setSavedSpeed(prev => {
+        const cur = particleAnimationRef.current.rotationSpeed
+        if ((cur.x !== 0 || cur.y !== 0)) return cur
+        return prev
+      })
+      setParticleAnimation(prev => ({ ...prev, rotationSpeed: { x: 0, y: 0 } }))
+    },
+    resumeParticles: () => {
+      // Restore saved speed or fallback to default for current page
+      setParticleAnimation(prev => {
+        let restore = savedSpeed
+        if (restore.x === 0 && restore.y === 0) {
+          restore = currentPage === 'lightlab-case' ? { x: 0.4, y: 0.4 } : { x: 1.0, y: 1.0 }
+        }
+        return { ...prev, rotationSpeed: restore }
+      })
+    }
   }
 
   return (
