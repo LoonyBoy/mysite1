@@ -1033,6 +1033,10 @@ const SpaceInvadersPage = () => {
         e.preventDefault()
         // Нажать сохранить, если доступно
         if (!saving && !saveDone) {
+          if (score <= 0) {
+            setSaveError('Счет 0 не сохраняется')
+            return
+          }
           const name = initials.join('')
           if (isForbiddenName(name)) {
             setSaveError('ты думаешь это правда смешно?')
@@ -2371,6 +2375,10 @@ const SpaceInvadersPage = () => {
             <RightActions>
               <GameOverButton
                 onClick={async () => {
+                  if (score <= 0) {
+                    setSaveError('Счет 0 не сохраняется')
+                    return
+                  }
                   try {
                     setSaving(true); setSaveError('')
                     const name = initials.join('')
@@ -2391,8 +2399,8 @@ const SpaceInvadersPage = () => {
                     setSaveError(msg)
                   } finally { setSaving(false) }
                 }}
-                disabled={saving || saveDone}
-                style={{ opacity: saving || saveDone ? 0.6 : 1 }}
+                disabled={saving || saveDone || score <= 0}
+                style={{ opacity: (saving || saveDone || score <= 0) ? 0.6 : 1 }}
               >
                 {saveDone ? 'СОХРАНЕНО' : (saving ? 'СОХРАНЕНИЕ…' : 'СОХРАНИТЬ СЧЕТ')}
               </GameOverButton>

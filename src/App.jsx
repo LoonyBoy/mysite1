@@ -7,6 +7,8 @@ import MenuPage from './pages/MenuPage'
 import SpaceInvadersPage from './pages/SpaceInvadersPage'
 import LightLabCasePage from './pages/LightLabCasePage'
 import VoytenkoCasePage from './pages/VoytenkoCasePage'
+import KlamBotCasePage from './pages/KlamBotCasePage'
+import WbAutoActionsCasePage from './pages/WbAutoActionsCasePage'
 import TestModalPage from './pages/TestModalPage'
 import PerformanceOptimizer from './components/PerformanceOptimizer'
 import { ParticleProvider } from './components/GlobalParticleManager'
@@ -29,6 +31,8 @@ function App() {
             <Route path="/menu" element={<MenuPage />} />
             <Route path="/project/lightlab" element={<LightLabCasePage />} />
             <Route path="/project/voytenko" element={<VoytenkoCasePage />} />
+            <Route path="/project/klambot" element={<KlamBotCasePage />} />
+            <Route path="/project/wb-auto-actions" element={<WbAutoActionsCasePage />} />
             <Route path="/game" element={<SpaceInvadersPage />} />
             <Route path="/test-modal" element={<TestModalPage />} />
           </Routes>

@@ -89,6 +89,10 @@ export const ParticleProvider = ({ children }) => {
       }, 100)
       return // Выходим, чтобы не выполнять остальную логику
     }
+    // Выход с кейсов klambot / wb-auto-actions тоже должен сбрасывать флаг анимации
+    if (path === '/menu' && (transitionContext === 'lightlab-case' || currentPage === 'lightlab-case')) {
+      hasAnimatedLightLabEntry.current = false
+    }
     
     if (path === '/' && currentPage === 'home') {
       // Возвращаемся на стартовую страницу - анимируем приближение
@@ -156,7 +160,7 @@ export const ParticleProvider = ({ children }) => {
         animateParticlesGameExit()
       }, 100)
       return
-  } else if ((path === '/project/lightlab' || path === '/project/voytenko') && !isAnimating) {
+  } else if ((path === '/project/lightlab' || path === '/project/voytenko' || path === '/project/klambot' || path === '/project/wb-auto-actions') && !isAnimating) {
       // Переход на страницу кейса LightLab - белый фон с черными частицами
       logger.particles('Contextual transition: projects->lightlab-case', { context: transitionContext })
   console.log('📸 Detected case page entry, switching to white background with black particles')
