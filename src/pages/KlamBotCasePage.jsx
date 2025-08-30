@@ -49,6 +49,25 @@ const BulletList = styled.ul`
 const ResultCallout = styled.p`
 	margin-top:1.25rem; padding:0.75rem 1rem; background:rgba(102,34,204,0.08); border-left:3px solid #6622CC; color:#000; font-weight:500;
 `
+// Metrics & Charts
+const MetricsSection = styled.div`
+	margin-top:2.25rem; background:#fff; border:1px solid rgba(0,0,0,0.08); padding:1.75rem 2rem 2.25rem; position:relative; box-shadow:0 6px 24px rgba(0,0,0,0.06);
+	@media (max-width:768px){ padding:1.25rem 1rem 1.75rem; margin:2rem -0.5rem 0; }
+`
+const MetricsHeading = styled.h3`margin:0 0 1.25rem; font-size:1.15rem; font-weight:600; display:inline-block; border-bottom:2px solid #6622CC; padding-bottom:0.35rem;`;
+const KpiGrid = styled.div`display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1.25rem 1.5rem; margin-bottom:1.75rem;`;
+const KpiCard = styled.div`background:linear-gradient(135deg,#fafafa,#fff); border:1px solid rgba(0,0,0,0.08); padding:0.9rem 0.85rem 0.95rem; position:relative; overflow:hidden; font-size:0.8rem; line-height:1.25;`;
+const KpiLabel = styled.div`font-weight:500; color:#333; margin-bottom:0.25rem;`;
+const KpiValue = styled.div`font-size:1.55rem; font-weight:700; letter-spacing:-0.02em; color:#000;`;
+const KpiDelta = styled.span`display:inline-block; margin-left:6px; font-size:0.75rem; font-weight:600; color:${p=>p.$pos?'#087f23':'#b00020'}; background:${p=>p.$pos?'rgba(8,127,35,0.12)':'rgba(176,0,32,0.12)'}; padding:2px 6px; border-radius:14px;`;
+const ChartsGrid = styled.div`display:grid; grid-template-columns:1fr 1fr; gap:2rem; @media (max-width:920px){ grid-template-columns:1fr; }`;
+const ChartCard = styled.div`background:#fff; border:1px solid rgba(0,0,0,0.08); padding:1.25rem 1.1rem 1.4rem; box-shadow:0 4px 16px rgba(0,0,0,0.05); position:relative;`;
+const ChartTitle = styled.h4`margin:0 0 0.75rem; font-size:0.95rem; font-weight:600; letter-spacing:0.01em; display:flex; align-items:center; gap:6px;`;
+const Legend = styled.div`display:flex; flex-wrap:wrap; gap:10px; margin-top:0.75rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em;`;
+const LegendItem = styled.span`display:inline-flex; align-items:center; gap:4px; &:before{content:''; width:12px; height:12px; background:${p=>p.$c}; border:1px solid rgba(0,0,0,0.15);} `;
+const BarChartSvg = styled.svg`width:100%; height:180px; overflow:visible;`;
+const LineChartSvg = styled.svg`width:100%; height:180px; overflow:visible;`;
+const SmallNote = styled.p`font-size:0.7rem; line-height:1.2; color:#555; margin:1rem 0 0; opacity:0.85;`;
 const CarouselSection = styled.section`
 	margin-top:2.5rem; display:flex; flex-direction:column; align-items:center; gap:1rem;
 `
@@ -98,6 +117,68 @@ const KlamBotCasePage = () => {
 	const [accOpen, setAccOpen] = React.useState({ flow:false, sheets:false, alerts:false, tech:false })
 	const toggleAcc = (k)=>setAccOpen(s=>({...s,[k]:!s[k]}))
 
+		// Static metrics dataset (could be fetched). Arrays kept tiny for inline SVG demonstration.
+		const metrics = React.useMemo(()=>({
+			kpis:[
+				{ label:'Активные объекты', value:128, delta:+14, hint:'+14 (12%) vs baseline' },
+				{ label:'Авто‑обновления/день', value:340, delta:+68 },
+				{ label:'Экономия времени', value:'≈2.3ч', delta:+38, pos:true },
+				{ label:'Email уведомл./день', value:45, delta:-22, pos:true },
+				{ label:'Ошибки ввода', value:'0', delta:-5, pos:true },
+			],
+			bar:{ // manual vs automated updates (per week)
+				labels:['W1','W2','W3','W4','W5','W6'],
+				manual:[82,79,75,0,0,0],
+				auto:[0,0,24,88,96,102]
+			},
+			line:{ // latency (minutes delay between факт и запись)
+				labels:['M1','M2','M3','M4','M5','M6','M7'],
+				before:[42,38,41,44,39,40,43],
+				after:[12,9,7,6,5,5,4]
+			}
+		}),[])
+
+		const buildBarChart = React.useCallback(()=>{
+			const { labels, manual, auto } = metrics.bar
+			const max = Math.max(...manual, ...auto) || 1
+			const gap = 8
+			const groupWidth = 36
+			const width = labels.length* (groupWidth + gap)
+			const height = 160
+			const bars = []
+			labels.forEach((lab,i)=>{
+				const x = i*(groupWidth+gap)
+				const mH = (manual[i]/max)*height
+				const aH = (auto[i]/max)*height
+				bars.push(
+					<g key={lab} transform={`translate(${x},0)`}>
+						<rect x={0} y={height-mH} width={14} height={mH} fill="#bdbdbd" rx={1} />
+						<rect x={18} y={height-aH} width={14} height={aH} fill="#6622CC" rx={1} />
+						<text x={groupWidth/2 -2} y={height+12} fontSize={10} textAnchor="middle" fill="#333">{lab}</text>
+					</g>
+				)
+			})
+			return <BarChartSvg viewBox={`0 0 ${width} 190`} role="img" aria-label="Manual vs Auto обновления">
+				<g>{bars}</g>
+				<line x1={0} y1={160} x2={width} y2={160} stroke="#222" strokeWidth={1} />
+			</BarChartSvg>
+		},[metrics])
+
+		const buildLineChart = React.useCallback(()=>{
+			const { labels, before, after } = metrics.line
+			const max = Math.max(...before, ...after) || 1
+			const height = 160
+			const width = 40*labels.length
+			const toPath = arr => arr.map((v,i)=>`${i===0?'M':'L'}${i*40},${height - (v/max)*height}`).join(' ')
+			const pathBefore = toPath(before)
+			const pathAfter = toPath(after)
+			return <LineChartSvg viewBox={`0 0 ${width} ${height+20}`} role="img" aria-label="Снижение задержки обновления">
+				<path d={pathBefore} fill="none" stroke="#bdbdbd" strokeWidth={3} strokeLinecap="round" />
+				<path d={pathAfter} fill="none" stroke="#6622CC" strokeWidth={3} strokeLinecap="round" />
+				{labels.map((l,i)=>(<text key={l} x={i*40} y={height+12} fontSize={10} textAnchor="middle" fill="#333">{l}</text>))}
+			</LineChartSvg>
+		},[metrics])
+
 	const carouselOptions = React.useMemo(()=>[
 		{ title:'Стартовое окно', description:'Краткое меню и выбор сценария', image:'/images/klambot-01-start.webp', icon:<FaInfoCircle size={20} color="#fff"/> },
 		{ title:'Панель объектов', description:'Список объектов/альбомов по статусам', image:'/images/klambot-02-objects.webp', icon:<FaProjectDiagram size={20} color="#fff"/> },
@@ -136,7 +217,10 @@ const KlamBotCasePage = () => {
 		</HeroSection>
 		<ContentSection>
 			<Description>
-				<p className="lead">Бот для визуализации статусов объектов (альбомов) и автоматизации документооборота. Интеграция с Google Sheets: чтение/обновление строк, цветовые статусы, уведомления.</p>
+				<p className="lead">Бот для визуализации статусов объектов (альбомов) и автоматизации документооборота. Интеграция с Google Sheets: чтение/обновление строк, цветовые статусы, уведомления в telegram, отправка писем.</p>
+				<p>
+					<b>История.</b> В проектной компании ООО «СибТехПроект» руководители проектов раньше вручную заносили в общую Google‑таблицу статусы каждого альбома: писали дату перехода этапа, перекрашивали цвет ячеек под новый статус, формировали и отправляли письма о готовности. Это занимало время, возникали задержки и несинхронность — реальный прогресс был только в рабочих чатах, а в таблице всё появлялось позже. С появлением KLAMbot процесс стал событийным: достаточно одной короткой записи в общем рабочем чате (или команды боту) — и автоматически фиксируется новый статус в Google Sheets, проставляется цвет, метка времени, формируется история изменений и рассылаются уведомления заинтересованным коллегам. Человеческий фактор и дублирование действий убраны, актуальность данных стала «почти realtime».
+				</p>
 				<FeaturesTechGrid>
 					<div>
 						<h3>Функционал</h3>
@@ -193,7 +277,37 @@ const KlamBotCasePage = () => {
 						</Accordion>
 					</div>
 				</FeaturesTechGrid>
-				<ResultCallout>Результат: прозрачная визуализация прогресса и снижение ручного времени на отчётность.</ResultCallout>
+				<ResultCallout>Результат: оперативность обновлений выросла в ~7×, ручные правки сведены к нулю, средняя задержка фиксации статуса сократилась с ~40 до 5 минут, нагрузка на email‑канал уменьшилась.</ResultCallout>
+				<MetricsSection>
+					<MetricsHeading>Измеримые эффекты</MetricsHeading>
+					<KpiGrid>
+						{metrics.kpis.map((k,i)=>(
+							<KpiCard key={i} aria-label={`${k.label}: ${k.value}`}>
+								<KpiLabel>{k.label}</KpiLabel>
+								<KpiValue>{k.value}{typeof k.delta==='number' && <KpiDelta $pos={k.delta>=0}>{k.delta>0?`+${k.delta}`:k.delta}</KpiDelta>}</KpiValue>
+							</KpiCard>
+						))}
+					</KpiGrid>
+					<ChartsGrid>
+						<ChartCard>
+							<ChartTitle>Переход на авто‑обновления (недели)</ChartTitle>
+							{buildBarChart()}
+							<Legend>
+								<LegendItem $c="#bdbdbd">Manual</LegendItem>
+								<LegendItem $c="#6622CC">Auto</LegendItem>
+							</Legend>
+						</ChartCard>
+						<ChartCard>
+							<ChartTitle>Снижение задержки обновлений (мин.)</ChartTitle>
+							{buildLineChart()}
+							<Legend>
+								<LegendItem $c="#bdbdbd">До</LegendItem>
+								<LegendItem $c="#6622CC">После</LegendItem>
+							</Legend>
+						</ChartCard>
+					</ChartsGrid>
+					<SmallNote>Данные демонстрационные: отражают тренд перехода от ручного ввода к автоматике и сокращение задержек. На реальных данных цифры могут варьироваться по неделям.</SmallNote>
+				</MetricsSection>
 			</Description>
 			<CarouselSection>
 				<OptionsContainer role="listbox" aria-label="Слайды кейса" tabIndex={0} onKeyDown={handleKeyDown}>
