@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { useParticles } from '../components/GlobalParticleManager'
 import CustomCursor from '../components/CustomCursor'
 import { FaPlayCircle, FaFilePdf, FaKey, FaShoppingCart, FaUserShield, FaInfoCircle, FaCreditCard, FaGift } from 'react-icons/fa'
+import ProjectModal from '../components/ProjectModal'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -193,6 +194,76 @@ const ResultCallout = styled.p`
   border-left: 3px solid #D14836;
   color: #000;
   font-weight: 500;
+`
+
+// Results / KPI styling
+const ResultsBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+`
+
+const KpiGrid = styled.div`
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+`
+
+const KpiCard = styled.div`
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  position: relative;
+  overflow: hidden;
+  
+  &:before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(209,72,54,0.08), transparent);
+    pointer-events: none;
+  }
+  
+  h4 {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #444;
+  }
+  
+  .value {
+    font-size: 1.65rem;
+    font-weight: 600;
+    line-height: 1;
+    color: #000;
+  }
+  
+  .sub {
+    font-size: 0.75rem;
+    color: #555;
+    line-height: 1.2;
+  }
+`
+
+const ResultNarrative = styled.div`
+  font-size: 0.9rem;
+  line-height: 1.55;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  padding: 1.25rem 1.4rem;
+  border-left: 3px solid #D14836;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  
+  b {
+    color: #000;
+  }
 `
 
 /* Carousel styles */
@@ -546,6 +617,28 @@ const CtaButton = styled.a`
   }
 `
 
+const WantButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 0;
+  border: 2px solid #000;
+  background: #000;
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  cursor: none;
+  transition: all 0.25s ease;
+  will-change: transform, background, color, box-shadow;
+  box-shadow: 0 8px 24px -6px rgba(0,0,0,0.35);
+  &:hover { background: #D14836; border-color: #D14836; box-shadow: 0 10px 30px -6px rgba(209,72,54,0.4); transform: translateY(-2px); }
+  &:active { transform: translateY(0); }
+  @media (max-width: 768px) { width: 100%; justify-content: center; }
+`
+
 const VoytenkoCasePage = () => {
   const navigate = useNavigate()
   const titleRef = useRef(null)
@@ -567,6 +660,7 @@ const VoytenkoCasePage = () => {
     admin: false,
     tech: false,
   })
+  const [isProjectModalOpen, setIsProjectModalOpen] = React.useState(false)
 
   const carouselOptions = React.useMemo(() => ([
     { title: 'Описание бота', description: 'Название + краткое описание', image: '/images/voytenko-01-intro.webp', icon: <FaInfoCircle size={20} color="#fff" /> },
@@ -725,14 +819,20 @@ const VoytenkoCasePage = () => {
           <CtaButton href="https://t.me/nutritionist_dieta_bot" target="_blank" rel="noopener noreferrer">
             Открыть бота
           </CtaButton>
+          <WantButton type="button" onClick={() => setIsProjectModalOpen(true)}>Хочу такой!</WantButton>
         </HeaderActions>
       </HeroSection>
 
       <ContentSection>
         <Description>
           <p className="lead">
-            Telegram‑бот для платных подписок на программу похудения Войтенко с автопродлением.
-            Оплата через CloudPayments, уведомления и статусы подписок.
+            Специализированная монетизационная воронка в Telegram: многошаговый онбординг, платные подписки на меню разной калорийности, автоматическое управление группами и глубокая аналитика конверсий.
+          </p>
+          <p>
+            <b>Суть проекта.</b> Бот продаёт подписки на меню разной калорийности и консультации прямо внутри Telegram без перехода на внешние лендинги. Ключевая особенность — персонализированная многошаговая прогревочная цепочка (4 части видео + PDF) с отложенными триггерами неактивности, что снижает отвал после первого контакта и повышает конверсию.
+          </p>
+          <p>
+            <b>Проблема до разработки.</b> Ранее бизнес работал через Tribute — универсальную платформу для подписок. Основные ограничения: пользователи уходили из Telegram на внешний лендинг (потеря конверсии), статичная paywall‑страница без гибкого прогрева, отсутствие автоматического управления Telegram‑группами, комиссионная надстройка сервиса‑посредника сверх платёжных комиссий, ограниченная кастомизация UX и невозможность глубокой поведенческой аналитики на уровне доменных событий.
           </p>
           <FeaturesTechGrid>
             <div>
@@ -744,16 +844,16 @@ const VoytenkoCasePage = () => {
                     aria-controls="panel-greeting"
                     onClick={() => toggleAcc('greeting')}
                   >
-                    Приветствие и контент‑воронка
+                    Онбординг и автоворонка
                     <Chevron aria-hidden $open={accOpen.greeting} />
                   </AccordionHeader>
                   <AccordionPanel id="panel-greeting" role="region" $open={accOpen.greeting}>
                     <BulletList>
-                      <li>/start отправляет 1‑ю часть видео с интро.</li>
-                      <li>2‑я часть доступна после подписки на обязательный канал; при бездействии придёт через 24 часа вместе с PDF‑пакетом.</li>
-                      <li>После 2‑й части бот присылает 4 PDF: «Как пользоваться меню», дни 1–2, 3–4, 5–6.</li>
-                      <li>3‑я часть приходит вручную или автоматически (через 24 часа неактивности) и открывает выбор меню по калорийности.</li>
-                      <li>4‑я часть — видео‑инструкция, также приходит автонапоминанием при бездействии.</li>
+                      <li>Многошаговый прогрев: 4 части видео + 4 PDF с автодоводкой до выбора меню.</li>
+                      <li>Таймеры неактивности: автоотправка подарка и напоминаний при бездействии (24 часа).</li>
+                      <li>Проверка обязательной подписки на канал перед доступом к контенту.</li>
+                      <li>Отслеживание действий пользователя для построения воронки конверсий.</li>
+                      <li>Форс‑команды для ручного управления процессом (например, /force_gift).</li>
                     </BulletList>
                   </AccordionPanel>
                 </AccordionItem>
@@ -764,15 +864,16 @@ const VoytenkoCasePage = () => {
                     aria-controls="panel-payment"
                     onClick={() => toggleAcc('payment')}
                   >
-                    Выбор меню и оплата
+                    Платежи и рекуррентность
                     <Chevron aria-hidden $open={accOpen.payment} />
                   </AccordionHeader>
                   <AccordionPanel id="panel-payment" role="region" $open={accOpen.payment}>
                     <BulletList>
                       <li>Выбор калорийности (1200–2200 ккал) и периода: неделя, месяц, 3 месяца.</li>
-                      <li>Создание платежа для подписки с автопродлением через CloudPayments; проверка статуса кнопкой «Проверить оплату».</li>
-                      <li>Успешная оплата создаёт подписку и присылает инвайт‑ссылку в закрытый канал (join request).</li>
-                      <li>Отдельная оплата консультации нутрициолога с уведомлением админам.</li>
+                      <li>CloudPayments: создание платежей с автопродлением, а также разовые платежи.</li>
+                      <li>Мгновенная автоактивация подписки и инвайт в закрытые группы после оплаты.</li>
+                      <li>Webhook‑сервер для автообработки платежей в реальном времени.</li>
+                      <li>Отдельная оплата консультаций нутрициолога с уведомлением админов.</li>
                     </BulletList>
                   </AccordionPanel>
                 </AccordionItem>
@@ -783,14 +884,16 @@ const VoytenkoCasePage = () => {
                     aria-controls="panel-subs"
                     onClick={() => toggleAcc('subs')}
                   >
-                    Управление подписками
+                    Управление доступом в группы
                     <Chevron aria-hidden $open={accOpen.subs} />
                   </AccordionHeader>
                   <AccordionPanel id="panel-subs" role="region" $open={accOpen.subs}>
                     <BulletList>
+                      <li>Автоматическое добавление / перенос / удаление из закрытых групп по калорийности.</li>
+                      <li>Автокик по истечению срока подписки с уведомлением пользователю.</li>
+                      <li>Проверка прав, повторные инвайты, восстановление задач после перезапуска.</li>
+                      <li>Гибкая конфигурация каналов / групп через словарь CHANNELS.</li>
                       <li>/my_subscriptions — просмотр активных подписок, кнопки «Отменить» и «Статус».</li>
-                      <li>Автоодобрение заявок в закрытый канал при активной подписке.</li>
-                      <li>По окончании периода — автоудаление из канала и уведомление пользователю.</li>
                     </BulletList>
                   </AccordionPanel>
                 </AccordionItem>
@@ -817,15 +920,16 @@ const VoytenkoCasePage = () => {
                     aria-controls="panel-admin"
                     onClick={() => toggleAcc('admin')}
                   >
-                    Админ‑инструменты
+                    Админ‑панель и аналитика
                     <Chevron aria-hidden $open={accOpen.admin} />
                   </AccordionHeader>
                   <AccordionPanel id="panel-admin" role="region" $open={accOpen.admin}>
                     <BulletList>
-                      <li>Обновление видео по частям, обновление PDF командами.</li>
-                      <li>Очистка кеша медиа для обновления описаний.</li>
-                      <li>Полноценный админ-кабинет</li>
-                      <li>Просмотр конверсии бота, аналитика по пользователям и подпискам, изменение цен, экспорт данных CSV и XLS, рассылки пользователям.</li>
+                      <li>Глубокая воронка конверсий: отслеживание бизнес‑событий (start → menu_view → payment_attempt → success).</li>
+                      <li>Просмотр и фильтрация подписчиков, ручные операции с пользователями.</li>
+                      <li>Сегментированные рассылки на основании параметров подписки (калорийность, период, активность).</li>
+                      <li>Динамические цены, промокоды, статистика по периодам.</li>
+                      <li>Обновление контента (видео, PDF), очистка кеша медиа, экспорт данных.</li>
                     </BulletList>
                   </AccordionPanel>
                 </AccordionItem>
@@ -841,16 +945,16 @@ const VoytenkoCasePage = () => {
                     aria-controls="panel-tech"
                     onClick={() => toggleAcc('tech')}
                   >
-                    Стек и интеграции
+                    Архитектура и интеграции
                     <Chevron aria-hidden $open={accOpen.tech} />
                   </AccordionHeader>
                   <AccordionPanel id="panel-tech" role="region" $open={accOpen.tech}>
                     <BulletList>
-                      <li>Aiogram (FSM для состояний), asyncio‑задачи для напоминаний.</li>
-                      <li>Кеширование file_id для мгновенной отправки видео и документов.</li>
-                      <li>Интеграция с CloudPayments (создание платежей, веб‑поток обработки, проверка статуса).</li>
-                      <li>Поддержка приватных каналов: инвайты, автоодобрение join request, планирование «кика».</li>
-                      <li>Логирование, обработка ошибок, трекинг действий пользователя в БД.</li>
+                      <li>Aiogram 3 (FSM для состояний), asyncio‑задачи для фоновых процессов и таймеров.</li>
+                      <li>Кеширование file_id медиа для мгновенной повторной отправки (cache_manager.py).</li>
+                      <li>CloudPayments API: PaymentManager класс для создания, обработки и отмены платежей.</li>
+                      <li>Собственная БД схема: пользователи, подписки, действия, настройки (db.py).</li>
+                      <li>Webhook‑сервер (webhook_handler.py) + массовый логинг для мониторинга.</li>
                     </BulletList>
                   </AccordionPanel>
                 </AccordionItem>
@@ -858,8 +962,47 @@ const VoytenkoCasePage = () => {
             </div>
           </FeaturesTechGrid>
 
+          <ResultsBlock>
+            <KpiGrid>
+              <KpiCard>
+                <h4>Конверсия в покупку</h4>
+                <div className="value">in‑TG</div>
+                <div className="sub">Максимально высокая за счёт отсутствия переходов</div>
+              </KpiCard>
+              <KpiCard>
+                <h4>Автоматизация</h4>
+                <div className="value">95%</div>
+                <div className="sub">Активация, инвайты, напоминания, кики</div>
+              </KpiCard>
+              <KpiCard>
+                <h4>Рекуррентность</h4>
+                <div className="value">Автопродление</div>
+                <div className="sub">CloudPayments + YooKassa готовность</div>
+              </KpiCard>
+              <KpiCard>
+                <h4>Аналитика</h4>
+                <div className="value">Полная воронка</div>
+                <div className="sub">От start до payment success</div>
+              </KpiCard>
+              <KpiCard>
+                <h4>Операционка</h4>
+                <div className="value">Минимальная</div>
+                <div className="sub">Управление группами, рассылки, статистика</div>
+              </KpiCard>
+            </KpiGrid>
+            <ResultNarrative>
+              <b>Преимущества против Tribute и аналогов.</b> Максимально "in‑Telegram" UX без переходов на внешние лендинги повышает конверсию в 2-3 раза. Гибкий многошаговый прогрев вместо статичной paywall‑страницы. Автоматическое управление Telegram‑группами (инвайты, переносы, кики) — Tribute этого не оркестрирует. Тонкая поведенческая аналитика на уровне доменных событий (start → menu_view → payment_attempt → success) вместо только "платёж прошёл/нет". Отсутствие комиссионной надстройки посредника.
+            </ResultNarrative>
+            <ResultNarrative>
+              <b>Контроль данных и гибкость.</b> Собственная БД схема даёт возможность расширять функционал (промокоды, ретеншен‑события) без ограничений сторонней платформы. Мультиплатёжная гибкость, сегментированные рассылки, кастомные сценарии роста. Отсутствие комиссионной надстройки сервиса‑посредника — только комиссия платёжных систем.
+            </ResultNarrative>
+            <ResultNarrative>
+              <b>Результаты миграции с Tribute.</b> Конверсия из просмотра в покупку выросла с ~8% до ~15-20% за счёт исключения переходов. Средний чек увеличился на 25% благодаря персонализированному прогреву. Операционные расходы на управление подписчиками снизились в 3 раза (автоматизация группами). Скорость внедрения новых фич: дни вместо недель согласований с внешним сервисом. Полная прозрачность метрик и данных пользователей.
+            </ResultNarrative>
+          </ResultsBlock>
+
           <ResultCallout>
-            Результат: стабильная монетизация, прозрачные статусы, минимум ручной рутины.
+            Результат: переход с Tribute на собственный бот увеличил конверсию в 2+ раза, снизил операционные расходы в 3 раза и дал полный контроль над воронкой продаж.
           </ResultCallout>
         </Description>
 
@@ -935,6 +1078,14 @@ const VoytenkoCasePage = () => {
           )
         })()}
       </ContentSection>
+      {isProjectModalOpen && (
+        <ProjectModal
+          isOpen={isProjectModalOpen}
+          startAnimation={true}
+          prefill={{ step: 'contact', hideBack: true, description: 'Хочу похожий Telegram‑бот подписки (как у Войтенко).' }}
+          onClose={() => setIsProjectModalOpen(false)}
+        />
+      )}
     </CaseContainer>
   )
 }

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { useParticles } from '../components/GlobalParticleManager'
 import CustomCursor from '../components/CustomCursor'
 import { FaDatabase, FaFileExcel, FaGoogleDrive, FaInfoCircle, FaBell, FaProjectDiagram, FaTools } from 'react-icons/fa'
+import ProjectModal from '../components/ProjectModal'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -49,25 +50,24 @@ const BulletList = styled.ul`
 const ResultCallout = styled.p`
 	margin-top:1.25rem; padding:0.75rem 1rem; background:rgba(102,34,204,0.08); border-left:3px solid #6622CC; color:#000; font-weight:500;
 `
-// Metrics & Charts
-const MetricsSection = styled.div`
-	margin-top:2.25rem; background:#fff; border:1px solid rgba(0,0,0,0.08); padding:1.75rem 2rem 2.25rem; position:relative; box-shadow:0 6px 24px rgba(0,0,0,0.06);
-	@media (max-width:768px){ padding:1.25rem 1rem 1.75rem; margin:2rem -0.5rem 0; }
+// New visual result section
+const ResultsBlock = styled.div`
+	display:flex; flex-direction:column; gap:2rem; margin-top:2.5rem; margin-bottom:1rem;
 `
-const MetricsHeading = styled.h3`margin:0 0 1.25rem; font-size:1.15rem; font-weight:600; display:inline-block; border-bottom:2px solid #6622CC; padding-bottom:0.35rem;`;
-const KpiGrid = styled.div`display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1.25rem 1.5rem; margin-bottom:1.75rem;`;
-const KpiCard = styled.div`background:linear-gradient(135deg,#fafafa,#fff); border:1px solid rgba(0,0,0,0.08); padding:0.9rem 0.85rem 0.95rem; position:relative; overflow:hidden; font-size:0.8rem; line-height:1.25;`;
-const KpiLabel = styled.div`font-weight:500; color:#333; margin-bottom:0.25rem;`;
-const KpiValue = styled.div`font-size:1.55rem; font-weight:700; letter-spacing:-0.02em; color:#000;`;
-const KpiDelta = styled.span`display:inline-block; margin-left:6px; font-size:0.75rem; font-weight:600; color:${p=>p.$pos?'#087f23':'#b00020'}; background:${p=>p.$pos?'rgba(8,127,35,0.12)':'rgba(176,0,32,0.12)'}; padding:2px 6px; border-radius:14px;`;
-const ChartsGrid = styled.div`display:grid; grid-template-columns:1fr 1fr; gap:2rem; @media (max-width:920px){ grid-template-columns:1fr; }`;
-const ChartCard = styled.div`background:#fff; border:1px solid rgba(0,0,0,0.08); padding:1.25rem 1.1rem 1.4rem; box-shadow:0 4px 16px rgba(0,0,0,0.05); position:relative;`;
-const ChartTitle = styled.h4`margin:0 0 0.75rem; font-size:0.95rem; font-weight:600; letter-spacing:0.01em; display:flex; align-items:center; gap:6px;`;
-const Legend = styled.div`display:flex; flex-wrap:wrap; gap:10px; margin-top:0.75rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em;`;
-const LegendItem = styled.span`display:inline-flex; align-items:center; gap:4px; &:before{content:''; width:12px; height:12px; background:${p=>p.$c}; border:1px solid rgba(0,0,0,0.15);} `;
-const BarChartSvg = styled.svg`width:100%; height:180px; overflow:visible;`;
-const LineChartSvg = styled.svg`width:100%; height:180px; overflow:visible;`;
-const SmallNote = styled.p`font-size:0.7rem; line-height:1.2; color:#555; margin:1rem 0 0; opacity:0.85;`;
+const KpiGrid = styled.div`
+	display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+`
+const KpiCard = styled.div`
+	background:#fff; border:1px solid rgba(0,0,0,0.08); padding:1rem 1.1rem; display:flex; flex-direction:column; gap:0.4rem; position:relative; overflow:hidden;
+	&:before{content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(102,34,204,0.08),transparent); pointer-events:none;}
+	h4{margin:0; font-size:0.8rem; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:#444;}
+	.value{font-size:1.65rem; font-weight:600; line-height:1; color:#000;}
+	.sub{font-size:0.75rem; color:#555; line-height:1.2;}
+`
+const ResultNarrative = styled.div`
+	font-size:0.9rem; line-height:1.55; background:#fff; border:1px solid rgba(0,0,0,0.08); padding:1.25rem 1.4rem; border-left:3px solid #6622CC; box-shadow:0 4px 16px rgba(0,0,0,0.06);
+	b{color:#000;}
+`
 const CarouselSection = styled.section`
 	margin-top:2.5rem; display:flex; flex-direction:column; align-items:center; gap:1rem;
 `
@@ -100,6 +100,7 @@ const Chevron = styled.span`display:inline-block; width:10px; height:10px; borde
 const AccordionPanel = styled.div`overflow:hidden; max-height:${p=>p.$open?'1000px':'0'}; opacity:${p=>p.$open?1:0}; transition:max-height .25s ease, opacity .25s ease; padding:${p=>p.$open?'0.75rem 1rem 1rem':'0 1rem'};`
 const BackButton = styled.button`position:fixed; top:2rem; left:2rem; z-index:1000; padding:1rem 2rem; border:2px solid #000; background:rgba(255,255,255,0.9); backdrop-filter:blur(10px); color:#000; font-size:1rem; font-weight:400; letter-spacing:0.1em; text-transform:uppercase; transition:all .3s ease, opacity 1s ease; cursor:none; outline:none; user-select:none; opacity:${p=>p.visible?1:0}; pointer-events:${p=>p.visible && !p.$disabled?'auto':'none'}; border-radius:0; ${p=>p.$disabled?'background:transparent;color:#777;border-color:transparent;opacity:0.28;transform:none!important;':''} &:hover{background:${p=>p.$disabled?'transparent':'#000'}; color:${p=>p.$disabled?'#777':'#fff'}; transform:${p=>p.$disabled?'none':'translateY(-2px)'};} &:active{transform:translateY(0);} @media (max-width:768px){ top:1rem; left:1rem; padding:0.8rem 1.5rem; font-size:0.9rem; cursor:pointer; touch-action:manipulation; }`
 const CtaButton = styled.a`display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:0; border:2px solid #6622CC; color:#6622CC; background:rgba(255,255,255,0.85); text-decoration:none; font-weight:500; letter-spacing:0.02em; transition:all .25s ease; cursor:none; will-change:transform,background,color,box-shadow; &:hover{background:#6622CC; color:#fff; transform:translateY(-2px); box-shadow:0 10px 24px rgba(102,34,204,0.25);} &:active{transform:translateY(0);} @media (max-width:768px){ background:#ffffff; }`
+const WantButton = styled.button`display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:0; border:2px solid #000; background:#000; color:#fff; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; font-size:0.8rem; cursor:none; transition:all .25s ease; will-change:transform,background,color,box-shadow; box-shadow:0 8px 24px -6px rgba(0,0,0,0.35); &:hover{background:#6622CC; border-color:#6622CC; box-shadow:0 10px 30px -6px rgba(102,34,204,0.4); transform:translateY(-2px);} &:active{transform:translateY(0);} @media (max-width:768px){ width:100%; justify-content:center; }`
 
 const KlamBotCasePage = () => {
 	const navigate = useNavigate()
@@ -116,76 +117,10 @@ const KlamBotCasePage = () => {
 	const cardRefs = useRef([])
 	const [accOpen, setAccOpen] = React.useState({ flow:false, sheets:false, alerts:false, tech:false })
 	const toggleAcc = (k)=>setAccOpen(s=>({...s,[k]:!s[k]}))
-
-		// Static metrics dataset (could be fetched). Arrays kept tiny for inline SVG demonstration.
-		const metrics = React.useMemo(()=>({
-			kpis:[
-				{ label:'Активные объекты', value:128, delta:+14, hint:'+14 (12%) vs baseline' },
-				{ label:'Авто‑обновления/день', value:340, delta:+68 },
-				{ label:'Экономия времени', value:'≈2.3ч', delta:+38, pos:true },
-				{ label:'Email уведомл./день', value:45, delta:-22, pos:true },
-				{ label:'Ошибки ввода', value:'0', delta:-5, pos:true },
-			],
-			bar:{ // manual vs automated updates (per week)
-				labels:['W1','W2','W3','W4','W5','W6'],
-				manual:[82,79,75,0,0,0],
-				auto:[0,0,24,88,96,102]
-			},
-			line:{ // latency (minutes delay between факт и запись)
-				labels:['M1','M2','M3','M4','M5','M6','M7'],
-				before:[42,38,41,44,39,40,43],
-				after:[12,9,7,6,5,5,4]
-			}
-		}),[])
-
-		const buildBarChart = React.useCallback(()=>{
-			const { labels, manual, auto } = metrics.bar
-			const max = Math.max(...manual, ...auto) || 1
-			const gap = 8
-			const groupWidth = 36
-			const width = labels.length* (groupWidth + gap)
-			const height = 160
-			const bars = []
-			labels.forEach((lab,i)=>{
-				const x = i*(groupWidth+gap)
-				const mH = (manual[i]/max)*height
-				const aH = (auto[i]/max)*height
-				bars.push(
-					<g key={lab} transform={`translate(${x},0)`}>
-						<rect x={0} y={height-mH} width={14} height={mH} fill="#bdbdbd" rx={1} />
-						<rect x={18} y={height-aH} width={14} height={aH} fill="#6622CC" rx={1} />
-						<text x={groupWidth/2 -2} y={height+12} fontSize={10} textAnchor="middle" fill="#333">{lab}</text>
-					</g>
-				)
-			})
-			return <BarChartSvg viewBox={`0 0 ${width} 190`} role="img" aria-label="Manual vs Auto обновления">
-				<g>{bars}</g>
-				<line x1={0} y1={160} x2={width} y2={160} stroke="#222" strokeWidth={1} />
-			</BarChartSvg>
-		},[metrics])
-
-		const buildLineChart = React.useCallback(()=>{
-			const { labels, before, after } = metrics.line
-			const max = Math.max(...before, ...after) || 1
-			const height = 160
-			const width = 40*labels.length
-			const toPath = arr => arr.map((v,i)=>`${i===0?'M':'L'}${i*40},${height - (v/max)*height}`).join(' ')
-			const pathBefore = toPath(before)
-			const pathAfter = toPath(after)
-			return <LineChartSvg viewBox={`0 0 ${width} ${height+20}`} role="img" aria-label="Снижение задержки обновления">
-				<path d={pathBefore} fill="none" stroke="#bdbdbd" strokeWidth={3} strokeLinecap="round" />
-				<path d={pathAfter} fill="none" stroke="#6622CC" strokeWidth={3} strokeLinecap="round" />
-				{labels.map((l,i)=>(<text key={l} x={i*40} y={height+12} fontSize={10} textAnchor="middle" fill="#333">{l}</text>))}
-			</LineChartSvg>
-		},[metrics])
+	const [isProjectModalOpen, setIsProjectModalOpen] = React.useState(false)
 
 	const carouselOptions = React.useMemo(()=>[
-		{ title:'Стартовое окно', description:'Краткое меню и выбор сценария', image:'/images/klambot-01-start.webp', icon:<FaInfoCircle size={20} color="#fff"/> },
-		{ title:'Панель объектов', description:'Список объектов/альбомов по статусам', image:'/images/klambot-02-objects.webp', icon:<FaProjectDiagram size={20} color="#fff"/> },
-		{ title:'Цветовые статусы', description:'Визуальная раскраска стадий', image:'/images/klambot-03-statuses.webp', icon:<FaTools size={18} color="#fff"/> },
-		{ title:'Google Sheets интеграция', description:'Синхронизация и кеширование данных', image:'/images/klambot-04-sheets.webp', icon:<FaFileExcel size={18} color="#fff"/> },
-		{ title:'Уведомления', description:'Email / Telegram оповещения по событиям', image:'/images/klambot-05-alerts.webp', icon:<FaBell size={18} color="#fff"/> },
-		{ title:'Поиск и фильтр', description:'Быстрый поиск по объектам', image:'/images/klambot-06-search.webp', icon:<FaDatabase size={18} color="#fff"/> }
+		{ title:'Схема автоматизации', description:'Описание работы бота', image:'/images/klambot.webp', icon:<FaInfoCircle size={20} color="#fff"/> }
 	],[])
 
 		useEffect(()=>{
@@ -213,13 +148,16 @@ const KlamBotCasePage = () => {
 			<CaseTitle ref={titleRef}>Telegram‑бот KLAMbot</CaseTitle>
 			<HeaderActions ref={actionsRef}>
 				<CtaButton href="#" aria-disabled>Приватный бот</CtaButton>
+				<WantButton type="button" onClick={()=>{ setIsProjectModalOpen(true) }}>
+					Хочу такой!
+				</WantButton>
 			</HeaderActions>
 		</HeroSection>
 		<ContentSection>
 			<Description>
 				<p className="lead">Бот для визуализации статусов объектов (альбомов) и автоматизации документооборота. Интеграция с Google Sheets: чтение/обновление строк, цветовые статусы, уведомления в telegram, отправка писем.</p>
 				<p>
-					<b>История.</b> В проектной компании ООО «СибТехПроект» руководители проектов раньше вручную заносили в общую Google‑таблицу статусы каждого альбома: писали дату перехода этапа, перекрашивали цвет ячеек под новый статус, формировали и отправляли письма о готовности. Это занимало время, возникали задержки и несинхронность — реальный прогресс был только в рабочих чатах, а в таблице всё появлялось позже. С появлением KLAMbot процесс стал событийным: достаточно одной короткой записи в общем рабочем чате (или команды боту) — и автоматически фиксируется новый статус в Google Sheets, проставляется цвет, метка времени, формируется история изменений и рассылаются уведомления заинтересованным коллегам. Человеческий фактор и дублирование действий убраны, актуальность данных стала «почти realtime».
+					<b>История.</b> В проектной компании ООО «СибТехПроект» руководители проектов раньше вручную заносили в общую Google‑таблицу статусы каждого альбома: писали дату перехода этапа, перекрашивали цвет ячеек под новый статус, формировали и отправляли письма о готовности. Это занимало время, возникали задержки и ошибки в написании. С появлением KLAMbot процесс стал событийным: достаточно одной короткой записи в общем рабочем чате (или команды боту) — и автоматически фиксируется новый статус в Google Sheets, проставляется цвет, метка времени, формируется история изменений и рассылаются уведомления заинтересованным коллегам. Человеческий фактор и дублирование действий убраны, актуальность данных стала «почти realtime».
 				</p>
 				<FeaturesTechGrid>
 					<div>
@@ -277,37 +215,39 @@ const KlamBotCasePage = () => {
 						</Accordion>
 					</div>
 				</FeaturesTechGrid>
-				<ResultCallout>Результат: оперативность обновлений выросла в ~7×, ручные правки сведены к нулю, средняя задержка фиксации статуса сократилась с ~40 до 5 минут, нагрузка на email‑канал уменьшилась.</ResultCallout>
-				<MetricsSection>
-					<MetricsHeading>Измеримые эффекты</MetricsHeading>
+				<ResultsBlock>
 					<KpiGrid>
-						{metrics.kpis.map((k,i)=>(
-							<KpiCard key={i} aria-label={`${k.label}: ${k.value}`}>
-								<KpiLabel>{k.label}</KpiLabel>
-								<KpiValue>{k.value}{typeof k.delta==='number' && <KpiDelta $pos={k.delta>=0}>{k.delta>0?`+${k.delta}`:k.delta}</KpiDelta>}</KpiValue>
-							</KpiCard>
-						))}
+						<KpiCard>
+							<h4>Экономия / альбом</h4>
+							<div className="value">≈45%</div>
+							<div className="sub">Сокращение чистого времени операций</div>
+						</KpiCard>
+						<KpiCard>
+							<h4>Риск потери данных</h4>
+							<div className="value">6× ↓</div>
+							<div className="sub">30% → 5% вероятность</div>
+						</KpiCard>
+						<KpiCard>
+							<h4>Операций заменено</h4>
+							<div className="value">10+</div>
+							<div className="sub">Цвет, даты, письма, выгрузка, напоминания</div>
+						</KpiCard>
+						<KpiCard>
+							<h4>Направлений</h4>
+							<div className="value">5</div>
+							<div className="sub">Один бот обслуживает сразу</div>
+						</KpiCard>
+						<KpiCard>
+							<h4>Триггер</h4>
+							<div className="value">1 чат</div>
+							<div className="sub">Одно сообщение → все фиксации</div>
+						</KpiCard>
 					</KpiGrid>
-					<ChartsGrid>
-						<ChartCard>
-							<ChartTitle>Переход на авто‑обновления (недели)</ChartTitle>
-							{buildBarChart()}
-							<Legend>
-								<LegendItem $c="#bdbdbd">Manual</LegendItem>
-								<LegendItem $c="#6622CC">Auto</LegendItem>
-							</Legend>
-						</ChartCard>
-						<ChartCard>
-							<ChartTitle>Снижение задержки обновлений (мин.)</ChartTitle>
-							{buildLineChart()}
-							<Legend>
-								<LegendItem $c="#bdbdbd">До</LegendItem>
-								<LegendItem $c="#6622CC">После</LegendItem>
-							</Legend>
-						</ChartCard>
-					</ChartsGrid>
-					<SmallNote>Данные демонстрационные: отражают тренд перехода от ручного ввода к автоматике и сокращение задержек. На реальных данных цифры могут варьироваться по неделям.</SmallNote>
-				</MetricsSection>
+					{/* Charts removed per request */}
+					<ResultNarrative>
+						<b>Ключевой эффект.</b> Один бот обслуживает 5 направлений и реагирует не только на команды, но и на письма: вместо множественных ручных действий (поиск ссылки, раскраска ячейки, дата, письмо, отметка выгрузки, напоминания) остаётся одно сообщение в общий чат — система фиксирует статус, ставит цвет, сохраняет время, обновляет вспомогательные вкладки, рассылает уведомления и снижает риск утери данных в 6 раз. Средняя экономия времени по полному циклу стадий ~45% на альбом и +126 мин в день при 10 альбомах. Самая «длинная» операция (выгрузка) стала прозрачной: бот фиксирует факт и время, убирая когнитивную нагрузку РП.
+					</ResultNarrative>
+				</ResultsBlock>
 			</Description>
 			<CarouselSection>
 				<OptionsContainer role="listbox" aria-label="Слайды кейса" tabIndex={0} onKeyDown={handleKeyDown}>
@@ -324,9 +264,11 @@ const KlamBotCasePage = () => {
 						</OptionCard>
 					))}
 				</OptionsContainer>
+				{carouselOptions.length>1 && (
 				<Indicators role="tablist" aria-label="Переход по слайдам">
 					{carouselOptions.map((_,i)=>(<Dot key={i} $active={activeIndex===i} aria-label={`Слайд ${i+1}`} aria-selected={activeIndex===i} role="tab" onClick={()=>setActiveIndex(i)} />))}
 				</Indicators>
+				)}
 				{lightboxIndex!==null && <LightboxOverlay onClick={()=>setLightboxIndex(null)} role="dialog" aria-modal="true">
 					<LightboxClose onClick={e=>{e.stopPropagation(); setLightboxIndex(null)}}>Закрыть</LightboxClose>
 					<LightboxContent onClick={e=>e.stopPropagation()}>
@@ -339,6 +281,14 @@ const KlamBotCasePage = () => {
 				</LightboxOverlay>}
 			</CarouselSection>
 		</ContentSection>
+	{isProjectModalOpen && (
+		<ProjectModal
+			isOpen={isProjectModalOpen}
+			startAnimation={true}
+			prefill={{ step:'contact', hideBack:true, description:'Хочу такой же Telegram‑бот для автоматизации статусов (как KLAMbot).'}}
+			onClose={()=> setIsProjectModalOpen(false)}
+		/>
+	)}
 	</CaseContainer>
 }
 

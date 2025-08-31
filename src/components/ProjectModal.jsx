@@ -684,7 +684,8 @@ const subcategories = {
 }
 
 const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
-  const [step, setStep] = useState('main') // 'main', 'subcategory', 'contact'
+  // Инициализируем сразу корректный шаг, если есть префилл на контакт
+  const [step, setStep] = useState(prefill?.step === 'contact' ? 'contact' : 'main') // 'main', 'subcategory', 'contact'
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [selectedSubcategories, setSelectedSubcategories] = useState([])
   const [formData, setFormData] = useState({
@@ -723,21 +724,28 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
   }, [])
 
   useEffect(() => {
-    if (isOpen) {
-      // При открытии учитываем возможный префилл
-      const nextStep = prefill?.step === 'contact' ? 'contact' : 'main'
-      setStep(nextStep)
-      setSelectedCategory(null)
-      setSelectedSubcategories([])
-      setFormData({ name: '', phone: '', description: prefill?.description || '' })
-    } else {
+    if (!isOpen) {
       // Полная очистка при закрытии
       setStep('main')
       setSelectedCategory(null)
       setSelectedSubcategories([])
       setFormData({ name: '', phone: '', description: '' })
+      return
     }
-  }, [isOpen, prefill])
+    // Открытие
+    if (prefill?.step === 'contact') {
+      // Сразу контакт без промежуточного мерцания
+      setStep('contact')
+      setSelectedCategory(null)
+      setSelectedSubcategories([])
+      setFormData({ name: '', phone: '', description: prefill?.description || '' })
+    } else {
+      setStep('main')
+      setSelectedCategory(null)
+      setSelectedSubcategories([])
+      setFormData({ name: '', phone: '', description: prefill?.description || '' })
+    }
+  }, [isOpen, prefill?.step, prefill?.description])
 
   const handleCategorySelect = (categoryId) => {
     setSelectedCategory(categoryId)
