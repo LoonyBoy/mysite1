@@ -1,4 +1,5 @@
 import React from 'react'
+import { subscriptionFAQ } from '../pages/MenuPage'
 
 // Full lazy-loaded Services modal content extracted from MenuPage
 const ServicesContent = (props) => {
@@ -149,7 +150,7 @@ const ServicesContent = (props) => {
                       <p style={{ margin: 0, opacity: 0.7 }}>{s.tech}</p>
                     </div>
                   </SectionBlock>
-                  {s.notes?.length && (<p style={{ opacity: 0.7, marginTop: 6 }}>{s.notes.join(' • ')}</p>)}
+                  {s.notes?.length > 0 && (<p style={{ opacity: 0.7, marginTop: 6 }}>{s.notes.join(' • ')}</p>)}
                 </PricingCard>
               )
               if (isMobileFlag || list.length === 1) {
@@ -166,14 +167,23 @@ const ServicesContent = (props) => {
               <SubscriptionIntro>
                 <IntroTitleRow><span style={{ fontSize: 16 }}>✨</span><h4>Что такое подписка?</h4></IntroTitleRow>
                 <IntroBody>
-                  <p>Подписка — это простой и прозрачный способ получать поддержку и развитие продукта без лишней рутины. Вы заранее понимаете объём работ и скорость реакции, а задачи выполняются регулярно и приоритетно. Это чаще выгоднее разовых работ и найма, гибко масштабируется под рост и сопровождается отчётами.</p>
+                  <p>Подписка — это ваш личный мини-IT-отдел по фиксированной цене в месяц. Вместо поиска фрилансеров или найма команды, все задачи по поддержке и развитию проекта закрываются регулярно, быстро и с приоритетом.</p>
+                  <p>Вы заранее знаете объём часов, скорость реакции и получаете отчёты о проделанной работе. Это выгоднее, чем разовые заказы и содержание сотрудников в штате, а главное — легко масштабируется вместе с вашим бизнесом.</p>
                 </IntroBody>
               </SubscriptionIntro>
               <p style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '24px 0 8px', opacity: 0.9 }}>Вопрос‑ответ</p>
               <FAQAccordionGreen>
-                {/* FAQ entries kept as-is */}
-                {['Что если у меня уже есть хостинг и домен?','А если не хватит часов?','Накапливаются ли часы, если их не использовать?','Как быстро происходит реакция на инциденты?','Как происходит старт работ и оплата?','Какие гарантии качества и сроков?','Что если понадобится задача вне подписки?'].map(q => (
-                  <details key={q}><summary>{q}</summary><div className="faq-content"><div className="faq-content-inner"><div className="faq-answer"><p/></div></div></div></details>
+                {subscriptionFAQ.map(item => (
+                  <details key={item.question}>
+                    <summary>{item.question}</summary>
+                    <div className="faq-content">
+                      <div className="faq-content-inner">
+                        <div className="faq-answer">
+                          <p>{item.answer}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </details>
                 ))}
               </FAQAccordionGreen>
             </div>

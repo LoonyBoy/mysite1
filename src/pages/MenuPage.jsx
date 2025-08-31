@@ -2598,6 +2598,38 @@ const servicesAutomation = [
     extras: [], notes: ['Стоимость обсуждается после брифинга'], timeline: 'Сроки: зависят от объёма', tech: 'Python/Node.js, Google API, PostgreSQL' },
 ]
 
+// FAQ данные для подписки
+const subscriptionFAQ = [
+  {
+    question: 'Что если у меня уже есть хостинг и домен?',
+    answer: 'Подключение возможно к существующему серверу или проект может быть перенесён на предоставленный хостинг — всё зависит от ваших предпочтений. В любом случае поддержка и обновления входят в подписку.'
+  },
+  {
+    question: 'А если не хватит часов?',
+    answer: 'Дополнительные часы можно докупить по фиксированной ставке либо перейти на тариф Pro. Вся работа фиксируется в отчёте, чтобы видеть распределение времени.'
+  },
+  {
+    question: 'Накапливаются ли часы, если их не использовать?',
+    answer: 'Неиспользованные часы переносятся в размере 50% от остатка на следующий месяц.'
+  },
+  {
+    question: 'Как быстро происходит реакция на инциденты?',
+    answer: 'На тарифе Basic — в течение 2 рабочих дней. На тарифе Pro — в течение 4 рабочих часов. Задачи клиентов Pro всегда ставятся в приоритет.'
+  },
+  {
+    question: 'Как происходит старт работ и оплата?',
+    answer: 'После выбора тарифа заключается договор и выставляется счёт за месяц вперёд. Сразу после оплаты проект подключается к системе мониторинга, и начинаются работы по задачам.'
+  },
+  {
+    question: 'Какие гарантии качества и сроков?',
+    answer: 'Все условия фиксируются в официальном договоре: сроки реакции, объём работ и ответственность сторон. Вы получаете ежемесячный отчёт с результатами и рекомендациями, что обеспечивает прозрачность и контроль.'
+  },
+  {
+    question: 'Что если понадобится задача вне подписки?',
+    answer: 'Крупные задачи, которые не укладываются в лимит часов (например, новые интеграции или разработка функционала), оцениваются и согласовываются отдельно. При этом поддержка и мелкие доработки продолжают выполняться в рамках подписки.'
+  }
+]
+
 const projectsRows = {
   web: [
     { id: 'lightlab', title: 'Light Lab', description: 'Онлайн‑бронирование слотов в фотостудии (витрина залов, корзина, ЛК, админка)', href: '/project/lightlab', image: '/images/lightlab.png', tech: ['React 19', 'Router 7', 'MUI', 'Framer Motion', 'Node/Express', 'Socket.IO', 'MySQL'], year: '2025', role: 'Full‑stack', features: ['Часы‑слоты с проверкой конфликтов', 'Динамическое ценообразование и промокоды', 'Live‑обновления через Socket.IO', 'Админ‑панель: клиенты/цены/услуги/брони', 'Загрузка и оптимизация фото (sharp/multer)', 'REST API + события bookingChange'] },
@@ -3102,6 +3134,19 @@ const MenuPage = () => {
         setTimeout(() => { isServicesUIUpdatingRef.current = false }, 180)
       }
     }, 10)
+  }
+
+  // Handle projects category navigation (mobile)
+  const handleProjectsNavButtonClick = (cat, event) => {
+    if (projectsCategory === cat) return
+    // Guard concurrent animations
+    if (isProjectsAnimatingRef.current) return
+    // Visual feedback
+    if (event) createRipple(event, event.currentTarget)
+    // Change category with animation
+    changeProjectsCategory(cat)
+    // Update mobile indicator position
+    setTimeout(positionMobileIndicator, 50)
   }
 
   // Toggle term tooltip (mobile/keyboard)
@@ -4726,6 +4771,7 @@ const MenuPage = () => {
 }
 
 export default MenuPage
+export { subscriptionFAQ }
 
 // Preload dither effects
 const preloadImage = new Image();
