@@ -143,7 +143,7 @@ const KlamBotCasePage = () => {
 
 	return <CaseContainer>
 		<CustomCursor color="#6622CC" />
-		{isBackButtonVisible && <BackButton ref={backButtonRef} onClick={handleBack} visible={isBackButtonVisible} $disabled={lightboxIndex!==null} aria-disabled={lightboxIndex!==null}>← Назад к проектам</BackButton>}
+		{isBackButtonVisible && <BackButton ref={backButtonRef} onClick={handleBack} visible={isBackButtonVisible} $disabled={lightboxIndex!==null} aria-disabled={lightboxIndex!==null}>← Назад в меню</BackButton>}
 		<HeroSection ref={heroRef}>
 			<CaseTitle ref={titleRef}>Telegram‑бот KLAMbot</CaseTitle>
 			<HeaderActions ref={actionsRef}>

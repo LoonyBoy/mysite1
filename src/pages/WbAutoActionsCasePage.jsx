@@ -66,7 +66,7 @@ const WbAutoActionsCasePage = () => {
 
 	return <CaseContainer>
 		<CustomCursor color="#d18f00" />
-		{isBackButtonVisible && <BackButton ref={backButtonRef} onClick={handleBack} visible={isBackButtonVisible} $disabled={false} aria-disabled={false}>← Назад к проектам</BackButton>}
+		{isBackButtonVisible && <BackButton ref={backButtonRef} onClick={handleBack} visible={isBackButtonVisible} $disabled={false} aria-disabled={false}>← Назад в меню</BackButton>}
 		<HeroSection ref={heroRef}>
 			<CaseTitle ref={titleRef}>WB Авто‑акции</CaseTitle>
 			<HeaderActions ref={actionsRef}>

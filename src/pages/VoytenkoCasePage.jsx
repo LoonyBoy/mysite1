@@ -809,7 +809,7 @@ const VoytenkoCasePage = () => {
           $disabled={lightboxIndex !== null}
           aria-disabled={lightboxIndex !== null}
         >
-          ← Назад к проектам
+          ← Назад в меню
         </BackButton>
       )}
 
