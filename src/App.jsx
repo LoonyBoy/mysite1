@@ -4,6 +4,7 @@ import { GlobalStyles } from './styles/GlobalStyles'
 import StartPage from './pages/StartPage'
 import HomePage from './pages/HomePage'
 import MenuPage from './pages/MenuPage'
+import SubscriptionPage from './pages/SubscriptionPage'
 import SpaceInvadersPage from './pages/SpaceInvadersPage'
 import LightLabCasePage from './pages/LightLabCasePage'
 import VoytenkoCasePage from './pages/VoytenkoCasePage'
@@ -29,6 +30,7 @@ function App() {
             <Route path="/" element={<StartPage />} />
             <Route path="/home" element={<HomePage />} />
             <Route path="/menu" element={<MenuPage />} />
+            <Route path="/menu/subscription" element={<SubscriptionPage />} />
             <Route path="/project/lightlab" element={<LightLabCasePage />} />
             <Route path="/project/voytenko" element={<VoytenkoCasePage />} />
             <Route path="/project/klambot" element={<KlamBotCasePage />} />

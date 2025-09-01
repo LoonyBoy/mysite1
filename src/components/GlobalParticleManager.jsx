@@ -19,7 +19,9 @@ export const ParticleProvider = ({ children }) => {
   
   // Определяем начальную страницу на основе текущего маршрута
   const getInitialPage = () => {
-    return location.pathname === '/home' ? 'home' : 'start'
+    if (location.pathname === '/home') return 'home'
+    if (location.pathname === '/menu/subscription') return 'subscription'
+    return 'start'
   }
   
   const [currentPage, setCurrentPage] = useState(getInitialPage())
@@ -33,6 +35,14 @@ export const ParticleProvider = ({ children }) => {
   if (location.pathname === '/home' || location.pathname === '/menu') {
       return {
         color: "#D14836",
+        size: 0.005,
+        opacity: 0.7
+      }
+    }
+    // Зеленые частицы для страницы подписки
+    if (location.pathname === '/menu/subscription') {
+      return {
+        color: "#22c55e",
         size: 0.005,
         opacity: 0.7
       }
@@ -187,6 +197,20 @@ export const ParticleProvider = ({ children }) => {
           fastRotation: false
         }))
       }
+    } else if (path === '/menu/subscription' && !isAnimating) {
+      // Переход на страницу подписки - зеленые частицы
+      logger.particles('Transition to subscription page', { from: currentPage, to: 'subscription' })
+      setCurrentPage('subscription')
+      setParticlesVisible(true)
+      setParticleProps({
+        color: '#22c55e', // Зеленый цвет rgba(34,197,94) - как в модальном окне "Услуги"
+        size: 0.005,      // Размер как на /menu
+        opacity: 0.7      // Прозрачность как на /menu
+      })
+      setParticleAnimation({
+        rotationSpeed: { x: 1.0, y: 1.0 }, // Скорость как на /menu
+        fastRotation: false
+      })
     }
   }, [location.pathname, camera, currentPage, transitionContext])
 
@@ -842,6 +866,7 @@ export const ParticleProvider = ({ children }) => {
     setParticleSpeed,
     camera,
     particlesVisible,
+    setParticlesVisible, // Добавляем функцию для управления видимостью частиц
     startParticleAppearAnimation,
     isPageVisible,
     setTransitionContext,

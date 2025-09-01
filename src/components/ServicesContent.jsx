@@ -12,13 +12,13 @@ const ServicesContent = (props) => {
     ProjectsTopTitle, ServicesModalWrap, PricingGrid, servicesGridRef, isMobileFlag,
     servicesAutomation, servicesWeb, servicesBots, PricingCard, PricingTop, PricingHead, DesktopOnly, HeadingPrice,
     MobileOnly, MobilePriceUnderTitle, MobilePriceText, MobileConfirmButton, SelectButton,
-    findServiceById, categoryLabelByServiceId, setPrefill, setIsProjectModalOpen, setSelectedSubscriptionLabel,
+    findServiceById, categoryLabelByServiceId, setPrefill, setIsProjectModalOpen,
     PlanCTA, SubscriptionIntro, IntroTitleRow, IntroBody,
     TERM_HINTS, FeatureList, FeatureItem, FAQAccordionGreen,
     CardSectionTitle, SectionBlock, Bullets, RightCol, ConfirmSlot, ConfirmButton, Divider,
     SubscriptionSplit, StepNote, MobilePlansWrap, PlanTabs, PlanTabButton, PlanCard, PlanHeader, StickyCTABar,
-    inlineNextFor, setInlineNextFor, setSelectedServiceId, setServicesStep, setServicesTier, prefetchSubscriptionAssets,
-    selectedServiceId, mobilePlan, setMobilePlan, handleServicesTierButtonClick, handleTermToggle, ComparisonTable
+    inlineNextFor, setInlineNextFor, setServicesStep, setServicesTier,
+    selectedServiceId, mobilePlan, setMobilePlan, handleServicesTierButtonClick, handleTermToggle, ComparisonTable, navigate
   } = props
 
   if (!ServicesModalWrap) return null
@@ -65,30 +65,43 @@ const ServicesContent = (props) => {
               const renderCard = (s, isFeatured) => (
                 <PricingCard key={s.id} className={isFeatured ? 'featured' : 'tier-hidden'} $accentRGB={accentRGB} onClick={(e) => {
                   e.preventDefault(); e.stopPropagation();
-                  if (inlineNextFor === s.id) { setSelectedServiceId(s.id); setServicesStep('subscription'); return }
+                  if (inlineNextFor === s.id) { 
+                    const tier = s.id.includes('premium') ? 'premium' : (s.id.includes('optimal') ? 'optimal' : 'basic')
+                    navigate(`/menu/subscription?service=${s.id}&category=${servicesCategory}&tier=${tier}`)
+                    return 
+                  }
                   const tier = s.id.includes('premium') ? 'premium' : (s.id.includes('optimal') ? 'optimal' : 'basic')
-                  setServicesTier(tier); prefetchSubscriptionAssets(); setInlineNextFor(s.id)
+                  setServicesTier(tier); setInlineNextFor(s.id)
                 }}>
                   <PricingTop>
                     <PricingHead>
                       <h4>{s.title}</h4>
                       <DesktopOnly>
                         <HeadingPrice>
-                          {s.price === 'Custom' ? (<span className="amount">По договоренности</span>) : (<><span className="amount">{s.price}</span><span className="period"> / проект</span></>)}
+                          {s.price === 'Custom' ? (<span className="amount">По договоренности</span>) : 
+                           (<><span className="amount">{s.price}</span><span className="period"> / проект</span></>)}
                         </HeadingPrice>
                       </DesktopOnly>
                       <MobileOnly>
                         <MobilePriceUnderTitle>
                           <MobilePriceText>
-                            {s.price === 'Custom' ? (<span className="amount">По договоренности</span>) : (<><span className="amount">{s.price}</span><span className="period"> / проект</span></>)}
+                            {s.price === 'Custom' ? (<span className="amount">По договоренности</span>) : 
+                             (<><span className="amount">{s.price}</span><span className="period"> / проект</span></>)}
                           </MobilePriceText>
                           <MobileConfirmButton type="button" className={inlineNextFor === s.id ? 'is-next' : ''} aria-label={inlineNextFor === s.id ? 'Далее' : 'Выбрать'} onClick={(e) => {
                             e.preventDefault(); e.stopPropagation();
-                            if (inlineNextFor === s.id) { setSelectedServiceId(s.id); setServicesStep('subscription'); return }
+                            if (inlineNextFor === s.id) { 
+                              const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
+                              navigate(`/menu/subscription?service=${s.id}&category=${servicesCategory}&tier=${tier}`)
+                              return 
+                            }
                             const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
-                            setServicesTier(tier); prefetchSubscriptionAssets(); setInlineNextFor(s.id)
+                            setServicesTier(tier); setInlineNextFor(s.id)
                           }}>
-                            <span className="icon">✓</span><span className="label">Далее</span>
+                            <span className="icon">✓</span>
+                            <span className="label">
+                              {inlineNextFor === s.id ? 'Далее' : 'Выбрать'}
+                            </span>
                           </MobileConfirmButton>
                         </MobilePriceUnderTitle>
                       </MobileOnly>
@@ -100,11 +113,18 @@ const ServicesContent = (props) => {
                         <ConfirmSlot>
                           <ConfirmButton type="button" className={inlineNextFor === s.id ? 'is-next' : ''} aria-label={inlineNextFor === s.id ? 'Далее' : 'Выбрать'} onClick={(e) => {
                             e.preventDefault(); e.stopPropagation();
-                            if (inlineNextFor === s.id) { setSelectedServiceId(s.id); setServicesStep('subscription'); return }
+                            if (inlineNextFor === s.id) { 
+                              const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
+                              navigate(`/menu/subscription?service=${s.id}&category=${servicesCategory}&tier=${tier}`)
+                              return 
+                            }
                             const tier = s.id.includes('premium') ? 'premium' : s.id.includes('optimal') ? 'optimal' : 'basic'
-                            setServicesTier(tier); prefetchSubscriptionAssets(); setInlineNextFor(s.id)
+                            setServicesTier(tier); setInlineNextFor(s.id)
                           }}>
-                            <span className="icon">✓</span><span className="label">Далее</span>
+                            <span className="icon">✓</span>
+                            <span className="label">
+                              {inlineNextFor === s.id ? 'Далее' : 'Выбрать'}
+                            </span>
                           </ConfirmButton>
                         </ConfirmSlot>
                       </DesktopOnly>

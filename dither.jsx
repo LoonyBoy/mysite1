@@ -1,5 +1,5 @@
 /* eslint-disable react/no-unknown-property */
-import { useRef, useEffect, forwardRef } from "react";
+import { useRef, useEffect, forwardRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { EffectComposer, wrapEffect } from "@react-three/postprocessing";
 import { Effect } from "postprocessing";
@@ -180,6 +180,20 @@ RetroEffect.displayName = "RetroEffect";
   const mesh = useRef(null);
   const mouseRef = useRef(new THREE.Vector2());
   const { viewport, size, gl } = useThree();
+  
+  // Отслеживание видимости страницы для остановки анимаций
+  const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
+  
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPageVisible(!document.hidden);
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const waveUniformsRef = useRef({
     time: new THREE.Uniform(0),
@@ -230,6 +244,9 @@ RetroEffect.displayName = "RetroEffect";
       };
     }, [enableMouseInteraction, trackWindowMouse, gl]);
   useFrame(({ clock }) => {
+    // Останавливаем анимацию если страница неактивна
+    if (!isPageVisible) return;
+    
     const u = waveUniformsRef.current;
 
     if (!disableAnimation) {

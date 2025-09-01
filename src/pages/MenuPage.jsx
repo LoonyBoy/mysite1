@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom'
 import { useParticles } from '../components/GlobalParticleManager'
 import CustomCursor from '../components/CustomCursor'
 import MobileNavigation from '../components/MobileNavigation'
+import usePageVisibility from '../hooks/usePageVisibility'
+import usePerformanceOptimization from '../hooks/usePerformanceOptimization'
 // Lazy components to reduce initial bundle
 const ProjectModal = React.lazy(() => import('../components/ProjectModal'))
 const ServicesContentLazy = React.lazy(()=>import('../components/ServicesContent'))
@@ -2650,6 +2652,12 @@ const MenuPage = () => {
   const { camera, setParticleProps, setHoveredRect, setParticleSpeed, particlesVisible, pauseParticles, resumeParticles } = useParticles()
   const isTransitioningRef = useRef(false)
   
+  // Отслеживание видимости страницы для оптимизации производительности
+  const isPageVisible = usePageVisibility()
+  
+  // Автоматическое управление производительностью
+  usePerformanceOptimization(isPageVisible, pauseParticles, resumeParticles)
+  
   // Логируем состояние частиц
   useEffect(() => {
     console.log('MenuPage: Particles state', { camera: !!camera, particlesVisible })
@@ -2685,9 +2693,8 @@ const MenuPage = () => {
   const [servicesCategory, setServicesCategory] = useState('web')
   const serviceCategories = ['web', 'bots', 'automation']
   const [servicesTier, setServicesTier] = useState('optimal')
-  const [servicesStep, setServicesStep] = useState('pick') // 'pick' | 'subscription'
+  const [servicesStep, setServicesStep] = useState('pick') // only 'pick' now
   // --- Добавлено: отслеживаем выбранную услугу и отправляем выбор в Telegram ---
-  const [selectedServiceId, setSelectedServiceId] = useState(null)
   const lastTelegramSentRef = useRef(null)
   const findServiceById = (id) => {
     if (!id) return null
@@ -2701,13 +2708,10 @@ const MenuPage = () => {
     return ''
   }
   // Больше не отправляем сразу в Telegram — сохраняем выбор для ProjectModal
-  const [selectedSubscriptionLabel, setSelectedSubscriptionLabel] = useState(null)
 
   // Project creation modal (same behavior as on HomePage)
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
   const [prefill, setPrefill] = useState(null)
-  // Mobile subscription tab state: 'none' | 'basic' | 'optimal'
-  const [mobilePlan, setMobilePlan] = useState('optimal')
   const [showSubscriptionInfo, setShowSubscriptionInfo] = useState(false)
   const [isProjectModalAnimationReady, setIsProjectModalAnimationReady] = useState(false)
   const bodyLockRef = useRef({ scrollY: 0, prevStyles: {} })
@@ -2807,46 +2811,12 @@ const MenuPage = () => {
   // One-shot flag for dynamic chunk preloading (ProjectModal, animations, dither)
   const prefetchDoneRef = useRef(false)
 
-  const prefetchSubscriptionAssets = () => {
-    if (prefetchDoneRef.current) return
-    prefetchDoneRef.current = true
-    try {
-      // Warm up React.lazy chunks without awaiting — network will fetch and cache
-      import('../components/ProjectModal') // modal form
-      import('../utils/DesktopModalAnimations') // optional desktop animations
-      import('../../dither.jsx') // visual background effects
-  import('../components/ServicesContent') // services section
-    } catch (e) {
-      // ignore errors — prefetch is best-effort
-    }
-  }
-
   // On initial mount, ensure no accidental force-hover on mobile
   useEffect(() => {
     if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
       requestAnimationFrame(() => {
         cardRefs.current.forEach((c) => c && c.classList.remove('force-hover'))
       })
-    }
-  }, [])
-
-  // Idle prefetch so first modal open feels instant
-  useEffect(() => {
-    let idleId = null
-    let timeoutId = null
-    if (typeof window !== 'undefined') {
-      if ('requestIdleCallback' in window) {
-        idleId = window.requestIdleCallback(() => prefetchSubscriptionAssets())
-      } else {
-        // fallback: slight delay after mount
-        timeoutId = setTimeout(() => prefetchSubscriptionAssets(), 200)
-      }
-    }
-    return () => {
-      try {
-        if (idleId && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId)
-        if (timeoutId) clearTimeout(timeoutId)
-      } catch {}
     }
   }, [])
 
@@ -3183,7 +3153,7 @@ const MenuPage = () => {
     const container = servicesModalRef.current
     if (!container) return
 
-    const windowScrollMode = servicesStep === 'subscription' // enable full page scroll for subscription step
+    const windowScrollMode = false // removed subscription step logic
     if (!windowScrollMode) {
       // Focus the container so keyboard scrolling works (PgUp/PgDn/Home/End)
       try { container.setAttribute('tabindex', '-1'); container.focus({ preventScroll: true }) } catch {}
@@ -3500,11 +3470,6 @@ const MenuPage = () => {
   }, [])
 
   const handleHover = (index, isHovering) => {
-    // Hovering over the projects / services / contacts cards can trigger prefetch early
-    if (isHovering && (index === 1 || index === 2 || index === 3)) {
-      // Fire-and-forget; guarded inside prefetchSubscriptionAssets
-      prefetchSubscriptionAssets()
-    }
     // На сенсорных устройствах отключаем hover-анимации, чтобы контент не "съезжал"
     if (isTouchRef.current) return
     // Игнорируем любые hover-изменения, пока открыта/закрывается модалка
@@ -4222,7 +4187,6 @@ const MenuPage = () => {
       if (isTransitioningRef.current) return
       // allow normal page scroll when Services subscription is open
       if (isModalOpenRef.current) return
-      if (openedIndex === 2 && servicesStep === 'subscription') return
       const deltaY = e.deltaY || 0
       // Навигация только при заметной прокрутке вверх
       if (deltaY >= -12) return
@@ -4283,7 +4247,7 @@ const MenuPage = () => {
     })
   }
 
-  const windowScroll = openedIndex === 2 && servicesStep === 'subscription'
+  const windowScroll = false // removed subscription step logic
   return (
     <MenuContainer $windowScroll={windowScroll}>
       <CustomCursor />
@@ -4643,22 +4607,17 @@ const MenuPage = () => {
                         servicesBots={servicesBots}
                         inlineNextFor={inlineNextFor}
                         setInlineNextFor={setInlineNextFor}
-                        setSelectedServiceId={setSelectedServiceId}
                         setServicesStep={setServicesStep}
                         setServicesTier={setServicesTier}
-                        prefetchSubscriptionAssets={prefetchSubscriptionAssets}
                         TERM_HINTS={TERM_HINTS}
                         setPrefill={setPrefill}
                         setIsProjectModalOpen={setIsProjectModalOpen}
-                        setSelectedSubscriptionLabel={setSelectedSubscriptionLabel}
                         findServiceById={findServiceById}
                         categoryLabelByServiceId={categoryLabelByServiceId}
-                        selectedServiceId={selectedServiceId}
-                        mobilePlan={mobilePlan}
-                        setMobilePlan={setMobilePlan}
                         handleServicesNavButtonClick={handleServicesNavButtonClick}
                         handleServicesTierButtonClick={handleServicesTierButtonClick}
                         handleTermToggle={handleTermToggle}
+                        navigate={navigate}
                         servicesNavWebRef={servicesNavWebRef}
                         servicesNavBotsRef={servicesNavBotsRef}
                         servicesNavAutoRef={servicesNavAutoRef}
@@ -4691,24 +4650,6 @@ const MenuPage = () => {
                         RightCol={RightCol}
                         ConfirmSlot={ConfirmSlot}
                         ConfirmButton={ConfirmButton}
-                        SubscriptionSplit={SubscriptionSplit}
-                        SubscriptionIntro={SubscriptionIntro}
-                        IntroTitleRow={IntroTitleRow}
-                        IconBubble={IconBubble}
-                        IntroBody={IntroBody}
-                        AboutCaption={AboutCaption}
-                        FAQAccordionGreen={FAQAccordionGreen}
-                        StepNote={StepNote}
-                        MobilePlansWrap={MobilePlansWrap}
-                        PlanTabs={PlanTabs}
-                        PlanTabButton={PlanTabButton}
-                        PlanCard={PlanCard}
-                        PlanHeader={PlanHeader}
-                        FeatureList={FeatureList}
-                        FeatureItem={FeatureItem}
-                        StickyCTABar={StickyCTABar}
-                        PlanCTA={PlanCTA}
-                        ComparisonTable={ComparisonTable}
                       />
                     </Suspense>
                   )}
@@ -4722,24 +4663,6 @@ const MenuPage = () => {
                   >
                     ✕
                   </CloseButton>
-                )}
-                {openedIndex === index && servicesStep === 'subscription' && (
-                  <BackTopButton
-                    type="button"
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setServicesStep('pick');
-                      // remove any dimming on sibling cards when returning
-                      requestAnimationFrame(() => {
-                        cardRefs.current.forEach(el => el && el.classList && el.classList.remove('dimmed'))
-                      })
-                    }}
-                    aria-label="Назад"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
-                    </svg>
-                  </BackTopButton>
                 )}
                 {/* Убрано изображение в хавере "О себе" */}
               </Card>
