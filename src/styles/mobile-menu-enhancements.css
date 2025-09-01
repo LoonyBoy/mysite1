@@ -78,6 +78,13 @@
     transform: translateX(0);
   }
 
+  /* Mobile: make arrow red */
+  @media (max-width: 768px) {
+    .card-arrow {
+      color: var(--primary-red) !important;
+    }
+  }
+
   .menu-card:hover .card-arrow,
   .menu-card.force-hover .card-arrow {
     opacity: 1;

@@ -41,6 +41,14 @@ const ModalContent = styled(motion.div)`
   overflow: hidden;
   position: relative;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
+  /* Очень мягкая анимация для общих изменений */
+  transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  /* Сглаживание / предотвращение мерцания текста на мобильных при fade */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  backface-visibility: hidden;
+  transform: translateZ(0); /* форсируем слой */
+  will-change: opacity, transform;
 
   @media (max-width: 768px) {
     max-width: 100%;
@@ -117,7 +125,7 @@ const CloseButton = styled.button`
   }
 `
 
-const BackButton = styled.button`
+const BackButton = styled(motion.button)`
   /* positioned to the left of CloseButton */
   position: absolute;
   top: 16px;
@@ -697,6 +705,31 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
 
   const isMobile = typeof window !== 'undefined' && (window.innerWidth <= 768 || 'ontouchstart' in window)
 
+  // Унифицированные пропсы анимации шага (убираем сдвиги на мобильном -> меньше мерцание)
+  const stepTransitionDesktop = {
+    initial: { opacity: 0, x: -20 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: 20 },
+    transition: { duration: 0.3, ease: 'easeInOut' }
+  }
+  const stepTransitionMobile = {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: { opacity: 0 },
+    transition: { duration: 0.18 }
+  }
+  const stepAnim = isMobile ? stepTransitionMobile : stepTransitionDesktop
+  // Для полного устранения мерцания на мобильных: не делаем fade-in первого появления и не ждём exit
+  if (isMobile) {
+    stepAnim.initial = { opacity: 1 }
+    stepAnim.animate = { opacity: 1 }
+    stepAnim.exit = { opacity: 1 }
+  }
+
+  const stepsPresenceProps = isMobile
+    ? { initial: false } // без ожидания и без начального скрытия
+    : { mode: 'wait' }
+
   // Убираем все блядские переходы - мгновенное появление
   const overlayVariants = {
     hidden: { opacity: 1, backdropFilter: 'none' },
@@ -895,17 +928,73 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
           onClick={(e) => e.stopPropagation()}
         >
           <ModalHeader>
-            {step !== 'main' && !(prefill?.hideBack && step === 'contact') && (
-              <BackButton onClick={handleBack}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
-                </svg>
-              </BackButton>
-            )}
+            <AnimatePresence>
+              {step !== 'main' && !(prefill?.hideBack && step === 'contact') && (
+                <motion.div
+                  key="back-button"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <BackButton 
+                    onClick={handleBack}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 1 }}
+                    transition={{ duration: 0.1 }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.42-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                  </BackButton>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <ModalTitle>
-              {step === 'main' && 'Мне нужно...'}
-              {step === 'subcategory' && 'Доп.опции'}
-              {step === 'contact' && 'Финишная прямая'}
+              {isMobile ? (
+                // На мобильном просто меняем текст без анимации, чтобы убрать моргание
+                <span>
+                  {step === 'main' && 'Мне нужно...'}
+                  {step === 'subcategory' && 'Доп.опции'}
+                  {step === 'contact' && 'Финишная прямая'}
+                </span>
+              ) : (
+                <AnimatePresence mode="wait">
+                  {step === 'main' && (
+                    <motion.span
+                      key="main-title"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      Мне нужно...
+                    </motion.span>
+                  )}
+                  {step === 'subcategory' && (
+                    <motion.span
+                      key="subcategory-title"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      Доп.опции
+                    </motion.span>
+                  )}
+                  {step === 'contact' && (
+                    <motion.span
+                      key="contact-title"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      Финишная прямая
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              )}
             </ModalTitle>
             <CloseButton onClick={onClose}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -914,202 +1003,338 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
             </CloseButton>
           </ModalHeader>
 
-          {/* Убираем условный рендер - показываем всё сразу */}
+          {/* Добавляем анимированные переходы между шагами */}
           <ModalBody>
-            {step === 'main' && (
+            {isMobile ? (
+              // Мобильная версия без переходных анимаций
               <>
-                <OptionsList>
-                  {mainCategories.map((category) => (
-                    <OptionButton
-                      key={category.id}
-                      className={selectedCategory === category.id ? 'selected' : ''}
-                      onClick={() => handleCategorySelect(category.id)}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <OptionNumber>{category.id.toString().padStart(2, '0')}</OptionNumber>
-                      <OptionText>{category.text}</OptionText>
-                    </OptionButton>
-                  ))}
-                </OptionsList>
-                <ContinueContainer>
-                  {renderProgressIndicator()}
-                  <ButtonGroup>
-                    <ContinueButton
-                      disabled={!selectedCategory}
-                      onClick={handleContinueToSubcategory}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Продолжить
-                    </ContinueButton>
-                  </ButtonGroup>
-                </ContinueContainer>
-              </>
-            )}
-
-            {step === 'subcategory' && selectedCategory && (
-              <>
-                <OptionsList>
-                  {subcategories[selectedCategory]?.map((subcategory) => (
-                    <OptionButton
-                      key={subcategory.id}
-                      className={selectedSubcategories.includes(subcategory.id) ? 'selected' : ''}
-                      onClick={() => handleSubcategoryToggle(subcategory.id)}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <OptionNumber>{subcategory.id.toString().padStart(2, '0')}</OptionNumber>
-                      <OptionText>{subcategory.text}</OptionText>
-                    </OptionButton>
-                  ))}
-                </OptionsList>
-                <ContinueContainer>
-                  {renderProgressIndicator()}
-                  <ButtonGroup>
-                    <ContinueButton
-                      onClick={handleContinueToContact}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Продолжить
-                    </ContinueButton>
-                  </ButtonGroup>
-                </ContinueContainer>
-              </>
-            )}
-
-            {step === 'contact' && (
-              <>
-                <FormContainer spacing="contact">
-                  <FormGroup>
-                      <AnimatedInput
-                        label="Имя"
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                      />
-                    </FormGroup>
-
-                    <FormGroup>
-                      <AnimatedInput
-                        label="Телефон"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                      />
-                    </FormGroup>
-
-                    <FormGroup>
-                      <AnimatedInput
-                        label="Коротко о проекте"
-                        multiline={true}
-                        value={formData.description}
-                        onChange={(e) => handleInputChange('description', e.target.value)}
-                      />
-                    </FormGroup>
-
-                  <ContactButtonsContainer>
-                    <ContactButton
-                      disabled={!isFormValid}
-                      onClick={handleSendEmail}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      📧 Отправить на почту
-                    </ContactButton>
-                    
-                    <ContactButton
-                      disabled={!isFormValid}
-                      onClick={handleSendTelegram}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      📱 Отправить в Telegram
-                    </ContactButton>
-                    
-                    <ContactButton
-                      disabled={!isFormValid}
-                      onClick={handleSendWhatsApp}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      💬 Отправить в WhatsApp
-                    </ContactButton>
-                  </ContactButtonsContainer>
-
-                  {/* Desktop: show icon buttons similar to mobile */}
-                  <DesktopContactWrapper>
-                    <MobileContactHeader>Отправить в...</MobileContactHeader>
-                    <MobileIconGroup>
-                      <MobileIconButton
-                        data-icon="telegram"
-                        onClick={handleSendTelegram}
-                        disabled={!isFormValid}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.98 }}
-                        aria-label="Telegram"
-                      />
-
-                      <MobileIconButton
-                        data-icon="whatsapp"
-                        onClick={handleSendWhatsApp}
-                        disabled={!isFormValid}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.98 }}
-                        aria-label="WhatsApp"
-                      />
-
-                      <MobileIconButton
-                        data-icon="email"
-                        onClick={handleSendEmail}
-                        disabled={!isFormValid}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.98 }}
-                        aria-label="Email"
-                      />
-                    </MobileIconGroup>
-                  </DesktopContactWrapper>
-
-                  {/* Mobile: compact icon buttons with header */}
-                  <MobileContactWrapper>
-                    <MobileContactHeader>Отправить в...</MobileContactHeader>
-                    <MobileIconGroup>
-                      <MobileIconButton
-                        data-icon="telegram"
-                        onClick={handleSendTelegram}
-                        disabled={!isFormValid}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.98 }}
-                        aria-label="Telegram"
-                      />
-
-                      <MobileIconButton
-                        data-icon="whatsapp"
-                        onClick={handleSendWhatsApp}
-                        disabled={!isFormValid}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.98 }}
-                        aria-label="WhatsApp"
-                      />
-
-                      <MobileIconButton
-                        data-icon="email"
-                        onClick={handleSendEmail}
-                        disabled={!isFormValid}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.98 }}
-                        aria-label="Email"
-                      />
-                    </MobileIconGroup>
-                  </MobileContactWrapper>
-                  
-                  {/* Добавляем индикатор прогресса под кнопками */}
-                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
-                    {renderProgressIndicator()}
+                {step === 'main' && (
+                  <div>
+                    <OptionsList>
+                      {mainCategories.map((category) => (
+                        <div key={category.id}>
+                          <OptionButton
+                            className={selectedCategory === category.id ? 'selected' : ''}
+                            onClick={() => handleCategorySelect(category.id)}
+                          >
+                            <OptionNumber>{category.id.toString().padStart(2, '0')}</OptionNumber>
+                            <OptionText>{category.text}</OptionText>
+                          </OptionButton>
+                        </div>
+                      ))}
+                    </OptionsList>
+                    <ContinueContainer>
+                      {renderProgressIndicator()}
+                      <ButtonGroup>
+                        <ContinueButton
+                          disabled={!selectedCategory}
+                          onClick={handleContinueToSubcategory}
+                        >
+                          Продолжить
+                        </ContinueButton>
+                      </ButtonGroup>
+                    </ContinueContainer>
                   </div>
-                </FormContainer>
+                )}
+                {step === 'subcategory' && selectedCategory && (
+                  <div>
+                    <OptionsList>
+                      {subcategories[selectedCategory]?.map((subcategory) => (
+                        <div key={subcategory.id}>
+                          <OptionButton
+                            className={selectedSubcategories.includes(subcategory.id) ? 'selected' : ''}
+                            onClick={() => handleSubcategoryToggle(subcategory.id)}
+                          >
+                            <OptionNumber>{subcategory.id.toString().padStart(2, '0')}</OptionNumber>
+                            <OptionText>{subcategory.text}</OptionText>
+                          </OptionButton>
+                        </div>
+                      ))}
+                    </OptionsList>
+                    <ContinueContainer>
+                      {renderProgressIndicator()}
+                      <ButtonGroup>
+                        <ContinueButton onClick={handleContinueToContact}>
+                          Продолжить
+                        </ContinueButton>
+                      </ButtonGroup>
+                    </ContinueContainer>
+                  </div>
+                )}
+                {step === 'contact' && (
+                  <div>
+                    <FormContainer spacing="contact">
+                      <FormGroup>
+                        <AnimatedInput
+                          label="Имя"
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => handleInputChange('name', e.target.value)}
+                        />
+                      </FormGroup>
+                      <FormGroup>
+                        <AnimatedInput
+                          label="Телефон"
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange('phone', e.target.value)}
+                        />
+                      </FormGroup>
+                      <FormGroup>
+                        <AnimatedInput
+                          label="Коротко о проекте"
+                          multiline={true}
+                          value={formData.description}
+                          onChange={(e) => handleInputChange('description', e.target.value)}
+                        />
+                      </FormGroup>
+                    </FormContainer>
+                    <ContactButtonsContainer>
+                      <ContactButton
+                        disabled={!isFormValid}
+                        onClick={handleSendTelegram}
+                      >
+                        📱 Отправить в Telegram
+                      </ContactButton>
+                      <ContactButton
+                        disabled={!isFormValid}
+                        onClick={handleSendWhatsApp}
+                      >
+                        💬 Отправить в WhatsApp
+                      </ContactButton>
+                    </ContactButtonsContainer>
+                    <DesktopContactWrapper>
+                      <MobileContactHeader>Отправить в...</MobileContactHeader>
+                      <MobileIconGroup>
+                        <MobileIconButton data-icon="telegram" onClick={handleSendTelegram} disabled={!isFormValid} aria-label="Telegram" />
+                        <MobileIconButton data-icon="whatsapp" onClick={handleSendWhatsApp} disabled={!isFormValid} aria-label="WhatsApp" />
+                      </MobileIconGroup>
+                    </DesktopContactWrapper>
+                    <MobileContactWrapper>
+                      <MobileContactHeader>Отправить в...</MobileContactHeader>
+                      <MobileIconGroup>
+                        <MobileIconButton data-icon="telegram" onClick={handleSendTelegram} disabled={!isFormValid} aria-label="Telegram" />
+                        <MobileIconButton data-icon="whatsapp" onClick={handleSendWhatsApp} disabled={!isFormValid} aria-label="WhatsApp" />
+                      </MobileIconGroup>
+                    </MobileContactWrapper>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+                      {renderProgressIndicator()}
+                    </div>
+                  </div>
+                )}
               </>
+            ) : (
+              <AnimatePresence {...stepsPresenceProps}>
+                {/* Desktop / non-mobile animated version (оставляем существующую анимацию) */}
+                {step === 'main' && (
+                  <motion.div
+                    key="main"
+                    initial={stepAnim.initial}
+                    animate={stepAnim.animate}
+                    exit={stepAnim.exit}
+                    transition={stepAnim.transition}
+                  >
+                    <OptionsList>
+                      {mainCategories.map((category, index) => (
+                        <motion.div
+                          key={category.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1, duration: 0.4 }}
+                        >
+                          <OptionButton
+                            className={selectedCategory === category.id ? 'selected' : ''}
+                            onClick={() => handleCategorySelect(category.id)}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <OptionNumber>{category.id.toString().padStart(2, '0')}</OptionNumber>
+                            <OptionText>{category.text}</OptionText>
+                          </OptionButton>
+                        </motion.div>
+                      ))}
+                    </OptionsList>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: mainCategories.length * 0.1 + 0.2, duration: 0.4 }}
+                    >
+                      <ContinueContainer>
+                        {renderProgressIndicator()}
+                        <ButtonGroup>
+                          <ContinueButton
+                            disabled={!selectedCategory}
+                            onClick={handleContinueToSubcategory}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Продолжить
+                          </ContinueButton>
+                        </ButtonGroup>
+                      </ContinueContainer>
+                    </motion.div>
+                  </motion.div>
+                )}
+                {step === 'subcategory' && selectedCategory && (
+                  <motion.div
+                    key="subcategory"
+                    initial={stepAnim.initial}
+                    animate={stepAnim.animate}
+                    exit={stepAnim.exit}
+                    transition={stepAnim.transition}
+                  >
+                    <OptionsList>
+                      {subcategories[selectedCategory]?.map((subcategory, index) => (
+                        <motion.div
+                          key={subcategory.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.08, duration: 0.4 }}
+                        >
+                          <OptionButton
+                            className={selectedSubcategories.includes(subcategory.id) ? 'selected' : ''}
+                            onClick={() => handleSubcategoryToggle(subcategory.id)}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <OptionNumber>{subcategory.id.toString().padStart(2, '0')}</OptionNumber>
+                            <OptionText>{subcategory.text}</OptionText>
+                          </OptionButton>
+                        </motion.div>
+                      ))}
+                    </OptionsList>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: (subcategories[selectedCategory]?.length || 0) * 0.08 + 0.2, duration: 0.4 }}
+                    >
+                      <ContinueContainer>
+                        {renderProgressIndicator()}
+                        <ButtonGroup>
+                          <ContinueButton
+                            onClick={handleContinueToContact}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Продолжить
+                          </ContinueButton>
+                        </ButtonGroup>
+                      </ContinueContainer>
+                    </motion.div>
+                  </motion.div>
+                )}
+                {step === 'contact' && (
+                  <motion.div
+                    key="contact"
+                    initial={stepAnim.initial}
+                    animate={stepAnim.animate}
+                    exit={stepAnim.exit}
+                    transition={stepAnim.transition}
+                  >
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1, duration: 0.4 }}
+                    >
+                      <FormContainer spacing="contact">
+                        <FormGroup>
+                          <AnimatedInput
+                            label="Имя"
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => handleInputChange('name', e.target.value)}
+                          />
+                        </FormGroup>
+                        <FormGroup>
+                          <AnimatedInput
+                            label="Телефон"
+                            type="tel"
+                            value={formData.phone}
+                            onChange={(e) => handleInputChange('phone', e.target.value)}
+                          />
+                        </FormGroup>
+                        <FormGroup>
+                          <AnimatedInput
+                            label="Коротко о проекте"
+                            multiline={true}
+                            value={formData.description}
+                            onChange={(e) => handleInputChange('description', e.target.value)}
+                          />
+                        </FormGroup>
+                      </FormContainer>
+                    </motion.div>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3, duration: 0.4 }}
+                    >
+                      <ContactButtonsContainer>
+                        <ContactButton
+                          disabled={!isFormValid}
+                          onClick={handleSendTelegram}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          📱 Отправить в Telegram
+                        </ContactButton>
+                        <ContactButton
+                          disabled={!isFormValid}
+                          onClick={handleSendWhatsApp}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          💬 Отправить в WhatsApp
+                        </ContactButton>
+                      </ContactButtonsContainer>
+                      <DesktopContactWrapper>
+                        <MobileContactHeader>Отправить в...</MobileContactHeader>
+                        <MobileIconGroup>
+                          <MobileIconButton
+                            data-icon="telegram"
+                            onClick={handleSendTelegram}
+                            disabled={!isFormValid}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.98 }}
+                            aria-label="Telegram"
+                          />
+                          <MobileIconButton
+                            data-icon="whatsapp"
+                            onClick={handleSendWhatsApp}
+                            disabled={!isFormValid}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.98 }}
+                            aria-label="WhatsApp"
+                          />
+                        </MobileIconGroup>
+                      </DesktopContactWrapper>
+                      <MobileContactWrapper>
+                        <MobileContactHeader>Отправить в...</MobileContactHeader>
+                        <MobileIconGroup>
+                          <MobileIconButton
+                            data-icon="telegram"
+                            onClick={handleSendTelegram}
+                            disabled={!isFormValid}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.98 }}
+                            aria-label="Telegram"
+                          />
+                          <MobileIconButton
+                            data-icon="whatsapp"
+                            onClick={handleSendWhatsApp}
+                            disabled={!isFormValid}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.98 }}
+                            aria-label="WhatsApp"
+                          />
+                        </MobileIconGroup>
+                      </MobileContactWrapper>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+                        {renderProgressIndicator()}
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             )}
           </ModalBody>
         </ModalContent>
