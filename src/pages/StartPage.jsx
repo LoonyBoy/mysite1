@@ -6,7 +6,7 @@ import CustomCursor from '../components/CustomCursor'
 import HyperText from '../components/HyperText'
 import { useParticles } from '../components/GlobalParticleManager'
 import useParticleControl from '../hooks/useParticleControl'
-import ProjectModal from '../components/ProjectModal'
+// Removed ProjectModal import after deleting "Создать проект" button
 
 const StartPageContainer = styled.div`
   width: 100vw;
@@ -335,113 +335,6 @@ const EnterButton = styled.button`
   }
 `
 
-const CreateProjectButton = styled.button`
-  padding: 1rem 3rem;
-  border: 2px solid var(--primary-red);
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
-  color: var(--primary-red);
-  font-size: 1.2rem;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  transition: all 0.3s ease;
-  opacity: 1; /* Сразу видимая */
-  transform: translateY(0); /* Без смещения */
-  min-height: 44px;
-  position: relative;
-  z-index: 10;
-  overflow: hidden;
-  text-shadow: 
-    0 0 10px rgba(209, 72, 54, 0.5),
-    0 0 20px rgba(209, 72, 54, 0.3);
-  box-shadow: 
-    0 0 20px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  
-  /* Киберпанк пиксельное мерцание */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(0, 255, 255, 0.1),
-      rgba(255, 0, 255, 0.1),
-      transparent
-    );
-    animation: cyberpunk-scan 3s infinite;
-    pointer-events: none;
-  }
-  
-  /* Пиксельные глитчи */
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: 
-      repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 1px,
-        rgba(209, 72, 54, 0.03) 1px,
-        rgba(209, 72, 54, 0.03) 2px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        transparent,
-        transparent 1px,
-        rgba(0, 255, 255, 0.02) 1px,
-        rgba(0, 255, 255, 0.02) 2px
-      );
-    animation: pixel-flicker 0.15s infinite alternate;
-    pointer-events: none;
-    opacity: 0.7;
-  }
-  
-  @media (max-width: 768px) {
-    padding: 1.2rem 2rem;
-    font-size: 1rem;
-    min-height: 48px;
-    min-width: 200px;
-  }
-  
-  &:hover {
-    background: var(--primary-red);
-    color: var(--black);
-    transform: translateY(-2px);
-    box-shadow: 
-      0 10px 30px rgba(209, 72, 54, 0.4),
-      0 0 40px rgba(209, 72, 54, 0.3),
-      0 0 60px rgba(0, 255, 255, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    text-shadow: 
-      0 0 5px rgba(0, 0, 0, 0.8),
-      0 0 10px rgba(0, 255, 255, 0.3);
-    animation: cyberpunk-hover 0.5s ease-out;
-    
-    &::before {
-      animation: cyberpunk-scan 1s infinite;
-    }
-    
-    &::after {
-      animation: pixel-flicker 0.1s infinite alternate;
-      opacity: 1;
-    }
-  }
-  
-  &:active {
-    transform: scale(0.98) translateY(-2px);
-    animation: cyberpunk-glitch 0.2s ease-out;
-  }
-`
 
 const ButtonsContainer = styled.div`
   display: flex;
@@ -472,12 +365,11 @@ const StartPage = () => {
   const titleRef = useRef(null)
   const subtitleRef = useRef(null)
   const buttonRef = useRef(null)
-  const createProjectButtonRef = useRef(null)
+  // Removed createProjectButtonRef
   const backgroundRef = useRef(null)
   const { currentPage, camera } = useParticles()
   const glitchIntervalRef = useRef(null)
-  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
-  const [isProjectModalAnimationReady, setIsProjectModalAnimationReady] = useState(false)
+  // Removed project modal state after deleting button
   
   // Подключаем интерактивное управление частицами только на стартовой странице
   const { resetRotation } = useParticleControl(
@@ -529,7 +421,7 @@ const StartPage = () => {
     }, 0.7)
 
     // Анимация подзаголовка и кнопок - ОТКЛЮЧЕНА (мгновенное появление)
-    .to([subtitleRef.current, buttonRef.current, createProjectButtonRef.current], {
+  .to([subtitleRef.current, buttonRef.current], {
       opacity: 1,
       y: 0,
       duration: 0, // Мгновенное появление
@@ -631,7 +523,7 @@ const StartPage = () => {
     })
 
     // Анимируем исчезновение элементов интерфейса
-    tl.to([titleRef.current, subtitleRef.current, buttonRef.current, createProjectButtonRef.current], {
+  tl.to([titleRef.current, subtitleRef.current, buttonRef.current], {
       opacity: 0,
       y: -50,
       duration: 0.8,
@@ -646,10 +538,7 @@ const StartPage = () => {
     }, "-=0.5")
   }
 
-  const handleCreateProject = () => {
-    setIsProjectModalOpen(true)
-    setIsProjectModalAnimationReady(true)
-  }
+  // Removed handleCreateProject
 
   // Разбиваем текст на символы для анимации
   const splitText = (text) => {
@@ -684,26 +573,13 @@ const StartPage = () => {
           onClick={handleEnter}
           data-hover
         >
-          ПОРТФОЛИО
+          ОТКРЫТЬ ПОРТФОЛИО
         </EnterButton>
         
-        <CreateProjectButton 
-          ref={createProjectButtonRef} 
-          onClick={handleCreateProject}
-          data-hover
-        >
-          Создать проект
-        </CreateProjectButton>
+  {/* Removed "Создать проект" button */}
       </ButtonsContainer>
       
-      <ProjectModal 
-        isOpen={isProjectModalOpen} 
-        startAnimation={isProjectModalAnimationReady}
-        onClose={() => {
-          setIsProjectModalAnimationReady(false)
-          setIsProjectModalOpen(false)
-        }}
-      />
+  {/* Removed ProjectModal instance */}
     </StartPageContainer>
   )
 }

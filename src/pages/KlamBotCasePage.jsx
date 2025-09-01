@@ -110,11 +110,14 @@ const KlamBotCasePage = () => {
 	const backButtonRef = useRef(null)
 	const { setTransitionContext } = useParticles()
 	const [isBackButtonVisible, setIsBackButtonVisible] = React.useState(false)
+	const [isBackButtonEnabled, setIsBackButtonEnabled] = React.useState(true)
 	const [activeIndex, setActiveIndex] = React.useState(0)
 	const [animatedOptions, setAnimatedOptions] = React.useState([])
 	const [lightboxIndex, setLightboxIndex] = React.useState(null)
 	const scrollYRef = useRef(0)
 	const cardRefs = useRef([])
+	// Флаг для отслеживания интерактивных изменений карусели
+	const hasUserInteractedRef = React.useRef(false)
 	const [accOpen, setAccOpen] = React.useState({ flow:false, sheets:false, alerts:false, tech:false })
 	const toggleAcc = (k)=>setAccOpen(s=>({...s,[k]:!s[k]}))
 	const [isProjectModalOpen, setIsProjectModalOpen] = React.useState(false)
@@ -127,6 +130,13 @@ const KlamBotCasePage = () => {
 			// Используем тот же контекст, что и LightLab/Voytenko для белого фона + чёрных частиц
 			setTransitionContext('lightlab-case')
 		const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+		const mobile = window.innerWidth <= 768
+		if (mobile) {
+			setIsBackButtonEnabled(false)
+			setTimeout(()=> setIsBackButtonEnabled(true), 3000)
+		} else {
+			setIsBackButtonEnabled(true)
+		}
 		const timer=setTimeout(()=>{ setIsBackButtonVisible(true); if(!prefersReduced && backButtonRef.current){ gsap.fromTo(backButtonRef.current,{opacity:0,y:-10},{opacity:1,y:0,duration:0.8,ease:'power2.out'}) } },800)
 		const items=[titleRef.current,actionsRef.current].filter(Boolean); if(items.length) gsap.set(items,{opacity:1,y:0,scale:1,clearProps:'transform'})
 		return ()=>{ clearTimeout(timer); ScrollTrigger.getAll().forEach(t=>t.kill()) }
@@ -136,14 +146,46 @@ const KlamBotCasePage = () => {
 
 	useEffect(()=>{ if(lightboxIndex===null) return; const onKey=e=>{ if(e.key==='Escape') setLightboxIndex(null) }; const prev={ overflow:document.body.style.overflow, position:document.body.style.position, top:document.body.style.top, width:document.body.style.width, scrollBehavior:document.documentElement.style.scrollBehavior }; scrollYRef.current=window.scrollY||0; document.body.style.position='fixed'; document.body.style.top=`-${scrollYRef.current}px`; document.body.style.width='100%'; document.body.style.overflow='hidden'; window.addEventListener('keydown',onKey); return ()=>{ const lockedTop=document.body.style.top; const y=lockedTop?Math.abs(parseInt(lockedTop,10)):scrollYRef.current; document.body.style.overflow=prev.overflow; document.body.style.position=prev.position; document.body.style.top=prev.top; document.body.style.width=prev.width; window.removeEventListener('keydown',onKey); document.documentElement.style.scrollBehavior='auto'; window.scrollTo(0,y); document.documentElement.style.scrollBehavior=prev.scrollBehavior } },[lightboxIndex])
 
-	useEffect(()=>{ if(typeof window==='undefined') return; const isMobile=window.innerWidth<=768; if(!isMobile) return; const el=cardRefs.current[activeIndex]; if(!el) return; el.scrollIntoView({behavior:'smooth', block:'nearest'}) },[activeIndex])
+	useEffect(()=>{ 
+		if(typeof window==='undefined') return; 
+		const isMobile=window.innerWidth<=768; 
+		if(!isMobile) return; 
+		// Скроллим к карусели только если пользователь взаимодействовал с ней
+		if(!hasUserInteractedRef.current) return;
+		const el=cardRefs.current[activeIndex]; 
+		if(!el) return; 
+		el.scrollIntoView({behavior:'smooth', block:'nearest'}) 
+	},[activeIndex])
 
-		const handleBack=()=>{ if(lightboxIndex!==null) return; setTransitionContext('lightlab-case->projects'); navigate('/menu') }
-	const handleKeyDown=e=>{ if(!carouselOptions.length) return; const last=carouselOptions.length-1; if(['ArrowRight','ArrowDown'].includes(e.key)){ e.preventDefault(); setActiveIndex(i=> i>=last?0:i+1) } else if(['ArrowLeft','ArrowUp'].includes(e.key)){ e.preventDefault(); setActiveIndex(i=> i<=0?last:i-1) } else if(e.key==='Home'){ e.preventDefault(); setActiveIndex(0) } else if(e.key==='End'){ e.preventDefault(); setActiveIndex(last) } else if(e.key==='Enter' || e.key===' '){ e.preventDefault(); setLightboxIndex(activeIndex) } }
+		const handleBack=()=>{ if(lightboxIndex!==null) return; if(!isBackButtonEnabled) return; setTransitionContext('lightlab-case->projects'); navigate('/menu') }
+	const handleKeyDown=e=>{ 
+		if(!carouselOptions.length) return; 
+		const last=carouselOptions.length-1; 
+		if(['ArrowRight','ArrowDown'].includes(e.key)){ 
+			e.preventDefault(); 
+			hasUserInteractedRef.current = true; // Пользователь взаимодействовал с каруселью
+			setActiveIndex(i=> i>=last?0:i+1) 
+		} else if(['ArrowLeft','ArrowUp'].includes(e.key)){ 
+			e.preventDefault(); 
+			hasUserInteractedRef.current = true; // Пользователь взаимодействовал с каруселью
+			setActiveIndex(i=> i<=0?last:i-1) 
+		} else if(e.key==='Home'){ 
+			e.preventDefault(); 
+			hasUserInteractedRef.current = true; // Пользователь взаимодействовал с каруселью
+			setActiveIndex(0) 
+		} else if(e.key==='End'){ 
+			e.preventDefault(); 
+			hasUserInteractedRef.current = true; // Пользователь взаимодействовал с каруселью
+			setActiveIndex(last) 
+		} else if(e.key==='Enter' || e.key===' '){ 
+			e.preventDefault(); 
+			setLightboxIndex(activeIndex) 
+		} 
+	}
 
 	return <CaseContainer>
 		<CustomCursor color="#6622CC" />
-		{isBackButtonVisible && <BackButton ref={backButtonRef} onClick={handleBack} visible={isBackButtonVisible} $disabled={lightboxIndex!==null} aria-disabled={lightboxIndex!==null}>← Назад в меню</BackButton>}
+		{isBackButtonVisible && <BackButton ref={backButtonRef} onClick={handleBack} visible={isBackButtonVisible} $disabled={lightboxIndex!==null || !isBackButtonEnabled} aria-disabled={lightboxIndex!==null || !isBackButtonEnabled}>← Назад в меню</BackButton>}
 		<HeroSection ref={heroRef}>
 			<CaseTitle ref={titleRef}>Telegram‑бот KLAMbot</CaseTitle>
 			<HeaderActions ref={actionsRef}>
@@ -252,7 +294,7 @@ const KlamBotCasePage = () => {
 			<CarouselSection>
 				<OptionsContainer role="listbox" aria-label="Слайды кейса" tabIndex={0} onKeyDown={handleKeyDown}>
 					{carouselOptions.map((opt,i)=>(
-						<OptionCard key={i} $bg={opt.image} $active={activeIndex===i} $animated={animatedOptions.includes(i)} role="option" aria-selected={activeIndex===i} onMouseEnter={()=>{ if(window.innerWidth>768) setActiveIndex(i) }} onClick={()=>{ activeIndex===i?setLightboxIndex(i):setActiveIndex(i) }} ref={el=>{ cardRefs.current[i]=el }}>
+						<OptionCard key={i} $bg={opt.image} $active={activeIndex===i} $animated={animatedOptions.includes(i)} role="option" aria-selected={activeIndex===i} onMouseEnter={()=>{ if(window.innerWidth>768) { hasUserInteractedRef.current = true; setActiveIndex(i) } }} onClick={()=>{ if(activeIndex===i) { setLightboxIndex(i) } else { hasUserInteractedRef.current = true; setActiveIndex(i) } }} ref={el=>{ cardRefs.current[i]=el }}>
 							<CardShadow $active={activeIndex===i} />
 							<CardLabel>
 								<IconCircle>{opt.icon}</IconCircle>
@@ -266,7 +308,7 @@ const KlamBotCasePage = () => {
 				</OptionsContainer>
 				{carouselOptions.length>1 && (
 				<Indicators role="tablist" aria-label="Переход по слайдам">
-					{carouselOptions.map((_,i)=>(<Dot key={i} $active={activeIndex===i} aria-label={`Слайд ${i+1}`} aria-selected={activeIndex===i} role="tab" onClick={()=>setActiveIndex(i)} />))}
+					{carouselOptions.map((_,i)=>(<Dot key={i} $active={activeIndex===i} aria-label={`Слайд ${i+1}`} aria-selected={activeIndex===i} role="tab" onClick={()=>{ hasUserInteractedRef.current = true; setActiveIndex(i) }} />))}
 				</Indicators>
 				)}
 				{lightboxIndex!==null && <LightboxOverlay onClick={()=>setLightboxIndex(null)} role="dialog" aria-modal="true">

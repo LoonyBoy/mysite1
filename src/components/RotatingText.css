@@ -3,17 +3,20 @@
   display: inline-block;
   color: var(--primary-red);
   min-height: 1em;
-  min-width: 300px;
+  /* Убрана фиксированная min-width: 300px; теперь ширина задаётся измерением в JS */
   overflow: hidden; /* Скрываем выходящие элементы */
   line-height: 1.2;
-  max-width: 800px;
+  max-width: 800px; /* вернули ограничение max-width */
   word-break: keep-all;
   overflow-wrap: break-word;
   hyphens: none;
   text-wrap: balance;
-  /* Предотвращаем мигание */
+  /* Удалён contain: layout (фиксировал ширину по первому короткому слову и обрезал длинные)
+    Заменяем на более мягкий paint, чтобы размеры могли пересчитываться */
   isolation: isolate;
-  contain: layout style paint;
+  contain: paint;
+  /* JS выставляет точную width; небольшой внутренний отступ справа чтобы избежать обрезки последней буквы */
+  padding-right: 4px; /* вернули к 4px */
 }
 
 .text-rotate-sr-only {

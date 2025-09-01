@@ -9,8 +9,8 @@ const SwipeHint = styled.div`
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 2.2rem;
+  color: var(--primary-red); /* изменено с rgba(255, 255, 255, 0.4) на красный */
+  font-size: 3.5rem; /* увеличено с 2.2rem */
   text-align: center;
   z-index: 99;
   display: none;

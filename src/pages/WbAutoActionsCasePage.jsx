@@ -42,6 +42,7 @@ const WbAutoActionsCasePage = () => {
 	const titleRef=useRef(null); const heroRef=useRef(null); const actionsRef=useRef(null); const backButtonRef=useRef(null)
 	const { setTransitionContext } = useParticles()
 	const [isBackButtonVisible,setIsBackButtonVisible]=React.useState(false)
+	const [isBackButtonEnabled,setIsBackButtonEnabled]=React.useState(true)
 	// Карусель удалена – связанные состояния убраны
 	// (оставлены только аккордеоны и результаты)
 	const [accOpen,setAccOpen]=React.useState({ actions:false, analytics:false, exports:false, tech:false })
@@ -52,6 +53,8 @@ const WbAutoActionsCasePage = () => {
 			// Общий стиль кейса: белый фон + чёрные частицы
 			setTransitionContext('lightlab-case'); 
 			const prefersReduced=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; 
+			const mobile = window.innerWidth <= 768;
+			if (mobile) { setIsBackButtonEnabled(false); setTimeout(()=> setIsBackButtonEnabled(true), 3000) } else { setIsBackButtonEnabled(true) }
 			const t=setTimeout(()=>{ 
 				setIsBackButtonVisible(true); 
 				if(!prefersReduced && backButtonRef.current){ gsap.fromTo(backButtonRef.current,{opacity:0,y:-10},{opacity:1,y:0,duration:.8,ease:'power2.out'}) } 
@@ -61,12 +64,12 @@ const WbAutoActionsCasePage = () => {
 		},[setTransitionContext])
 	// Хуки анимации/лайтбокса карусели удалены
 
-		const handleBack=()=>{ setTransitionContext('lightlab-case->projects'); navigate('/menu') }
+		const handleBack=()=>{ if(!isBackButtonEnabled) return; setTransitionContext('lightlab-case->projects'); navigate('/menu') }
 	// Обработчик клавиатуры для карусели удалён
 
 	return <CaseContainer>
 		<CustomCursor color="#d18f00" />
-		{isBackButtonVisible && <BackButton ref={backButtonRef} onClick={handleBack} visible={isBackButtonVisible} $disabled={false} aria-disabled={false}>← Назад в меню</BackButton>}
+		{isBackButtonVisible && <BackButton ref={backButtonRef} onClick={handleBack} visible={isBackButtonVisible} $disabled={!isBackButtonEnabled} aria-disabled={!isBackButtonEnabled}>← Назад в меню</BackButton>}
 		<HeroSection ref={heroRef}>
 			<CaseTitle ref={titleRef}>WB Авто‑акции</CaseTitle>
 			<HeaderActions ref={actionsRef}>

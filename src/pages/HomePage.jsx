@@ -24,7 +24,27 @@ const HomeContainer = styled.div`
   
   @media (max-width: 768px) {
     overflow-y: auto;
+    overflow-x: hidden; /* запрещаем горизонтальный скролл */
     -webkit-overflow-scrolling: touch;
+    /* Полная блокировка горизонтального движения */
+    touch-action: pan-y; /* только вертикальный скролл, убираем pinch-zoom */
+    overscroll-behavior-x: none; /* отключаем bounce эффект по горизонтали */
+    overscroll-behavior: contain; /* полное ограничение прокрутки */
+    /* Дополнительные ограничения для WebKit */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    /* Фиксируем ширину контейнера */
+    max-width: 100vw;
+    box-sizing: border-box;
+    /* Предотвращаем любые transform эффекты */
+    transform: none !important;
+    transform-origin: 0 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    /* Жесткое позиционирование */
+    position: relative;
+    left: 0 !important;
+    right: 0 !important;
   }
 `
 
@@ -48,6 +68,15 @@ const HeroSection = styled.section`
     align-items: flex-start;
     text-align: left;
     height: 100svh;
+    /* Предотвращаем выход контента за границы экрана */
+    max-width: 100vw;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    /* Дополнительная фиксация позиции */
+    transform: none !important;
+    left: 0 !important;
+    right: 0 !important;
+    position: relative;
     
     @supports (padding: max(0px)) {
       padding-top: max(32px, env(safe-area-inset-top) + 32px);
@@ -77,6 +106,8 @@ const MainHeading = styled.h1`
     gap: 8px; /* unified 8px rule */
     min-height: 1em;
     overflow: visible;
+    /* Убеждаемся что контейнер не ограничивает ширину RotatingText */
+    flex-shrink: 0;
     
     &:last-child {
       min-height: 2em;
@@ -152,74 +183,124 @@ const ButtonsContainer = styled.div`
   flex-direction: column;
   gap: 0;
   flex-shrink: 0;
+  align-self: flex-start; /* anchor to top of description container */
+  margin-top: 6px; /* поднял кнопки выше (было 6px) */
+
+  @media (max-width: 768px) {
+    margin-top: 0; /* avoid crowding on stacked mobile layout */
+  }
 `
 
-const CreateProjectButton = styled.button`
+// Unified action button style (matches StartPage EnterButton)
+const ActionButtonBase = styled.button`
+  /* Reduced overall sizing (was 1rem 3rem) */
+  padding: 0.8rem 2.4rem;
+  border: 2px solid var(--primary-red);
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  color: var(--primary-red);
+  /* Slightly smaller font (was 1.2rem) */
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  /* Lower min-height (was 44px) */
+  min-height: 40px;
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+  text-shadow:
+    0 0 10px rgba(209, 72, 54, 0.5),
+    0 0 20px rgba(209, 72, 54, 0.3);
+  box-shadow:
+    0 0 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  cursor: pointer;
   display: inline-grid;
   place-items: center;
-  padding: 16px 32px;
-  min-width: 200px;
-  border: 2px solid var(--primary-red);
-  border-bottom: 1px solid var(--primary-red);
-  color: var(--primary-red);
-  background: transparent;
   text-decoration: none;
-  font-weight: 600;
-  font-size: 1.1rem;
-  font-family: 'Unbounded', sans-serif;
-  border-radius: 0;
-  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
-  cursor: pointer;
   white-space: nowrap;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(0, 255, 255, 0.1),
+      rgba(255, 0, 255, 0.1),
+      transparent
+    );
+    animation: cyberpunk-scan 3s infinite;
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 1px,
+        rgba(209, 72, 54, 0.03) 1px,
+        rgba(209, 72, 54, 0.03) 2px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 1px,
+        rgba(0, 255, 255, 0.02) 1px,
+        rgba(0, 255, 255, 0.02) 2px
+      );
+    animation: pixel-flicker 0.15s infinite alternate;
+    pointer-events: none;
+    opacity: 0.7;
+  }
 
   &:hover {
     background: var(--primary-red);
     color: var(--black);
     transform: translateY(-2px);
-    box-shadow: 0 10px 26px rgba(0,0,0,0.35);
-    z-index: 1;
-    position: relative;
+    box-shadow:
+      0 10px 30px rgba(209, 72, 54, 0.4),
+      0 0 40px rgba(209, 72, 54, 0.3),
+      0 0 60px rgba(0, 255, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    text-shadow:
+      0 0 5px rgba(0, 0, 0, 0.8),
+      0 0 10px rgba(0, 255, 255, 0.3);
+    animation: cyberpunk-hover 0.5s ease-out;
+
+    &::before { animation: cyberpunk-scan 1s infinite; }
+    &::after { animation: pixel-flicker 0.1s infinite alternate; opacity: 1; }
+  }
+
+  &:active {
+    transform: scale(0.98) translateY(-2px);
+    animation: cyberpunk-glitch 0.2s ease-out;
   }
 
   @media (max-width: 768px) {
-    padding: 12px 20px;
-    min-width: 160px;
-    font-size: 1rem;
+  /* Mobile also slightly reduced (was 1.2rem 2rem) */
+  padding: 0.9rem 1.6rem;
+  font-size: 0.95rem; /* was 1rem */
+  min-height: 44px; /* was 48px */
+  min-width: 180px; /* was 200px */
   }
 `
 
-const LaunchEnginesButton = styled.a`
-  display: inline-grid;
-  place-items: center;
-  padding: 16px 32px;
-  min-width: 200px;
-  border: 2px solid var(--primary-red);
-  border-top: 1px solid var(--primary-red);
-  color: var(--primary-red);
-  background: transparent;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 1.1rem;
-  border-radius: 0;
-  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:hover {
-    background: var(--primary-red);
-    color: var(--black);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 26px rgba(0,0,0,0.35);
-    z-index: 1;
-    position: relative;
-  }
-
-  @media (max-width: 768px) {
-    padding: 12px 20px;
-    min-width: 160px;
-    font-size: 1rem;
-  }
-`
+const CreateProjectButton = styled(ActionButtonBase)``
+const LaunchEnginesButton = styled(ActionButtonBase).attrs({ as: 'a' })``
 
 const NavigationEdge = styled.div`
   position: fixed;
@@ -297,11 +378,122 @@ const HomePage = () => {
     mode: "wait" // Ждем завершения анимации выхода
   }
   
-  // Подключаем интерактивное управление частицами
+  // Подключаем интерактивное управление частицами (отключаем touch на мобильных)
   const { resetRotation } = useParticleControl(camera, true, {
     wheel: 0.002,
-    touch: 0.005
+    touch: isMobile ? 0 : 0.005 // отключаем touch управление на мобильных
   })
+
+  // Применяем глобальные стили для предотвращения горизонтального скролла на мобильных
+  useEffect(() => {
+    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
+    if (isMobile) {
+      const body = document.body
+      const html = document.documentElement
+      
+      // Сохраняем оригинальные стили
+      const originalBodyStyles = {
+        overflowX: body.style.overflowX,
+        touchAction: body.style.touchAction,
+        overscrollBehaviorX: body.style.overscrollBehaviorX,
+        maxWidth: body.style.maxWidth
+      }
+      
+      const originalHtmlStyles = {
+        overflowX: html.style.overflowX,
+        touchAction: html.style.touchAction,
+        overscrollBehaviorX: html.style.overscrollBehaviorX
+      }
+      
+      // Применяем ограничения
+      body.style.overflowX = 'hidden'
+      body.style.touchAction = 'pan-y'
+      body.style.overscrollBehaviorX = 'none'
+      body.style.maxWidth = '100vw'
+      
+      html.style.overflowX = 'hidden'
+      html.style.touchAction = 'pan-y'
+      html.style.overscrollBehaviorX = 'none'
+      
+      // Cleanup функция
+      return () => {
+        body.style.overflowX = originalBodyStyles.overflowX
+        body.style.touchAction = originalBodyStyles.touchAction
+        body.style.overscrollBehaviorX = originalBodyStyles.overscrollBehaviorX
+        body.style.maxWidth = originalBodyStyles.maxWidth
+        
+        html.style.overflowX = originalHtmlStyles.overflowX
+        html.style.touchAction = originalHtmlStyles.touchAction
+        html.style.overscrollBehaviorX = originalHtmlStyles.overscrollBehaviorX
+      }
+    }
+  }, [])
+
+  // Жесткая блокировка горизонтальных touch движений на мобильных
+  useEffect(() => {
+    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
+    if (!isMobile) return
+
+    let startX = 0
+    let startY = 0
+    let isScrolling = false
+
+    const handleTouchStart = (e) => {
+      startX = e.touches[0].clientX
+      startY = e.touches[0].clientY
+      isScrolling = false
+    }
+
+    const handleTouchMove = (e) => {
+      if (!startX || !startY) return
+
+      const currentX = e.touches[0].clientX
+      const currentY = e.touches[0].clientY
+      
+      const diffX = Math.abs(currentX - startX)
+      const diffY = Math.abs(currentY - startY)
+
+      // Ждем достаточного движения перед определением направления
+      const totalMovement = Math.sqrt(diffX * diffX + diffY * diffY)
+      if (totalMovement < 15) return // минимальный порог движения
+
+      // Определяем направление движения только один раз
+      if (!isScrolling) {
+        // Блокируем только если горизонтальное движение значительно больше вертикального
+        if (diffX > diffY * 1.5 && diffX > 20) {
+          // Явное горизонтальное движение - блокируем
+          isScrolling = 'horizontal'
+        } else {
+          // Вертикальное или диагональное движение - разрешаем
+          isScrolling = 'vertical'
+        }
+      }
+
+      // Блокируем только четко горизонтальные движения
+      if (isScrolling === 'horizontal') {
+        e.preventDefault()
+        e.stopPropagation()
+        return false
+      }
+    }
+
+    const handleTouchEnd = () => {
+      startX = 0
+      startY = 0
+      isScrolling = false
+    }
+
+    // Используем capture: true для перехвата событий раньше других обработчиков
+    document.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true })
+    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
+    document.addEventListener('touchend', handleTouchEnd, { passive: true, capture: true })
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart, { capture: true })
+      document.removeEventListener('touchmove', handleTouchMove, { capture: true })
+      document.removeEventListener('touchend', handleTouchEnd, { capture: true })
+    }
+  }, [])
 
   // Блокируем скролл body когда модальное окно открыто
   // Блокируем скролл body когда модальное окно открыто — более надёжный метод для мобильных
@@ -312,6 +504,8 @@ const HomePage = () => {
     const lockBody = () => {
       const scrollY = window.scrollY || window.pageYOffset || 0
       const body = document.body
+      const html = document.documentElement
+      
       // Сохраняем инлайн-стили, чтобы восстановить их позже
       bodyLockRef.current.prevStyles = {
         position: body.style.position || '',
@@ -331,10 +525,20 @@ const HomePage = () => {
       body.style.width = '100%'
       body.style.overflow = 'hidden'
       body.style.overscrollBehavior = 'none'
+      
+      // Дополнительные ограничения для мобильных устройств
+      if (window.innerWidth <= 768) {
+        body.style.touchAction = 'pan-y'
+        body.style.overflowX = 'hidden'
+        html.style.overflowX = 'hidden'
+        html.style.touchAction = 'pan-y'
+        html.style.overscrollBehavior = 'contain'
+      }
     }
 
     const unlockBody = () => {
       const body = document.body
+      const html = document.documentElement
       const { scrollY, prevStyles } = bodyLockRef.current
 
       // Восстанавливаем предыдущие инлайн-стили
@@ -345,6 +549,15 @@ const HomePage = () => {
       body.style.width = prevStyles.width
       body.style.overflow = prevStyles.overflow
       body.style.overscrollBehavior = prevStyles.overscrollBehavior
+
+      // Очищаем дополнительные мобильные стили
+      if (window.innerWidth <= 768) {
+        body.style.touchAction = ''
+        body.style.overflowX = ''
+        html.style.overflowX = ''
+        html.style.touchAction = ''
+        html.style.overscrollBehavior = ''
+      }
 
       // Восстанавливаем позицию прокрутки
       window.scrollTo(0, scrollY || 0)
@@ -646,7 +859,14 @@ const HomePage = () => {
     const navigationEdge = document.querySelector('.navigation-edge')
     const navigationHint = document.querySelector('.navigation-hint')
     
+    console.log('🔍 HomePage: Navigation elements found', { 
+      navigationEdge: !!navigationEdge, 
+      navigationHint: !!navigationHint, 
+      isMobile 
+    })
+    
     if (navigationEdge && navigationHint && !isMobile) {
+      console.log('✅ HomePage: Setting up navigation edge listeners')
       const handleMouseEnter = () => {
         navigationHint.classList.add('visible')
       }
@@ -656,16 +876,19 @@ const HomePage = () => {
       }
       
       const handleClick = () => {
+        console.log('🎯 HomePage: Navigation edge clicked')
         // Анимация частиц при переходе - используем контекстную анимацию
         // setParticleSpeed теперь вызывается автоматически в GlobalParticleManager
         
         // Быстрое затухание
         const heroSection = heroRef.current
+        console.log('🌅 HomePage: Starting hero section fade out (edge click)')
         gsap.to(heroSection, {
           opacity: 0,
           duration: 0.3,
           ease: "power2.out",
           onComplete: () => {
+            console.log('✅ HomePage: Hero fade complete, navigating to /menu (edge click)')
             // Устанавливаем флаг перехода на меню
             sessionStorage.setItem('coming-from-home', 'true')
             navigate('/menu')
@@ -705,9 +928,20 @@ const HomePage = () => {
     if (isMobile) return
 
     const onWheelNavigateToMenu = (e) => {
-      if (isTransitioningRef.current || isProjectModalOpen) return
+      console.log('🖱️ HomePage: Wheel event detected', { deltaY: e.deltaY, isTransitioning: isTransitioningRef.current, isModalOpen: isProjectModalOpen })
+      
+      if (isTransitioningRef.current || isProjectModalOpen) {
+        console.log('⏸️ HomePage: Wheel navigation blocked (transitioning or modal open)')
+        return
+      }
+      
       const deltaY = e.deltaY || 0
-      if (deltaY <= 12) return
+      if (deltaY <= 12) {
+        console.log('⏸️ HomePage: Wheel navigation blocked (deltaY too small)', deltaY)
+        return
+      }
+      
+      console.log('🚀 HomePage: Starting wheel navigation to /menu')
       isTransitioningRef.current = true
       if (typeof e.preventDefault === 'function') e.preventDefault()
 
@@ -717,6 +951,7 @@ const HomePage = () => {
         duration: 0.3,
         ease: 'power2.out',
         onComplete: () => {
+          console.log('✅ HomePage: Hero fade complete, navigating to /menu')
           sessionStorage.setItem('coming-from-home', 'true')
           navigate('/menu')
         }
@@ -731,7 +966,11 @@ const HomePage = () => {
     <HomeContainer>
       <CustomCursor />
       
-      {/* Удалён правый edge перехода в меню */}
+      {/* Navigation edge для перехода в меню */}
+      <NavigationEdge className="navigation-edge" />
+      <NavigationHint className="navigation-hint">
+        Проекты →
+      </NavigationHint>
       
       <HeroSection ref={heroRef} id="hero" style={{
         pointerEvents: isProjectModalOpen ? 'none' : 'auto'
@@ -776,7 +1015,7 @@ const HomePage = () => {
                 'для роста бизнеса',
                 'для всех устройств',
                 'для всех',
-                'приятные в использовании',
+                'приятные в пользовании',
                 'под ваши потребности',
                 'для любой аудитории',
                 'до мелочей',
@@ -800,16 +1039,16 @@ const HomePage = () => {
             сайты, чат-боты и автоматизации, созданные под ваши цели.
           </Description>
           <ButtonsContainer>
-            <CreateProjectButton 
+            <CreateProjectButton
               onClick={() => {
-                // НИКАКИХ БЛЯДСКИХ ЗАДЕРЖЕК - ВСЁ СРАЗУ
                 setIsProjectModalOpen(true)
                 setIsProjectModalAnimationReady(true)
               }}
+              data-variant="primary"
             >
               Создать проект
             </CreateProjectButton>
-            <LaunchEnginesButton href="/game" onClick={handleEngineClick}>
+            <LaunchEnginesButton href="/game" onClick={handleEngineClick} data-variant="primary">
               Запустить двигатели!
             </LaunchEnginesButton>
           </ButtonsContainer>

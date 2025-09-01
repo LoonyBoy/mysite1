@@ -647,11 +647,14 @@ const VoytenkoCasePage = () => {
   const backButtonRef = useRef(null)
   const { setTransitionContext } = useParticles()
   const [isBackButtonVisible, setIsBackButtonVisible] = React.useState(false)
+  const [isBackButtonEnabled, setIsBackButtonEnabled] = React.useState(true)
   const [activeIndex, setActiveIndex] = React.useState(0)
   const [animatedOptions, setAnimatedOptions] = React.useState([])
   const [lightboxIndex, setLightboxIndex] = React.useState(null)
   const scrollYRef = useRef(0)
   const cardRefs = useRef([])
+  // Флаг для отслеживания интерактивных изменений карусели
+  const hasUserInteractedRef = React.useRef(false)
   const [accOpen, setAccOpen] = React.useState({
     greeting: false,
     payment: false,
@@ -679,6 +682,13 @@ const VoytenkoCasePage = () => {
     setTransitionContext('lightlab-case')
 
     const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const mobile = window.innerWidth <= 768
+    if (mobile) {
+      setIsBackButtonEnabled(false)
+      setTimeout(() => setIsBackButtonEnabled(true), 3000)
+    } else {
+      setIsBackButtonEnabled(true)
+    }
     const isMobile = window.innerWidth <= 768
 
     // Показ кнопки «Назад» с лёгким появлением
@@ -766,6 +776,7 @@ const VoytenkoCasePage = () => {
 
   const handleBack = () => {
     if (lightboxIndex !== null) return
+  if (!isBackButtonEnabled) return
     setTransitionContext('lightlab-case->projects')
     navigate('/menu')
   }
@@ -775,6 +786,8 @@ const VoytenkoCasePage = () => {
     if (typeof window === 'undefined') return
     const isMobile = window.innerWidth <= 768
     if (!isMobile) return
+    // Скроллим к карусели только если пользователь взаимодействовал с ней
+    if (!hasUserInteractedRef.current) return
     const el = cardRefs.current[activeIndex]
     if (!el) return
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -785,14 +798,20 @@ const VoytenkoCasePage = () => {
     const last = carouselOptions.length - 1
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault()
+      hasUserInteractedRef.current = true
       setActiveIndex(i => (i >= last ? 0 : i + 1))
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       e.preventDefault()
+      hasUserInteractedRef.current = true
       setActiveIndex(i => (i <= 0 ? last : i - 1))
     } else if (e.key === 'Home') {
-      e.preventDefault(); setActiveIndex(0)
+      e.preventDefault()
+      hasUserInteractedRef.current = true
+      setActiveIndex(0)
     } else if (e.key === 'End') {
-      e.preventDefault(); setActiveIndex(last)
+      e.preventDefault()
+      hasUserInteractedRef.current = true
+      setActiveIndex(last)
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault(); setLightboxIndex(activeIndex)
     }
@@ -801,13 +820,13 @@ const VoytenkoCasePage = () => {
   return (
     <CaseContainer>
       <CustomCursor color="#D14836" />
-      {isBackButtonVisible && (
+    {isBackButtonVisible && (
         <BackButton
           ref={backButtonRef}
-          onClick={handleBack}
+      onClick={handleBack}
           visible={isBackButtonVisible}
-          $disabled={lightboxIndex !== null}
-          aria-disabled={lightboxIndex !== null}
+      $disabled={lightboxIndex !== null || !isBackButtonEnabled}
+      aria-disabled={lightboxIndex !== null || !isBackButtonEnabled}
         >
           ← Назад в меню
         </BackButton>
@@ -1023,8 +1042,14 @@ const VoytenkoCasePage = () => {
                 $animated={animatedOptions.includes(i)}
                 role="option"
                 aria-selected={activeIndex === i}
-                onMouseEnter={() => { if (window.innerWidth > 768) setActiveIndex(i) }}
+                onMouseEnter={() => { 
+                  if (window.innerWidth > 768) {
+                    hasUserInteractedRef.current = true
+                    setActiveIndex(i)
+                  }
+                }}
                 onClick={() => {
+                  hasUserInteractedRef.current = true
                   if (activeIndex === i) setLightboxIndex(i); else setActiveIndex(i)
                 }}
                 ref={el => { cardRefs.current[i] = el }}
@@ -1058,7 +1083,10 @@ const VoytenkoCasePage = () => {
                     aria-label={`Слайд ${i+1}`}
                     aria-selected={activeIndex === i}
                     role="tab"
-                    onClick={() => setActiveIndex(i)}
+                    onClick={() => {
+                      hasUserInteractedRef.current = true
+                      setActiveIndex(i)
+                    }}
                   />
                 ))}
               </Indicators>

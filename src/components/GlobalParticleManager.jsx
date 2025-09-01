@@ -66,15 +66,117 @@ export const ParticleProvider = ({ children }) => {
   const particleAnimationRef = useRef(particleAnimation) // Ref для актуальной скорости
   const colorAnimationRef = useRef(null) // Ref для отслеживания активной анимации цвета
   const hasAnimatedLightLabEntry = useRef(false) // Флаг для предотвращения повторной анимации LightLab
+  // Фазовый механизм для детерминированного перехода в кейс
+  // phase: 'idle' | 'preparing-case' | 'case-active'
+  const transitionPhaseRef = useRef('idle')
+  const [targetCase, setTargetCase] = useState(null) // 'voytenko' | 'lightlab' | 'klambot' | 'wb-auto-actions' | null
+
+  const forceCaseStyle = (reason) => {
+    logger.particles('forceCaseStyle invoked', { reason, phase: transitionPhaseRef.current, targetCase })
+    setCurrentPage('lightlab-case')
+    setParticlesVisible(true)
+    setParticleProps(prev => ({
+      ...prev,
+      color: '#000000',
+      size: 0.006,
+      opacity: 0.4
+    }))
+    setParticleAnimation(prev => ({
+      ...prev,
+      rotationSpeed: { x: 0.4, y: 0.4 },
+      fastRotation: false
+    }))
+    hasAnimatedLightLabEntry.current = true
+    setSavedSpeed({ x: 0.4, y: 0.4 })
+  }
 
   // Обновляем ref при изменении particleAnimation
   useEffect(() => {
     particleAnimationRef.current = particleAnimation
   }, [particleAnimation])
 
+  // Подготовка к кейсу при установке targetCase до смены маршрута
+  useEffect(() => {
+    if (targetCase && transitionPhaseRef.current === 'idle') {
+      transitionPhaseRef.current = 'preparing-case'
+      forceCaseStyle('preselect')
+    }
+  }, [targetCase])
+
+  // Watchdog: если уже на странице кейса, но стиль не применён корректно
+  useEffect(() => {
+    if (!targetCase) return
+    if (transitionPhaseRef.current !== 'preparing-case') return
+    const t = setTimeout(() => {
+      if (/^\/project\//.test(location.pathname) && particleProps.color !== '#000000') {
+        forceCaseStyle('watchdog')
+        transitionPhaseRef.current = 'case-active'
+      }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [targetCase, location.pathname, particleProps.color])
+
+  // Дополнительная авто-проверка/коррекция стиля на странице кейса (устраняет редкий race, когда внешний код перекрасил частицы между фазами)
+  useEffect(() => {
+    const isCasePath = /^\/project\//.test(location.pathname)
+    if (!isCasePath) return
+    // Проверяем ключевые параметры — если расходятся, принудительно исправляем
+    const needsFix = (
+      particleProps.color !== '#000000' ||
+      particleProps.size !== 0.006 ||
+      particleProps.opacity !== 0.4 ||
+      (particleAnimation.rotationSpeed.x !== 0.4 || particleAnimation.rotationSpeed.y !== 0.4)
+    )
+    if (needsFix) {
+      logger.particles('Auto-correct case style', {
+        current: particleProps,
+        speed: particleAnimation.rotationSpeed,
+        phase: transitionPhaseRef.current
+      })
+      forceCaseStyle('auto-correct')
+      transitionPhaseRef.current = 'case-active'
+    }
+  }, [location.pathname, particleProps, particleAnimation.rotationSpeed])
+
+  // Fallback: при возврате на /menu убеждаемся, что базовое состояние частиц восстановлено
+  useEffect(() => {
+    if (location.pathname !== '/menu') return
+    // Ждём чуть-чуть, чтобы дать выполниться exit-анимации, затем проверяем
+    const t = setTimeout(() => {
+      const isCasePath = /^\/project\//.test(location.pathname)
+      if (isCasePath) return
+      // Если мы уже НЕ в кейсе и цвет/параметры не соответствуют меню — жёстко восстанавливаем
+      const needsMenuRestore = (
+        particleProps.color !== '#D14836' ||
+        particleProps.size !== 0.005 ||
+        particleProps.opacity !== 0.7 ||
+        particleAnimation.rotationSpeed.x !== 1.0 ||
+        particleAnimation.rotationSpeed.y !== 1.0
+      )
+      if (needsMenuRestore) {
+        logger.particles('Menu baseline auto-restore', {
+          color: particleProps.color,
+          size: particleProps.size,
+            opacity: particleProps.opacity,
+          speed: particleAnimation.rotationSpeed
+        })
+        setParticleProps(prev => ({ ...prev, color: '#D14836', size: 0.005, opacity: 0.7 }))
+        setParticleAnimation(prev => ({ ...prev, rotationSpeed: { x: 1.0, y: 1.0 }, fastRotation: false }))
+      }
+    }, 500)
+    return () => clearTimeout(t)
+  }, [location.pathname, particleProps, particleAnimation.rotationSpeed])
+
   // Отслеживаем изменения маршрута
   useEffect(() => {
     const path = location.pathname
+    const isCasePath = /^\/project\//.test(path)
+
+    // Сброс фаз при выходе с кейса
+    if (!isCasePath && currentPage === 'lightlab-case') {
+      transitionPhaseRef.current = 'idle'
+      setTargetCase(null)
+    }
     
     logger.navigation('Route change detected', { 
       from: currentPage, 
@@ -170,13 +272,19 @@ export const ParticleProvider = ({ children }) => {
         animateParticlesGameExit()
       }, 100)
       return
-  } else if ((path === '/project/lightlab' || path === '/project/voytenko' || path === '/project/klambot' || path === '/project/wb-auto-actions') && !isAnimating) {
-      // Переход на страницу кейса LightLab - белый фон с черными частицами
-      logger.particles('Contextual transition: projects->lightlab-case', { context: transitionContext })
-  console.log('📸 Detected case page entry, switching to white background with black particles')
-  setCurrentPage('lightlab-case')
-      setParticlesVisible(true)
-      animateParticlesLightLabEntry()
+  } else if (isCasePath && !isAnimating) {
+      // Унифицированная обработка любой case-страницы
+      if (transitionPhaseRef.current === 'preparing-case') {
+        transitionPhaseRef.current = 'case-active'
+        logger.particles('Case path entered (prepared)', { path, targetCase })
+      } else if (transitionPhaseRef.current === 'idle') {
+        // Переход без предварительной подготовки (прямой переход / перезагрузка)
+        forceCaseStyle('late-detect-route')
+        transitionPhaseRef.current = 'case-active'
+      }
+      setCurrentPage('lightlab-case')
+      // Сброс transitionContext быстрее
+      setTimeout(() => setTransitionContext(null), 50)
       return
     } else if (path === '/menu' && currentPage !== 'menu' && currentPage !== 'lightlab-case' && !isAnimating) {
       // Переход на menu с любой другой страницы
@@ -639,62 +747,65 @@ export const ParticleProvider = ({ children }) => {
     if (!camera) return
     
     setIsAnimating(true) // Блокируем восстановление focus/blur во время анимации
-    
-    logger.particles('Starting game exit animation', { 
+
+    logger.particles('Starting game exit animation', {
       direction: 'forward',
-      effect: 'return from backward movement to normal',
-      initialSpeed: { x: 0.2, y: 1.4 }, // Игровая скорость с движением назад
-      finalSpeed: { x: 1.0, y: 1.0 } // Базовая скорость
+      effect: 'smooth tween: return from backward movement to normal',
+      initialSpeed: { x: particleAnimationRef.current.rotationSpeed.x, y: particleAnimationRef.current.rotationSpeed.y },
+      finalSpeed: { x: 1.0, y: 1.0 }
     })
-    
+
     // Плавный переход цвета: фиолетовый → красный (обратно)
-    animateParticleColor('#8A2BE2', '#D14836', 1200)
-    
-    // Восстанавливаем все параметры частиц домашней страницы
+    animateParticleColor('#8A2BE2', '#D14836', 1000)
+
+    // Восстанавливаем параметры домашней страницы (размер/прозрачность)
     setParticleProps(prev => ({
       ...prev,
-      size: 0.005,    // Размер для домашней страницы
-      opacity: 0.7    // Прозрачность для домашней страницы
+      size: 0.005,
+      opacity: 0.7
     }))
-    
-    // Сохраняем базовую скорость для корректного восстановления
+
+    // Сохраняем базовую скорость
     setSavedSpeed({ x: 1.0, y: 1.0 })
-    
-    // Постепенное возвращение к базовой скорости от движения назад
-    const decelerationInterval = setInterval(() => {
-      setParticleAnimation(prev => {
-        const newSpeedX = Math.min(prev.rotationSpeed.x * 1.12, 1.0) // Ускоряем X обратно к норме
-        const newSpeedY = Math.max(prev.rotationSpeed.y * 0.93, 1.0) // Замедляем Y к норме
-        
-        if (newSpeedX >= 0.95 && newSpeedY <= 1.05) {
-          clearInterval(decelerationInterval)
-          logger.particles('Game exit animation completed - fully restored to home state', {
-            finalSpeed: { x: 1.0, y: 1.0 },
-            color: '#D14836',
-            size: 0.005,
-            opacity: 0.7
-          })
-          
-          // Разблокируем восстановление focus/blur
-          setIsAnimating(false)
-          
-          // Сбрасываем контекст перехода после завершения анимации
-          setTimeout(() => {
-            setTransitionContext(null)
-          }, 200)
-          
-          return {
-            rotationSpeed: { x: 1.0, y: 1.0 }, // Возвращаемся к базовой скорости
+
+    // Используем GSAP tween вместо дискретных interval шагов (устранение дерганья)
+    const speedProxy = {
+      x: particleAnimationRef.current.rotationSpeed.x,
+      y: particleAnimationRef.current.rotationSpeed.y
+    }
+
+    // На протяжении всей анимации удерживаем fastRotation = true, чтобы не происходил резкий
+    // переход между режимами (деление /15-/20), вызывавший визуальный скачок.
+    gsap.to(speedProxy, {
+      x: 1,
+      y: 1,
+      duration: 1.1,
+      ease: 'power2.out',
+      onUpdate: () => {
+        setParticleAnimation(prev => ({
+          ...prev,
+          rotationSpeed: { x: speedProxy.x, y: speedProxy.y },
+          fastRotation: true
+        }))
+      },
+      onComplete: () => {
+        logger.particles('Game exit animation completed (tween)', {
+          finalSpeed: { x: 1.0, y: 1.0 },
+          color: '#D14836'
+        })
+        // Плавно выключаем fastRotation после достижения целевой скорости отдельным небольшим tween,
+        // чтобы убрать последний микроскачок.
+        gsap.delayedCall(0.05, () => {
+          setParticleAnimation(prev => ({
+            ...prev,
+            rotationSpeed: { x: 1.0, y: 1.0 },
             fastRotation: false
-          }
-        }
-        
-        return {
-          rotationSpeed: { x: newSpeedX, y: newSpeedY },
-          fastRotation: newSpeedY > 1.2
-        }
-      })
-    }, 100) // Немного быстрее для лучшего отклика
+          }))
+          setIsAnimating(false)
+          setTimeout(() => setTransitionContext(null), 200)
+        })
+      }
+    })
   }
 
   // Анимация входа в кейс LightLab
@@ -704,7 +815,16 @@ export const ParticleProvider = ({ children }) => {
       logger.particles('LightLab entry animation already performed, skipping')
       return
     }
+    
+    // Дополнительная защита от race conditions
+    if (isAnimating) {
+      logger.particles('Animation already in progress, queuing LightLab entry')
+      setTimeout(() => animateParticlesLightLabEntry(), 100)
+      return
+    }
+    
     hasAnimatedLightLabEntry.current = true
+    setIsAnimating(true)
     
     logger.particles('Starting LightLab case entry animation', { 
       effect: 'switch to black particles on white background',
@@ -732,9 +852,10 @@ export const ParticleProvider = ({ children }) => {
     // Сохраняем скорость для кейса
     setSavedSpeed({ x: 0.4, y: 0.4 })
     
-    // Сбрасываем контекст перехода
+    // Сбрасываем контекст перехода и флаг анимации
     setTimeout(() => {
       setTransitionContext(null)
+      setIsAnimating(false) // Важно: сбрасываем флаг анимации
     }, 1500)
   }
 
@@ -859,6 +980,23 @@ export const ParticleProvider = ({ children }) => {
   const value = {
     currentPage,
     setCurrentPage,
+  targetCase,
+  setTargetCase,
+    // Обёртка, блокирующая внешнее изменение цвета/скорости во время фаз кейса
+    guardedSetParticleProps: (updater) => {
+      // Если мы готовим/находимся в кейсе — игнорируем попытки смены цвета кроме внутренних
+      if (transitionPhaseRef.current === 'preparing-case' || transitionPhaseRef.current === 'case-active') {
+        const res = typeof updater === 'function' ? updater(particleProps) : updater
+        // Разрешаем только изменения НЕ затрагивающие color (но оставляем size/opacity если нужно)
+        if (res.color && res.color !== '#000000') {
+          logger.particles('guardedSetParticleProps: blocked external color change in case phase', { attempted: res.color })
+          const { color, ...rest } = res
+          setParticleProps(prev => ({ ...prev, ...rest }))
+          return
+        }
+      }
+      setParticleProps(updater)
+    },
     animateToHome,
     animateToStart,
     animateToMenu,
@@ -877,6 +1015,7 @@ export const ParticleProvider = ({ children }) => {
     hoveredRect,
     setHoveredRect,
     setParticleProps, // Added to expose the setter
+    setParticleAnimation, // Added to expose particle animation setter
     pauseParticles: () => {
       // Save current speed (if not zero) and set speed to 0
       setSavedSpeed(prev => {

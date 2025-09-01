@@ -195,6 +195,12 @@ const Card = styled.div`
   flex-direction: column;
   gap: 12px;
   
+  /* Предотвращаем начальное мерцание на мобильных */
+  @media (max-width: 768px) {
+    opacity: 1;
+    visibility: visible;
+  }
+  
   /* Overlap cards slightly to remove visible seams */
   margin-right: -1px;
 
@@ -2250,9 +2256,40 @@ const CardBack = styled(CardFace)`
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   text-align: left;
+  position: relative;
   @media (max-width: 768px) {
     padding: 12px;
     justify-content: center;
+  }
+`
+
+// Кнопка перехода (иконка «стрелка вправо-вверх») в правом верхнем углу оборотной стороны
+const CardGoIcon = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  backdrop-filter: blur(4px);
+  transition: background .18s ease, transform .15s ease, border-color .18s ease;
+  &:hover { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.55); }
+  &:active { transform: translateY(1px); }
+  /* Плавное появление при ховере карточки */
+  opacity: 0; transform: translateY(-4px); pointer-events: none;
+  ${ProjectCard}:hover & { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  @media (max-width: 768px) {
+    opacity: 1; pointer-events: auto; transform: none; /* на мобильных всегда видна */
   }
 `
 
@@ -2649,8 +2686,13 @@ const projectsRows = {
 const MenuPage = () => {
   const menuRef = useRef(null)
   const navigate = useNavigate()
-  const { camera, setParticleProps, setHoveredRect, setParticleSpeed, particlesVisible, pauseParticles, resumeParticles } = useParticles()
+  const { camera, guardedSetParticleProps: setParticleProps, setHoveredRect, setParticleSpeed, particlesVisible, pauseParticles, resumeParticles, setTransitionContext, setParticleAnimation, setTargetCase } = useParticles()
   const isTransitioningRef = useRef(false)
+  // Гейт для перехода в кейсы: пока контент модалки "Проекты" полностью не прогружен (изображения), навигация запрещена
+  const [isProjectsContentReady, setIsProjectsContentReady] = useState(true) // true по умолчанию (переопределим при открытии)
+  const projectsLoadTokenRef = useRef(0)
+  // Жёсткая блокировка любых кликов внутри модалки "Проекты" первые 2.5s после открытия
+  const [isProjectsInteractionLocked, setIsProjectsInteractionLocked] = useState(false)
   
   // Отслеживание видимости страницы для оптимизации производительности
   const isPageVisible = usePageVisibility()
@@ -2681,6 +2723,7 @@ const MenuPage = () => {
   const lastHoveredBeforeOpenRef = useRef(null)
   const isModalOpenRef = useRef(false)
   const lastOpenModalIndexRef = useRef(null)
+  const isNavigatingRef = useRef(false) // Флаг для предотвращения множественных навигаций
   // Prevent fast-click bugs right after navigating into /menu
   const menuReadyRef = useRef(false)
   const pendingOpenRef = useRef(null)
@@ -3118,6 +3161,91 @@ const MenuPage = () => {
     // Update mobile indicator position
     setTimeout(positionMobileIndicator, 50)
   }
+
+  // Mapping href -> case key used in particle manager
+  const caseKeyFromHref = (href) => {
+    if (href.includes('voytenko')) return 'voytenko'
+    if (href.includes('lightlab')) return 'lightlab'
+    if (href.includes('klambot')) return 'klambot'
+    if (href.includes('wb-auto-actions')) return 'wb-auto-actions'
+    return null
+  }
+
+  // Navigate to project case page (phase-based particle handling occurs in GlobalParticleManager)
+  const handleProjectNavigation = (href) => {
+    if (isProjectsInteractionLocked) {
+      console.warn('Навигация заблокирована: стартовый лок 2.5s')
+      return
+    }
+    if (!isProjectsContentReady) {
+      console.warn('Навигация в проект заблокирована: контент проектов ещё грузится')
+      return
+    }
+    if (!href) return
+    if (isNavigatingRef.current) return
+    if (isProjectsAnimatingRef.current) {
+      setTimeout(() => handleProjectNavigation(href), 120)
+      return
+    }
+    isNavigatingRef.current = true
+    const key = caseKeyFromHref(href)
+    if (key) setTargetCase(key)
+    setTransitionContext('menu->case')
+    // Micro-delay to flush state before route change
+    setTimeout(() => {
+      navigate(href)
+      setTimeout(() => { isNavigatingRef.current = false }, 800)
+    }, 0)
+  }
+
+  // Прелоад изображений в модалке "Проекты" при её открытии
+  useEffect(() => {
+    // index 1 соответствует модалке "Проекты" (см. JSX ниже)
+    const isProjectsModalOpen = openedIndex === 1
+    if (!isProjectsModalOpen) {
+      // Если закрываем модалку — сбрасываем состояние (при повторном открытии снова проверим)
+      setIsProjectsContentReady(true)
+      setIsProjectsInteractionLocked(false)
+      return
+    }
+    // Старт новой сессии загрузки
+    setIsProjectsContentReady(false)
+    setIsProjectsInteractionLocked(true)
+    const unlockTimer = setTimeout(() => setIsProjectsInteractionLocked(false), 2500)
+    const token = ++projectsLoadTokenRef.current
+    const all = [...projectsRows.web, ...projectsRows.bots, ...projectsRows.tools]
+      .filter(p => p.image && p.image !== '#')
+    if (all.length === 0) {
+      setIsProjectsContentReady(true)
+      return
+    }
+    let loaded = 0
+    const mark = () => {
+      loaded++
+      if (loaded >= all.length && projectsLoadTokenRef.current === token) {
+        setIsProjectsContentReady(true)
+      }
+    }
+    const timers = []
+    all.forEach(p => {
+      const img = new Image()
+      const finalize = () => mark()
+      img.onload = finalize
+      img.onerror = finalize
+      // Кэшированный ресурс может уже быть загружен
+      img.src = p.image
+      if (img.complete) finalize()
+    })
+    // Фолбек таймаут: не держим блокировку бесконечно (3.5s)
+  const fallback = setTimeout(() => {
+      if (projectsLoadTokenRef.current === token) {
+        console.warn('Проекты: фолбек снял блокировку (не все изображения успели загрузиться)')
+        setIsProjectsContentReady(true)
+      }
+    }, 3500)
+  timers.push(fallback, unlockTimer)
+  return () => timers.forEach(t => clearTimeout(t))
+  }, [openedIndex])
 
   // Toggle term tooltip (mobile/keyboard)
   const handleTermToggle = (e) => {
@@ -3927,33 +4055,65 @@ const MenuPage = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
 
-    // Немедленная анимация fade-in при загрузке (на мобилке мягче/короче)
-    cards.forEach((_, index) => {
-      gsap.fromTo(`.card-${index}`,
-        { opacity: 0, y: 0 }, // Начинаем с y: 0, чтобы карточки не были смещены вниз
-        {
-          opacity: 1,
-          y: 0,
-          duration: isTouchRef.current ? 0.5 : 0.8,
-          delay: index * 0.1 // Лёгкая задержка для последовательности
-        }
-      )
-
-      // Установка начального состояния текста без анимации
-      const cardElement = cardRefs.current[index];
-      if (cardElement) {
+    // Улучшенная анимация fade-in при загрузке без мерцания на мобильных
+    const isMobileDevice = window.innerWidth <= 768 || 'ontouchstart' in window;
+    
+    if (isMobileDevice) {
+      // На мобильных: более быстрая и мягкая анимация без задержки
+      cards.forEach((_, index) => {
+        const cardElement = cardRefs.current[index];
+        if (!cardElement) return;
+        
+        // Устанавливаем начальное состояние сразу, без opacity: 0
+        gsap.set(cardElement, { opacity: 1, y: 0 });
+        
+        // Легкая анимация появления только для контента внутри карточек
         const normalTitle = cardElement.querySelector(`.normal-title-${index}`);
         const normalDesc = cardElement.querySelector(`.normal-desc-${index}`);
-
+        
         if (normalTitle) {
-          gsap.set(normalTitle, { x: 0, opacity: 1 });
+          gsap.fromTo(normalTitle, 
+            { opacity: 0, y: 10 }, 
+            { opacity: 1, y: 0, duration: 0.4, delay: index * 0.05 }
+          );
         }
-
+        
         if (normalDesc) {
-          gsap.set(normalDesc, { x: 0, opacity: 1 });
+          gsap.fromTo(normalDesc, 
+            { opacity: 0, y: 8 }, 
+            { opacity: 1, y: 0, duration: 0.4, delay: index * 0.05 + 0.1 }
+          );
         }
-      }
-    });
+      });
+    } else {
+      // На десктопе: оригинальная анимация
+      cards.forEach((_, index) => {
+        gsap.fromTo(`.card-${index}`,
+          { opacity: 0, y: 0 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.8,
+            delay: index * 0.1
+          }
+        );
+
+        // Установка начального состояния текста без анимации
+        const cardElement = cardRefs.current[index];
+        if (cardElement) {
+          const normalTitle = cardElement.querySelector(`.normal-title-${index}`);
+          const normalDesc = cardElement.querySelector(`.normal-desc-${index}`);
+
+          if (normalTitle) {
+            gsap.set(normalTitle, { x: 0, opacity: 1 });
+          }
+
+          if (normalDesc) {
+            gsap.set(normalDesc, { x: 0, opacity: 1 });
+          }
+        }
+      });
+    }
 
     // Анимации появления контента модалки "О себе"
     if (aboutContainerRef.current) {
@@ -4408,12 +4568,37 @@ const MenuPage = () => {
                   )}
 
                   {openedIndex === index && index === 1 && (
-                    <ProjectsModalWrap data-testid="projects-modal" onTouchStart={onProjectsTouchStart} onTouchEnd={onProjectsTouchEnd}>
+                    <ProjectsModalWrap
+                      data-testid="projects-modal"
+                      onTouchStart={onProjectsTouchStart}
+                      onTouchEnd={onProjectsTouchEnd}
+                      onClickCapture={(e) => {
+                        if (isProjectsInteractionLocked) {
+                          // Разрешаем кнопки категорий и кнопку закрытия
+                          const allowed = e.target.closest && e.target.closest('button.nav-btn, .close-btn, [data-allow-during-lock="true"]')
+                          if (!allowed) {
+                            e.stopPropagation()
+                            e.preventDefault()
+                          }
+                        }
+                      }}
+                      aria-busy={isProjectsInteractionLocked ? 'true' : undefined}
+                    >
+                      {!isProjectsContentReady && (
+                        <div style={{
+                          position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(2px)', zIndex: 50,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+                          fontSize: 14, fontWeight: 500, color: '#222'
+                        }}>
+                          <div style={{ animation: 'pulse 1.2s ease-in-out infinite' }}>Загружаю превью…</div>
+                          <div style={{ fontSize: 12, opacity: 0.7 }}>Переход в кейс станет доступен сразу после подготовки</div>
+                        </div>
+                      )}
                       <ProjectsTopTitle>Проекты</ProjectsTopTitle>
                       <MobileProjectsNavigation data-testid="mobile-projects-nav">
                         <NavButton
                           ref={navBotsRef}
-                          className={projectsCategory === 'bots' ? 'active' : ''}
+                          className={`nav-btn ${projectsCategory === 'bots' ? 'active' : ''}`}
                           onClick={(e) => handleProjectsNavButtonClick('bots', e)}
                           data-testid="nav-button-bots"
                         >
@@ -4421,7 +4606,7 @@ const MenuPage = () => {
                         </NavButton>
                         <NavButton
                           ref={navWebRef}
-                          className={projectsCategory === 'web' ? 'active' : ''}
+                          className={`nav-btn ${projectsCategory === 'web' ? 'active' : ''}`}
                           onClick={(e) => handleProjectsNavButtonClick('web', e)}
                           data-testid="nav-button-web"
                         >
@@ -4429,7 +4614,7 @@ const MenuPage = () => {
                         </NavButton>
                         <NavButton
                           ref={navToolsRef}
-                          className={projectsCategory === 'tools' ? 'active' : ''}
+                          className={`nav-btn ${projectsCategory === 'tools' ? 'active' : ''}`}
                           onClick={(e) => handleProjectsNavButtonClick('tools', e)}
                           data-testid="nav-button-tools"
                         >
@@ -4441,7 +4626,7 @@ const MenuPage = () => {
                       <div ref={mobilePaneRef} style={{ display: 'block' }}>
                         <MobileProjectsList ref={mobileListRef} data-testid="projects-list" onTouchMove={onProjectsTouchMove}>
                           {(projectsCategory === 'web' ? projectsRows.web : (projectsCategory === 'bots' ? projectsRows.bots : projectsRows.tools)).map(p => (
-                            <div key={p.id} style={{ padding: 12 }} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
+                            <div key={p.id} style={{ padding: 12 }} onClick={(e) => { e.stopPropagation(); handleProjectNavigation(p.href) }}>
                               <ProjectCard style={{ width: '100%' }}>
                                 <CardInner>
                                   <CardFront>
@@ -4454,6 +4639,9 @@ const MenuPage = () => {
                                     </CardText>
                                   </CardFront>
                                   <CardBack>
+                                    <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
+                                      ↗
+                                    </CardGoIcon>
                                     <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
                                     <div style={{ fontSize: 13, opacity: 0.9 }}>{p.description}</div>
                                     <TechChips>
@@ -4472,7 +4660,7 @@ const MenuPage = () => {
                           <RowScroller>
                             <CardsStrip ref={el => stripsRef.current[0] = el}>
                               {projectsRows.web.map(p => (
-                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
+                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); handleProjectNavigation(p.href) }}>
                                   <CardInner>
                                     <CardFront>
                                       <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
@@ -4484,6 +4672,9 @@ const MenuPage = () => {
                                       </CardText>
                                     </CardFront>
                                     <CardBack>
+                                      <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
+                                        ↗
+                                      </CardGoIcon>
                                       <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
                                       <MetaRow>
                                         <span>{p.role || 'Role'}</span>
@@ -4504,11 +4695,7 @@ const MenuPage = () => {
                                           </div>
                                         ))}
                                       </div>
-                                      {p.href && (
-                                        <button onClick={(e) => { e.stopPropagation(); navigate(p.href) }} style={{ marginTop: 10, fontSize: 12, color: '#fff', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer' }}>
-                                          Подробнее
-                                        </button>
-                                      )}
+                                      {/* Убрана кнопка "Подробнее" – теперь клик по всей карточке */}
                                     </CardBack>
                                   </CardInner>
                                 </ProjectCard>
@@ -4522,7 +4709,7 @@ const MenuPage = () => {
                           <RowScroller>
                             <CardsStrip ref={el => stripsRef.current[1] = el}>
                               {projectsRows.bots.map(p => (
-                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
+                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); handleProjectNavigation(p.href) }}>
                                   <CardInner>
                                     <CardFront>
                                       <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
@@ -4534,6 +4721,9 @@ const MenuPage = () => {
                                       </CardText>
                                     </CardFront>
                                     <CardBack>
+                                      <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
+                                        ↗
+                                      </CardGoIcon>
                                       <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
                                       <div style={{ fontSize: 13, opacity: 0.9 }}>{p.description}</div>
                                       <TechChips>
@@ -4552,7 +4742,7 @@ const MenuPage = () => {
                           <RowScroller>
                             <CardsStrip ref={el => stripsRef.current[2] = el}>
                               {projectsRows.tools.map(p => (
-                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); if (p.href) navigate(p.href) }}>
+                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); handleProjectNavigation(p.href) }}>
                                   <CardInner>
                                     <CardFront>
                                       <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
@@ -4564,6 +4754,9 @@ const MenuPage = () => {
                                       </CardText>
                                     </CardFront>
                                     <CardBack>
+                                      <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
+                                        ↗
+                                      </CardGoIcon>
                                       <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
                                       <div style={{ fontSize: 13, opacity: 0.9 }}>{p.description}</div>
                                       <TechChips>

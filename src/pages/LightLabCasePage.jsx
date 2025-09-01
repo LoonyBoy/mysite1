@@ -553,9 +553,11 @@ const LightLabCasePage = () => {
   const backButtonRef = useRef(null)
   const { setTransitionContext } = useParticles()
   const [isBackButtonVisible, setIsBackButtonVisible] = React.useState(false)
+  const [isBackButtonEnabled, setIsBackButtonEnabled] = React.useState(true)
   const [activeIndex, setActiveIndex] = React.useState(0)
   const [animatedOptions, setAnimatedOptions] = React.useState([])
   const [lightboxIndex, setLightboxIndex] = React.useState(null)
+  const hasUserInteractedRef = useRef(false)
   const scrollYRef = useRef(0)
   const cardRefs = useRef([])
   const carouselOptions = React.useMemo(() => ([
@@ -581,6 +583,14 @@ const LightLabCasePage = () => {
     setTransitionContext('lightlab-case')
 
     const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    // Мобильная блокировка кнопки «Назад» первые 3s
+    const mobile = window.innerWidth <= 768
+    if (mobile) {
+      setIsBackButtonEnabled(false)
+      setTimeout(() => setIsBackButtonEnabled(true), 3000)
+    } else {
+      setIsBackButtonEnabled(true)
+    }
 
     // Плавное появление кнопки «Назад»
     const timer = setTimeout(() => {
@@ -653,7 +663,8 @@ const LightLabCasePage = () => {
   }, [lightboxIndex])
 
   const handleBack = () => {
-    if (lightboxIndex !== null) return
+  if (lightboxIndex !== null) return
+  if (!isBackButtonEnabled) return
     setTransitionContext('lightlab-case->projects')
     navigate('/menu')
   }
@@ -663,13 +674,21 @@ const LightLabCasePage = () => {
     if (!carouselOptions.length) return
     const last = carouselOptions.length - 1
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      e.preventDefault(); setActiveIndex(i => (i >= last ? 0 : i + 1))
+      e.preventDefault()
+      hasUserInteractedRef.current = true
+      setActiveIndex(i => (i >= last ? 0 : i + 1))
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault(); setActiveIndex(i => (i <= 0 ? last : i - 1))
+      e.preventDefault()
+      hasUserInteractedRef.current = true
+      setActiveIndex(i => (i <= 0 ? last : i - 1))
     } else if (e.key === 'Home') {
-      e.preventDefault(); setActiveIndex(0)
+      e.preventDefault()
+      hasUserInteractedRef.current = true
+      setActiveIndex(0)
     } else if (e.key === 'End') {
-      e.preventDefault(); setActiveIndex(last)
+      e.preventDefault()
+      hasUserInteractedRef.current = true
+      setActiveIndex(last)
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault(); setLightboxIndex(activeIndex)
     }
@@ -678,6 +697,7 @@ const LightLabCasePage = () => {
   // Auto-scroll active card on mobile
   useEffect(() => {
     if (typeof window === 'undefined') return
+    if (!hasUserInteractedRef.current) return
     const isMobile = window.innerWidth <= 768
     if (!isMobile) return
     const el = cardRefs.current[activeIndex]
@@ -687,13 +707,13 @@ const LightLabCasePage = () => {
   return (
     <CaseContainer>
       <CustomCursor color="#D14836" />
-      {isBackButtonVisible && (
+    {isBackButtonVisible && (
         <BackButton
           ref={backButtonRef}
-          onClick={handleBack}
+      onClick={handleBack}
           visible={isBackButtonVisible}
-          $disabled={lightboxIndex !== null}
-          aria-disabled={lightboxIndex !== null}
+      $disabled={lightboxIndex !== null || !isBackButtonEnabled}
+      aria-disabled={lightboxIndex !== null || !isBackButtonEnabled}
         >
           ← Назад в меню
         </BackButton>
@@ -853,8 +873,16 @@ const LightLabCasePage = () => {
                 $animated={animatedOptions.includes(i)}
                 role="option"
                 aria-selected={activeIndex === i}
-                onMouseEnter={() => { if (window.innerWidth > 768) setActiveIndex(i) }}
-                onClick={() => { if (activeIndex === i) setLightboxIndex(i); else setActiveIndex(i) }}
+                onMouseEnter={() => { 
+                  if (window.innerWidth > 768) {
+                    hasUserInteractedRef.current = true
+                    setActiveIndex(i)
+                  }
+                }}
+                onClick={() => { 
+                  hasUserInteractedRef.current = true
+                  if (activeIndex === i) setLightboxIndex(i); else setActiveIndex(i) 
+                }}
                 ref={el => { cardRefs.current[i] = el }}
               >
                 <CardShadow $active={activeIndex === i} />
@@ -886,7 +914,10 @@ const LightLabCasePage = () => {
                 aria-label={`Слайд ${i+1}`}
                 aria-selected={activeIndex === i}
                 role="tab"
-                onClick={() => setActiveIndex(i)}
+                onClick={() => {
+                  hasUserInteractedRef.current = true
+                  setActiveIndex(i)
+                }}
               />
             ))}
           </Indicators>

@@ -39,6 +39,47 @@ const RotatingText = forwardRef((props, ref) => {
   } = props;
 
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const [maxWidth, setMaxWidth] = useState(null);
+  
+  // Измеряем максимальную ширину всех текстов один раз (при mount или смене массива)
+  useEffect(() => {
+    if (!texts || !texts.length) return;
+    
+    // Получаем стили с реального элемента после рендера
+    const timer = setTimeout(() => {
+      const realElement = document.querySelector('.text-rotate');
+      if (!realElement) return;
+      
+      const computedStyle = window.getComputedStyle(realElement);
+      
+      // Создаём точный измеритель с теми же стилями
+      const measureSpan = document.createElement('span');
+      measureSpan.style.cssText = `
+        position: absolute; left: -9999px; top: -9999px; white-space: nowrap; visibility: hidden;
+        font-family: ${computedStyle.fontFamily};
+        font-size: ${computedStyle.fontSize};
+        font-weight: ${computedStyle.fontWeight};
+        letter-spacing: ${computedStyle.letterSpacing};
+        line-height: 1;
+      `;
+      document.body.appendChild(measureSpan);
+      
+      let localMax = 0;
+      texts.forEach(t => {
+        measureSpan.textContent = t;
+        const w = measureSpan.getBoundingClientRect().width;
+        if (w > localMax) localMax = w;
+      });
+      document.body.removeChild(measureSpan);
+      
+      // Увеличиваем буфер для надёжности
+      const finalWidth = localMax + 8; // вернули обратно к 8px
+      console.log('RotatingText width measurement:', { localMax, finalWidth, texts });
+      setMaxWidth(finalWidth);
+    }, 100); // небольшая задержка для загрузки CSS
+    
+    return () => clearTimeout(timer);
+  }, [texts]);
 
   const splitIntoCharacters = (text) => {
     if (typeof Intl !== "undefined" && Intl.Segmenter) {
@@ -164,6 +205,7 @@ const RotatingText = forwardRef((props, ref) => {
       className={cn("text-rotate", mainClassName)}
       {...rest}
       transition={transition}
+  style={maxWidth ? { width: maxWidth } : undefined}
     >
       <span className="text-rotate-sr-only">{texts[currentTextIndex]}</span>
       <AnimatePresence mode="wait" initial={false}>
