@@ -320,6 +320,7 @@ const BillingToggle = styled.div`
     display: inline-block;
     width: 50px;
     height: 26px;
+    order: 2; /* Переключатель справа */
   }
   
   .toggle-input {
@@ -370,6 +371,7 @@ const BillingToggle = styled.div`
     display: flex;
     align-items: center;
     gap: 6px;
+    order: 1; /* Надпись слева */
     
     .discount-badge {
   background: var(--primary-green, #22c55e);
@@ -393,6 +395,7 @@ const BillingToggle = styled.div`
       /* Увеличиваем область касания */
       padding: 4px;
       margin: -4px;
+      order: 2; /* Переключатель справа на мобильных */
     }
     
     .toggle-slider {
@@ -414,6 +417,7 @@ const BillingToggle = styled.div`
       font-size: 1.1rem;
       font-weight: 500;
       gap: 8px;
+      order: 1; /* Надпись слева на мобильных */
       
       .discount-badge {
         padding: 4px 8px;
@@ -427,27 +431,12 @@ const BillingToggle = styled.div`
   
   /* Для очень маленьких экранов */
   @media (max-width: 480px) {
-    flex-direction: column;
-    gap: 16px;
-    text-align: center;
-    
-    .toggle-wrapper {
-      order: 2;
-      align-self: center;
-    }
-    
-    .toggle-label:first-child {
-      order: 1;
-    }
-    
-    .toggle-label:last-child {
-      order: 3;
-    }
-    
-    .toggle-label {
-      font-size: 1rem;
-      justify-content: center;
-    }
+  /* Сохраняем горизонтальное расположение: подпись слева, переключатель справа */
+  flex-direction: row;
+  gap: 14px;
+  text-align: left;
+  .toggle-label { font-size: 1rem; justify-content: flex-start; }
+  .toggle-wrapper { order: 2; }
   }
 `
 
@@ -856,7 +845,10 @@ const SubscriptionPage = () => {
             
             <MobileOnly>
               <BillingToggle>
-                <span className="toggle-label">Месячная оплата</span>
+                <span className="toggle-label">
+                  Годовая оплата
+                  <span className="discount-badge">Save 20%</span>
+                </span>
                 <div className="toggle-wrapper">
                   <input
                     type="checkbox"
@@ -866,10 +858,6 @@ const SubscriptionPage = () => {
                   />
                   <span className="toggle-slider"></span>
                 </div>
-                <span className="toggle-label">
-                  Годовая оплата
-                  <span className="discount-badge">Save 20%</span>
-                </span>
               </BillingToggle>
               
               <MobilePlansWrap>
@@ -1008,7 +996,10 @@ const SubscriptionPage = () => {
             
             <DesktopOnly>
               <BillingToggle>
-                <span className="toggle-label">Месячная оплата</span>
+                <span className="toggle-label">
+                  Годовая оплата
+                  <span className="discount-badge">Save 20%</span>
+                </span>
                 <div className="toggle-wrapper">
                   <input
                     type="checkbox"
@@ -1018,10 +1009,6 @@ const SubscriptionPage = () => {
                   />
                   <span className="toggle-slider"></span>
                 </div>
-                <span className="toggle-label">
-                  Годовая оплата
-                  <span className="discount-badge">Save 20%</span>
-                </span>
               </BillingToggle>
               
       <ComparisonMatrix aria-label="Сравнение тарифов подписки">

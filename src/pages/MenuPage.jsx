@@ -1445,7 +1445,8 @@ const ContactsModalWrap = styled.div`
 
 const ContactsMainTitle = styled.h2`
   position: absolute;
-  top: calc(16px + env(safe-area-inset-top, 0px));
+  /* Опущен ниже для более сбалансированного вертикального расположения */
+  top: calc(40px + env(safe-area-inset-top, 0px));
   left: 16px;
   margin: 0;
   font-size: clamp(24px, 5vw, 36px);
@@ -1453,7 +1454,7 @@ const ContactsMainTitle = styled.h2`
   color: #fff;
 
   @media (max-width: 768px) {
-    top: calc(16px + env(safe-area-inset-top, 0px));
+    top: calc(36px + env(safe-area-inset-top, 0px));
     left: 12px;
     z-index: 10;
   }
@@ -1465,18 +1466,20 @@ const ContactsGrid = styled.div`
   grid-template-rows: repeat(2, 1fr);
   gap: 0;
   width: 100vw;
-  height: 100vh;
+  /* Дополнительно опущены карточки ниже заголовка */
+  height: calc(100vh - 72px);
   margin: 0;
-  padding: 0;
+  padding: 72px 0 0 0;
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     grid-template-rows: repeat(4, auto);
     gap: 1px;
-    height: auto;
-    min-height: calc(100vh - 80px);
-    padding-top: 80px;
-    padding-bottom: 200px;
+  height: auto;
+  /* Компактный режим: уменьшаем отступы чтобы все 4 карточки помещались без скролла */
+  min-height: calc(100vh - 64px);
+  padding-top: 104px; /* ещё больше пространства над карточками */
+  padding-bottom: 32px; /* убрали крупный нижний отступ */
   }
 `;
 
@@ -1515,9 +1518,10 @@ const ContactPortal = styled.a`
   border-radius: 0;
   
   @media (max-width: 768px) {
-    min-height: 140px;
-    height: auto;
-    padding: 30px 20px;
+  /* Compact card sizing */
+  min-height: 0;
+  height: auto;
+  padding: 16px 16px 18px;
   }
 `;
 
@@ -1541,10 +1545,11 @@ const ContactIcon = styled.div`
   }
   
   @media (max-width: 768px) {
-    font-size: 48px;
+    font-size: 36px;
+    margin-bottom: 12px;
     svg, img {
-      width: 48px;
-      height: 48px;
+      width: 36px;
+      height: 36px;
     }
   }
 `;
@@ -1563,8 +1568,8 @@ const ContactTitle = styled.h3`
   transition: all 0.3s ease;
   
   @media (max-width: 768px) {
-    font-size: 24px;
-    margin: 0 0 12px 0;
+  font-size: 18px;
+  margin: 0 0 6px 0;
   }
 `;
 
@@ -1579,7 +1584,7 @@ const ContactValue = styled.div`
   }
   
   @media (max-width: 768px) {
-    font-size: 16px;
+  font-size: 14px;
   }
 `;
 
