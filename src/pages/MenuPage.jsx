@@ -19,6 +19,7 @@ const DitherLazy = React.lazy(() => import('../../dither.jsx')) // Adjusted to n
 // Иконки каналов связи (используются в hover-оверлее «Контакты»)
 import telegramIcon from '../images/telegram.svg'
 import whatsappIcon from '../images/whatsapp.svg'
+import phoneIcon from '../images/phone.svg'
 import emailIcon from '../images/email.svg'
 
 import { useDeviceDetection } from '../hooks/useDeviceDetection'
@@ -105,15 +106,14 @@ const NavigationEdge = styled.div`
     display: none;
   }
 `
-
 const CloseButton = styled.button`
   /* square cyberpunk close icon button */
   position: fixed;
   top: calc(16px + env(safe-area-inset-top, 0px));
   right: calc(24px + var(--close-right-offset, 0px));
   z-index: 1102; /* поверх модалки и dither */
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   display: grid;
   place-items: center;
   color: var(--primary-red);
@@ -121,32 +121,17 @@ const CloseButton = styled.button`
   border: 2px solid var(--primary-red);
   border-radius: 0; /* прямые углы */
   padding: 0;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1;
   cursor: pointer;
   transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
-
-  &:hover {
-    background: var(--primary-red);
-    color: var(--black);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
-    transform: translateY(-2px);
-  }
-
+  &:hover { background: var(--primary-red); color: var(--black); box-shadow: 0 8px 20px rgba(0,0,0,0.35); transform: translateY(-2px); }
   &:active { transform: translateY(0) scale(0.985); }
-
-  /* make icon visually similar to nav buttons */
+  &:focus-visible { outline: 2px solid var(--primary-red); outline-offset: 2px; }
   &::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
 `
 
-const BackTopButton = styled(CloseButton)`
-  right: calc(24px + var(--close-right-offset, 0px) + 44px + 8px);
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  color: var(--primary-red);
-  border-color: var(--primary-red);
-`
+
 
 const CardRow = styled.div`
   display: flex;
@@ -555,7 +540,7 @@ const ContactStack = styled.div`
   }
 `
 
-const ContactLink = styled.a`
+const ContactsLink = styled.a`
   font-size: clamp(11px, 1.1vw, 13px);
   color: rgba(255, 255, 255, 0.92);
   text-decoration: underline;
@@ -1430,6 +1415,192 @@ const PricingGrid = styled.div`
   @media (min-width: 1024px) { & > div:nth-child(-n+3) { border-top: none; } }
 `
 
+// Contacts modal styles
+// Contacts modal styles - Creative futuristic design
+const ContactsModalWrap = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  z-index: 1000;
+
+  @media (min-width: 769px) {
+    opacity: 0;
+    transform: translateY(10px);
+    will-change: opacity, transform;
+  }
+
+  @media (max-width: 768px) {
+    padding: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+`;
+
+const ContactsMainTitle = styled.h2`
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: 16px;
+  margin: 0;
+  font-size: clamp(24px, 5vw, 36px);
+  font-weight: 500;
+  color: #fff;
+
+  @media (max-width: 768px) {
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    left: 12px;
+  }
+`;
+
+const ContactsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, 1fr);
+    gap: 0;
+  }
+`;
+
+const ContactPortal = styled.a`
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  
+  &:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.2);
+  }
+  
+  &:active {
+    background: rgba(255,255,255,0.06);
+  }
+  
+  &:focus {
+    outline: 2px solid rgba(255,255,255,0.3);
+    outline-offset: -2px;
+  }
+  
+  /* Убираем border-radius для полноэкранного вида */
+  border-radius: 0;
+`;
+
+const ContactIcon = styled.div`
+  font-size: 64px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  
+  svg, img {
+    width: 64px;
+    height: 64px;
+    filter: brightness(0) invert(1); /* Делает SVG белыми */
+    transition: all 0.3s ease;
+  }
+  
+  ${ContactPortal}:hover & {
+    svg, img {
+      transform: scale(1.1);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 48px;
+    svg, img {
+      width: 48px;
+      height: 48px;
+    }
+  }
+`;
+
+const ContactContent = styled.div`
+  text-align: center;
+  position: relative;
+  z-index: 2;
+`;
+
+const ContactTitle = styled.h3`
+  font-size: 32px;
+  font-weight: 500;
+  color: #fff;
+  margin: 0 0 16px 0;
+  transition: all 0.3s ease;
+  
+  @media (max-width: 768px) {
+    font-size: 24px;
+    margin: 0 0 12px 0;
+  }
+`;
+
+const ContactValue = styled.div`
+  font-size: 20px;
+  color: rgba(255,255,255,0.7);
+  font-weight: 400;
+  transition: all 0.3s ease;
+  
+  ${ContactPortal}:hover & {
+    color: rgba(255,255,255,0.9);
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 16px;
+  }
+`;
+
+const CopyNotification = styled.div`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  padding: 16px 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 16px;
+  font-weight: 500;
+  z-index: 10000;
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  backdrop-filter: blur(20px);
+  
+  &.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  
+  &::before {
+    content: '✓';
+    margin-right: 8px;
+    color: #4ade80;
+    font-weight: bold;
+  }
+`;
+
 const PricingCard = styled.div`
   text-align: left; border-radius: 0; padding: 14px; cursor: pointer; color: #fff;
   background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.12);
@@ -1612,7 +1783,7 @@ const PriceRow = styled.div`
 const ConfirmButton = styled(CloseButton)`
   position: relative;
   top: 0; right: 0; left: 0; bottom: 0;
-  width: 44px; height: 44px;
+  width: 56px; height: 56px;
   z-index: 3; /* above decorations within card header */
   @media (max-width: 1023px) { display: none; }
   /* Desktop: no vertical offset */
@@ -1669,7 +1840,7 @@ const ConfirmSlot = styled.div`
 const MobileConfirmButton = styled(CloseButton)`
   position: relative;
   top: 0; right: 0; left: 0; bottom: 0;
-  width: 44px; height: 44px;
+  width: 56px; height: 56px;
   z-index: 3; /* ensure above potential decorative overlays */
   @media (min-width: 1024px) { display: none; }
   /* Поднимаем кнопку умеренно для мобильной версии */
@@ -2067,7 +2238,7 @@ const FeatureList = styled.ul`
   list-style: none; margin: 0; padding: 0; display: grid; gap: 8px;
 `
 
-const FeatureItem = styled.li`
+const PlanFeatureItem = styled.li`
   display: flex; align-items: baseline; gap: 8px;
   .label { color: rgba(255,255,255,0.9); font-size: 14px; line-height: 1.35; }
   .value { margin-left: auto; font-size: 14px; opacity: 0.95; }
@@ -2216,6 +2387,11 @@ const CardInner = styled.div`
   background: transparent;
   overflow: hidden;
 
+  /* Принудительный флип на мобильном при первом тапе */
+  &.force-flip ${'' /* styled-components keep */} {
+    /* Ничего – класс используется дочерними в селекторах ниже */
+  }
+
   @media (max-width: 768px) {
     /* allow flexible height on mobile while keeping visual ratio */
     height: auto;
@@ -2238,6 +2414,10 @@ const CardFront = styled(CardFace)`
   transition: transform 0.6s ease, box-shadow 0.3s ease;
   box-shadow: 0 8px 24px rgba(0,0,0,0.25);
   ${ProjectCard}:hover & { transform: rotateY(180deg) rotateX(1deg) translateZ(1px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  /* Мобильный: флип по классу force-flip */
+  @media (max-width: 768px) {
+    .force-flip & { transform: rotateY(180deg) rotateX(1deg) translateZ(1px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  }
 `
 
 const CardBack = styled(CardFace)`
@@ -2245,21 +2425,100 @@ const CardBack = styled(CardFace)`
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-end;
-  padding: 14px;
-  gap: 8px;
-  background: linear-gradient(180deg, rgba(16,16,20,0.6), rgba(8,8,12,0.9));
+  /* Синхронизируем внутренние отступы с фронтной стороной (CardText: left/right 12px, bottom 10px) */
+  padding: 8px 12px 10px; /* чуть выше контент */
+  gap: 6px;
+  /* Белый фон на обороте */
+  background: #ffffff;
   transform: rotateY(-180deg) rotateX(0deg) translateZ(1px);
   transform-origin: 50% 50%;
   transition: transform 0.6s ease, box-shadow 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
   ${ProjectCard}:hover & { transform: rotateY(0deg) rotateX(1deg) translateZ(1px); box-shadow: 0 12px 36px rgba(0,0,0,0.35); }
-  color: #fff;
+  @media (max-width: 768px) {
+    .force-flip & { transform: rotateY(0deg) rotateX(1deg) translateZ(1px); box-shadow: 0 12px 36px rgba(0,0,0,0.35); }
+  }
+  color: #000;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   text-align: left;
   position: relative;
+  height: 100%;
+  box-sizing: border-box;
+  /* Перекраска внутреннего текста/контента в чёрный */
+  &, h4, p, div, span { color: #000; }
+  /* Кнопка (стрелка) остаётся брендовой */
+  button { color: var(--primary-red); }
+  /* Точки и чипы адаптированы под светлый фон */
+  .dot { background: rgba(0,0,0,0.5); }
+  .chip { background: rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.18); color: #000; }
+  .chip.more { opacity: 0.7; }
   @media (max-width: 768px) {
-    padding: 12px;
+    padding: 8px 12px 10px;
     justify-content: center;
+  }
+`
+
+/* Заголовок на обороте: чуть крупнее и визуально приподнят */
+const CardBackTitle = styled.h4`
+  margin: 0;
+  font-size: 18px; /* было 16px */
+  font-weight: 600;
+  line-height: 1.2;
+  transform: translateY(-2px); /* оптически приподнять */
+  letter-spacing: 0.2px;
+  padding-right: 60px; /* место под кнопку перехода */
+  word-break: break-word;
+  @media (max-width: 768px) {
+    font-size: 17px;
+    padding-right: 56px; /* чуть меньше на мобильном */
+  }
+`
+/* Ряд метаданных (роль, год и т.п.) */
+const CardBackMeta = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  opacity: 0.9;
+  line-height: 1.3;
+  position: relative;
+  padding-top: 2px;
+  .dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(0,0,0,0.55); }
+`
+
+/* Список ключевых фич проекта (на обороте карточки) */
+const ProjectFeaturesList = styled.ul`
+  list-style: none;
+  margin: 4px 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+`
+
+const ProjectFeatureItem = styled.li`
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #000;
+  opacity: 0.95;
+  position: relative;
+  padding-left: 14px; /* место под маркер */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: linear-gradient(135deg, rgba(255,165,0,0.55), rgba(255,165,0,0.25));
+    box-shadow: 0 0 0 1px rgba(255,165,0,0.35), 0 2px 4px rgba(0,0,0,0.15);
   }
 `
 
@@ -2268,38 +2527,65 @@ const CardGoIcon = styled.button`
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.35);
-  border-radius: 4px;
-  color: #fff;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 2px solid var(--primary-red);
+  border-radius: 0;
+  color: var(--primary-red);
   cursor: pointer;
   padding: 0;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
-  backdrop-filter: blur(4px);
-  transition: background .18s ease, transform .15s ease, border-color .18s ease;
-  &:hover { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.55); }
-  &:active { transform: translateY(1px); }
-  /* Плавное появление при ховере карточки */
-  opacity: 0; transform: translateY(-4px); pointer-events: none;
+  backdrop-filter: none;
+  transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
+  & > svg { width: 20px; height: 20px; display: block; pointer-events: none; transition: transform 0.18s ease; }
+  &:hover > svg { transform: translate(1px, -1px); }
+  &:hover { background: var(--primary-red); color: var(--black); box-shadow: 0 8px 20px rgba(0,0,0,0.35); transform: translateY(-2px); }
+  &:active { transform: translateY(0) scale(0.985); }
+  opacity: 0; transform: translateY(-4px); pointer-events: none; /* появление при ховере */
   ${ProjectCard}:hover & { opacity: 1; transform: translateY(0); pointer-events: auto; }
   @media (max-width: 768px) {
-    opacity: 1; pointer-events: auto; transform: none; /* на мобильных всегда видна */
+    width: 40px; height: 40px; font-size: 16px; opacity: 1; pointer-events: auto; transform: none; /* всегда видна на мобильных */
   }
 `
 
 const TechChips = styled.div`
   display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
   .chip {
-    font-size: 12px; padding: 4px 8px; border-radius: 999px;
-    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    position: relative;
+    font-size: 12px; padding: 4px 8px 4px 10px; border-radius: 999px;
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);
+    line-height: 1.1; letter-spacing: .2px;
+    transition: background .25s ease, border-color .25s ease, transform .2s ease;
+    overflow: hidden;
   }
+  .chip::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--primary-red), #ff9966);
+    opacity: .85;
+  }
+  /* Темная тема hover (фронт) */
+  ${ProjectCard} &:hover .chip { background: rgba(255,255,255,0.16); }
   .chip.more { font-size: 11px; opacity: 0.8; }
+  /* Варианты по технологиям через data-tech (частичное совпадение) */
+  .chip[data-tech*='react']::before { background: linear-gradient(180deg,#61dafb,#388bab); }
+  .chip[data-tech*='node']::before { background: linear-gradient(180deg,#3c873a,#6bbf5a); }
+  .chip[data-tech*='python']::before { background: linear-gradient(180deg,#3776ab,#ffdd57); }
+  .chip[data-tech*='next']::before { background: linear-gradient(180deg,#000,#555); }
+  .chip[data-tech*='router']::before { background: linear-gradient(180deg,#e53935,#ff8a65); }
+  .chip[data-tech*='aws']::before { background: linear-gradient(180deg,#ff9900,#ffb84d); }
+  .chip[data-tech*='docker']::before { background: linear-gradient(180deg,#0db7ed,#016799); }
+  .chip[data-tech*='go']::before { background: linear-gradient(180deg,#00add8,#5ed0e6); }
+  .chip[data-tech*='ts']::before, .chip[data-tech*='typescript']::before { background: linear-gradient(180deg,#3178c6,#5495e6); }
+  .chip[data-tech*='postgres']::before, .chip[data-tech*='pg']::before { background: linear-gradient(180deg,#336791,#6fa3d6); }
+  .chip[data-tech*='redis']::before { background: linear-gradient(180deg,#d82c20,#ff6a5c); }
+  }
 `
 
 const MetaRow = styled.div`
@@ -2559,7 +2845,7 @@ const menuItems = [
   {
     label: "Contact",
     title: "Контакты",
-    description: "Связаться со мной",
+    description: "Все способы связи",
     route: "/contact",
     color: "#060010"
   },
@@ -2712,6 +2998,8 @@ const MenuPage = () => {
   const hoverTimelinesRef = useRef([])
   // убрали таймеры дебаунса — из‑за них терялись hover‑события
   const [openedIndex, setOpenedIndex] = useState(null)
+  // Мобильный двухтаповый флип проектов: id карточки, чья обратная сторона показана
+  const [mobileFlippedId, setMobileFlippedId] = useState(null)
   const desktopAnimatorRef = useRef(null)
   const cardRefs = useRef([])
   // Which service card shows inline "Next" morph button (desktop only)
@@ -2757,6 +3045,7 @@ const MenuPage = () => {
   const [prefill, setPrefill] = useState(null)
   const [showSubscriptionInfo, setShowSubscriptionInfo] = useState(false)
   const [isProjectModalAnimationReady, setIsProjectModalAnimationReady] = useState(false)
+  const [copyNotification, setCopyNotification] = useState({ show: false, text: '' })
   const bodyLockRef = useRef({ scrollY: 0, prevStyles: {} })
 
   // Lock body scroll while ProjectModal is open (copied from HomePage)
@@ -2849,6 +3138,36 @@ const MenuPage = () => {
       }
     } catch (e) { }
   }, [])
+
+  // Функция копирования в буфер обмена
+  const copyToClipboard = async (text, type) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      showCopyNotification(`${type} скопирован в буфер обмена`)
+    } catch (err) {
+      // Fallback для старых браузеров
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        showCopyNotification(`${type} скопирован в буфер обмена`)
+      } catch (fallbackErr) {
+        console.error('Не удалось скопировать:', fallbackErr)
+        showCopyNotification('Не удалось скопировать')
+      }
+      document.body.removeChild(textArea)
+    }
+  }
+
+  const showCopyNotification = (text) => {
+    setCopyNotification({ show: true, text })
+    setTimeout(() => {
+      setCopyNotification({ show: false, text: '' })
+    }, 2000)
+  }
 
   // Prefetch heavy modules used by the subscription/modal step to avoid delay
   // One-shot flag for dynamic chunk preloading (ProjectModal, animations, dither)
@@ -2991,6 +3310,7 @@ const MenuPage = () => {
   }
   const servicesGridRef = useRef(null)
   const servicesModalRef = useRef(null)
+  const contactsModalRef = useRef(null)
   const tabsRowRef = useRef(null)
   const tabWebRef = useRef(null)
   const tabBotsRef = useRef(null)
@@ -3173,6 +3493,12 @@ const MenuPage = () => {
 
   // Navigate to project case page (phase-based particle handling occurs in GlobalParticleManager)
   const handleProjectNavigation = (href) => {
+    // Блокируем переход на lightlab
+    if (href && href.includes('lightlab')) {
+      console.warn('Переход на lightlab временно заблокирован')
+      return
+    }
+    
     if (isProjectsInteractionLocked) {
       console.warn('Навигация заблокирована: стартовый лок 2.5s')
       return
@@ -3197,6 +3523,24 @@ const MenuPage = () => {
       setTimeout(() => { isNavigatingRef.current = false }, 800)
     }, 0)
   }
+
+  // Мобильный обработчик: первый тап — флип, второй тап — переход
+  const onProjectCardClick = (e, project) => {
+    e.stopPropagation()
+    const isMobile = window.innerWidth <= 768 || 'ontouchstart' in window
+    if (!isMobile) {
+      handleProjectNavigation(project.href)
+      return
+    }
+    if (mobileFlippedId !== project.id) {
+      setMobileFlippedId(project.id)
+      return
+    }
+    handleProjectNavigation(project.href)
+  }
+
+  // Сброс флипа при смене категории проектов
+  useEffect(() => { setMobileFlippedId(null) }, [projectsCategory])
 
   // Прелоад изображений в модалке "Проекты" при её открытии
   useEffect(() => {
@@ -3272,6 +3616,39 @@ const MenuPage = () => {
     }
     document.addEventListener('click', onDocClick, true)
     return () => document.removeEventListener('click', onDocClick, true)
+  }, [openedIndex])
+
+  // Contacts modal: lock body scroll + futuristic reveal animation
+  useEffect(() => {
+    if (openedIndex !== 3) return
+    const prevOverflow = document.body.style.overflow
+    const prevPad = document.body.style.paddingRight
+    try {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+      document.body.style.overflow = 'hidden'
+      document.body.style.paddingRight = `${scrollbarWidth}px`
+    } catch {}
+    const root = contactsModalRef.current
+    if (root) {
+      try {
+        const title = root.querySelector('h2') // ContactsMainTitle
+        const portals = root.querySelectorAll('a') // ContactPortal elements
+        
+        // Set initial states
+        gsap.set(root, { opacity: 0, y: 10 })
+        gsap.set(title, { opacity: 0, scale: 0.8, rotationX: 20 })
+        gsap.set(portals, { opacity: 0, y: 40, scale: 0.9, rotationY: 15 })
+        
+        // Create dramatic timeline
+        const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
+        tl.to(root, { opacity: 1, y: 0, duration: 0.6 })
+          .to(title, { opacity: 1, scale: 1, rotationX: 0, duration: 0.8 }, 0.1)
+          .to(portals, { opacity: 1, y: 0, scale: 1, rotationY: 0, duration: 0.8, stagger: 0.15 }, 0.3)
+      } catch {}
+    }
+    return () => {
+      try { document.body.style.overflow = prevOverflow; document.body.style.paddingRight = prevPad } catch {}
+    }
   }, [openedIndex])
 
   // Desktop-only: ensure scroll behavior depending on mode
@@ -3351,6 +3728,23 @@ const MenuPage = () => {
     try { if (onResize) window.removeEventListener('resize', onResize) } catch {}
     }
   }, [openedIndex, servicesStep])
+
+  // Анимация появления модального окна "Услуги"
+  useEffect(() => {
+    if (openedIndex !== 2) return
+    const container = servicesModalRef.current
+    if (!container) return
+    
+    // Анимируем появление модального окна
+    gsap.set(container, { opacity: 0, y: 10 })
+    gsap.to(container, { 
+      opacity: 1, 
+      y: 0, 
+      duration: 0.4, 
+      ease: 'power2.out',
+      delay: 0.1
+    })
+  }, [openedIndex])
 
   // Reset inline morph button when leaving pick step, switching category, or changing tier
   useEffect(() => {
@@ -4433,27 +4827,15 @@ const MenuPage = () => {
                 onPointerEnter={() => { handleHover(index, true) }}
                 onPointerLeave={() => { handleHover(index, false) }}
                 onClick={(e) => {
-                  if (index === 3) {
-                    e.stopPropagation();
-                    e.preventDefault?.();
-                    // Open project creation modal like on HomePage
-                    setIsProjectModalOpen(true)
-                    setIsProjectModalAnimationReady(true)
-                    return
-                  }
+                  // For all indices including contacts (3) use unified fullscreen flow now
                   openCardFullscreen(index, e)
                 }}
                 tabIndex={0}
                 role="button"
-                aria-disabled={index === 3}
+                aria-disabled={false}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    if (index === 3) {
-                      setIsProjectModalOpen(true)
-                      setIsProjectModalAnimationReady(true)
-                      return
-                    }
                     openCardFullscreen(index, e)
                   }
                 }}
@@ -4626,9 +5008,9 @@ const MenuPage = () => {
                       <div ref={mobilePaneRef} style={{ display: 'block' }}>
                         <MobileProjectsList ref={mobileListRef} data-testid="projects-list" onTouchMove={onProjectsTouchMove}>
                           {(projectsCategory === 'web' ? projectsRows.web : (projectsCategory === 'bots' ? projectsRows.bots : projectsRows.tools)).map(p => (
-                            <div key={p.id} style={{ padding: 12 }} onClick={(e) => { e.stopPropagation(); handleProjectNavigation(p.href) }}>
+                            <div key={p.id} style={{ padding: 12 }} onClick={(e) => onProjectCardClick(e, p)}>
                               <ProjectCard style={{ width: '100%' }}>
-                                <CardInner>
+                                <CardInner className={mobileFlippedId === p.id ? 'force-flip' : ''}>
                                   <CardFront>
                                     <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
                                     <CardImage style={{ backgroundImage: `url(${p.image})` }} />
@@ -4639,10 +5021,15 @@ const MenuPage = () => {
                                     </CardText>
                                   </CardFront>
                                   <CardBack>
-                                    <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
-                                      ↗
-                                    </CardGoIcon>
-                                    <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
+                                    {p.id !== 'raykhan' && (
+                                      <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                          <path d="M7 17L17 7" />
+                                          <path d="M9 7H17V15" />
+                                        </svg>
+                                      </CardGoIcon>
+                                    )}
+                                    <CardBackTitle>{p.title}</CardBackTitle>
                                     <div style={{ fontSize: 13, opacity: 0.9 }}>{p.description}</div>
                                     <TechChips>
                                       {(p.tech || []).map(t => (<span key={t} className="chip">{t}</span>))}
@@ -4660,8 +5047,8 @@ const MenuPage = () => {
                           <RowScroller>
                             <CardsStrip ref={el => stripsRef.current[0] = el}>
                               {projectsRows.web.map(p => (
-                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); handleProjectNavigation(p.href) }}>
-                                  <CardInner>
+                                <ProjectCard key={p.id} onClick={(e) => onProjectCardClick(e, p)}>
+                                  <CardInner className={mobileFlippedId === p.id ? 'force-flip' : ''}>
                                     <CardFront>
                                       <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
                                       <CardImage style={{ backgroundImage: `url(${p.image})` }} />
@@ -4672,29 +5059,31 @@ const MenuPage = () => {
                                       </CardText>
                                     </CardFront>
                                     <CardBack>
-                                      <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
-                                        ↗
-                                      </CardGoIcon>
-                                      <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
-                                      <MetaRow>
+                                      {p.id !== 'raykhan' && p.id !== 'lightlab' && (
+                                        <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <path d="M7 17L17 7" />
+                                            <path d="M9 7H17V15" />
+                                          </svg>
+                                        </CardGoIcon>
+                                      )}
+                                      <CardBackTitle>{p.title}</CardBackTitle>
+                                      <CardBackMeta>
                                         <span>{p.role || 'Role'}</span>
                                         <span className="dot" />
                                         <span>{p.year || ''}</span>
-                                      </MetaRow>
+                                      </CardBackMeta>
                                       <TechChips>
-                                        {(p.tech || []).slice(0, 2).map(t => (<span key={t} className="chip">{t}</span>))}
+                                        {(p.tech || []).slice(0, 2).map(t => (<span key={t} className="chip" data-tech={t.toLowerCase()}>{t}</span>))}
                                         {((p.tech || []).length > 2) && (
-                                          <span className="chip">+{(p.tech || []).length - 2}</span>
+                                          <span className="chip more" data-tech="more">+{(p.tech || []).length - 2}</span>
                                         )}
                                       </TechChips>
-                                      <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                      <ProjectFeaturesList>
                                         {(p.features || []).slice(0, 2).map((f, i) => (
-                                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, opacity: 0.95 }}>
-                                            <span style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(255,165,0,0.25)', display: 'inline-block' }} />
-                                            <span style={{ whiteSpace: 'normal' }}>{f}</span>
-                                          </div>
+                                          <ProjectFeatureItem key={i}>{f}</ProjectFeatureItem>
                                         ))}
-                                      </div>
+                                      </ProjectFeaturesList>
                                       {/* Убрана кнопка "Подробнее" – теперь клик по всей карточке */}
                                     </CardBack>
                                   </CardInner>
@@ -4709,8 +5098,8 @@ const MenuPage = () => {
                           <RowScroller>
                             <CardsStrip ref={el => stripsRef.current[1] = el}>
                               {projectsRows.bots.map(p => (
-                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); handleProjectNavigation(p.href) }}>
-                                  <CardInner>
+                                <ProjectCard key={p.id} onClick={(e) => onProjectCardClick(e, p)}>
+                                  <CardInner className={mobileFlippedId === p.id ? 'force-flip' : ''}>
                                     <CardFront>
                                       <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
                                       <CardImage style={{ backgroundImage: `url(${p.image})` }} />
@@ -4721,13 +5110,18 @@ const MenuPage = () => {
                                       </CardText>
                                     </CardFront>
                                     <CardBack>
-                                      <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
-                                        ↗
-                                      </CardGoIcon>
-                                      <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
+                                      {p.id !== 'raykhan' && (
+                                        <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" >
+                                            <path d="M7 17L17 7" />
+                                            <path d="M9 7H17V15" />
+                                          </svg>
+                                        </CardGoIcon>
+                                      )}
+                                      <CardBackTitle>{p.title}</CardBackTitle>
                                       <div style={{ fontSize: 13, opacity: 0.9 }}>{p.description}</div>
                                       <TechChips>
-                                        {(p.tech || []).map(t => (<span key={t} className="chip">{t}</span>))}
+                                        {(p.tech || []).map(t => (<span key={t} className="chip" data-tech={t.toLowerCase()}>{t}</span>))}
                                       </TechChips>
                                     </CardBack>
                                   </CardInner>
@@ -4742,8 +5136,8 @@ const MenuPage = () => {
                           <RowScroller>
                             <CardsStrip ref={el => stripsRef.current[2] = el}>
                               {projectsRows.tools.map(p => (
-                                <ProjectCard key={p.id} onClick={(e) => { e.stopPropagation(); handleProjectNavigation(p.href) }}>
-                                  <CardInner>
+                                <ProjectCard key={p.id} onClick={(e) => onProjectCardClick(e, p)}>
+                                  <CardInner className={mobileFlippedId === p.id ? 'force-flip' : ''}>
                                     <CardFront>
                                       <DevBadge $status={p.status === 'done' ? 'done' : 'wip'}>{p.status === 'done' ? 'Готово' : 'В разработке'}</DevBadge>
                                       <CardImage style={{ backgroundImage: `url(${p.image})` }} />
@@ -4754,13 +5148,18 @@ const MenuPage = () => {
                                       </CardText>
                                     </CardFront>
                                     <CardBack>
-                                      <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
-                                        ↗
-                                      </CardGoIcon>
-                                      <h4 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{p.title}</h4>
+                                      {p.id !== 'raykhan' && (
+                                        <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <path d="M7 17L17 7" />
+                                            <path d="M9 7H17V15" />
+                                          </svg>
+                                        </CardGoIcon>
+                                      )}
+                                      <CardBackTitle>{p.title}</CardBackTitle>
                                       <div style={{ fontSize: 13, opacity: 0.9 }}>{p.description}</div>
                                       <TechChips>
-                                        {(p.tech || []).map(t => (<span key={t} className="chip">{t}</span>))}
+                                        {(p.tech || []).map(t => (<span key={t} className="chip" data-tech={t.toLowerCase()}>{t}</span>))}
                                       </TechChips>
                                     </CardBack>
                                   </CardInner>
@@ -4846,6 +5245,85 @@ const MenuPage = () => {
                       />
                     </Suspense>
                   )}
+                  {openedIndex === index && index === 3 && (
+                    <ContactsModalWrap className="contacts-modal" ref={contactsModalRef}>
+                      <ContactsMainTitle>Контакты</ContactsMainTitle>
+                      <ContactsGrid>
+                        <ContactPortal 
+                          href="https://t.me/loonyboss" 
+                          target="_blank" 
+                          rel="noopener" 
+                          aria-label="Написать в Telegram"
+                        >
+
+                          <ContactContent>
+                            <ContactIcon>
+                              <img src={telegramIcon} alt="Telegram" />
+                            </ContactIcon>
+                            <ContactTitle>
+                              Telegram
+                            </ContactTitle>
+                            <ContactValue>@loonyboss</ContactValue>
+                          </ContactContent>
+                        </ContactPortal>
+                        
+                        <ContactPortal 
+                          href="https://wa.me/79131114551" 
+                          target="_blank" 
+                          rel="noopener" 
+                          aria-label="Написать в WhatsApp"
+                        >
+                          <ContactContent>
+                            <ContactIcon>
+                              <img src={whatsappIcon} alt="WhatsApp" />
+                            </ContactIcon>
+                            <ContactTitle>
+                              WhatsApp
+                            </ContactTitle>
+                            <ContactValue>+7 913 111-45-51</ContactValue>
+                          </ContactContent>
+                        </ContactPortal>
+                        
+                        <ContactPortal 
+                          as="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            copyToClipboard('+79131114551', 'Номер телефона')
+                          }}
+                          aria-label="Скопировать номер телефона"
+                        >
+                          <ContactContent>
+                            <ContactIcon>
+                              <img src={phoneIcon} alt="Phone" />
+                            </ContactIcon>
+                            <ContactTitle>
+                              Телефон
+                            </ContactTitle>
+                            <ContactValue>+7 913 111-45-51</ContactValue>
+                          </ContactContent>
+                        </ContactPortal>
+                        
+                        <ContactPortal 
+                          as="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            copyToClipboard('mikhail@loonyboss.com', 'Email')
+                          }}
+                          aria-label="Скопировать email"
+                        >
+                          <ContactContent>
+                            <ContactIcon>
+                              <img src={emailIcon} alt="Email" />
+                            </ContactIcon>
+                            <ContactTitle>
+                              Email
+                            </ContactTitle>
+                            <ContactValue>mikhail@loonyboss.com</ContactValue>
+                          </ContactContent>
+                        </ContactPortal>
+                      </ContactsGrid>
+                    </ContactsModalWrap>
+                  )}
                 </CardContent>
                 {openedIndex === index && (
                   <CloseButton
@@ -4882,6 +5360,11 @@ const MenuPage = () => {
       </ErrorBoundary>
 
       <MobileNavigation />
+      
+      {/* Уведомление о копировании */}
+      <CopyNotification className={copyNotification.show ? 'show' : ''}>
+        {copyNotification.text}
+      </CopyNotification>
     </MenuContainer>
   )
 }

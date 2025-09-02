@@ -146,12 +146,20 @@ export const ParticleProvider = ({ children }) => {
       const isCasePath = /^\/project\//.test(location.pathname)
       if (isCasePath) return
       // Если мы уже НЕ в кейсе и цвет/параметры не соответствуют меню — жёстко восстанавливаем
+      // Hover в MenuPage временно перекрашивает частицы в один из специальных цветов.
+      // Ранее авто-восстановление через 500ms сбрасывало цвет прямо во время hover.
+      // Добавляем белый список допустимых временных цветов, при которых не делаем restore.
+      const menuHoverColors = ['#1a1a66', '#4d1a4d', '#1a4d1a', '#5a0f0f']
+      const allowTemporaryColor = menuHoverColors.includes(particleProps.color)
       const needsMenuRestore = (
-        particleProps.color !== '#D14836' ||
-        particleProps.size !== 0.005 ||
-        particleProps.opacity !== 0.7 ||
-        particleAnimation.rotationSpeed.x !== 1.0 ||
-        particleAnimation.rotationSpeed.y !== 1.0
+        !allowTemporaryColor && // не трогаем если сейчас активен hover цвет
+        (
+          particleProps.color !== '#D14836' ||
+          particleProps.size !== 0.005 ||
+          particleProps.opacity !== 0.7 ||
+          particleAnimation.rotationSpeed.x !== 1.0 ||
+          particleAnimation.rotationSpeed.y !== 1.0
+        )
       )
       if (needsMenuRestore) {
         logger.particles('Menu baseline auto-restore', {

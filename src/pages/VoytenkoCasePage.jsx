@@ -208,7 +208,12 @@ const ResultsBlock = styled.div`
 const KpiGrid = styled.div`
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: 1fr 1fr;
+  
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
 `
 
 const KpiCard = styled.div`
@@ -285,12 +290,21 @@ const OptionsContainer = styled.div`
   outline: none;
 
   @media (max-width: 768px) {
-  /* Вертикальная карусель на мобильных */
-  flex-direction: column;
-  height: auto;
-  max-width: 100%;
-  overflow: visible;
-  gap: 12px;
+    /* Горизонтальный свайп на мобильных */
+    flex-direction: row;
+    height: 300px;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 0;
+    
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 `
 
@@ -320,16 +334,19 @@ const OptionCard = styled.div`
   z-index: ${p => (p.$active ? 10 : 1)};
 
   @media (max-width: 768px) {
-    /* Переход к вертикальному раскрытию */
-    width: 100%;
-    min-width: 100%;
+    /* Горизонтальные карточки для свайпа */
+    width: 100vw;
+    min-width: 100vw;
     flex: none;
-    height: ${p => (p.$active ? 'min(60vh, 420px)' : '64px')};
-    /* Вертикальный вход */
-    transform: ${p => (p.$animated ? 'translateY(0)' : 'translateY(40px)')};
-    /* Масштаб по ширине экрана, чтобы кадр заполнял блок вертикально */
-    background-size: ${p => (p.$active ? '100% auto' : '120% auto')};
+    height: 300px;
+    /* Горизонтальный вход */
+    transform: ${p => (p.$animated ? 'translateX(0)' : 'translateX(40px)')};
+    /* Полное покрытие экрана */
+    background-size: cover;
     background-position: center;
+    scroll-snap-align: start;
+    border: none;
+    box-shadow: none;
   }
 `
 
@@ -370,7 +387,8 @@ const CardShadow = styled.div`
   opacity: ${p => (p.$active ? 1 : 0.001)}; /* почти невидимая в свернутом состоянии */
 
   @media (max-width: 768px) {
-    height: 40%; /* большее покрытие на вертикальных карточках */
+    /* На мобильном всегда видимая тень для читаемости текста */
+    height: 50%;
     background: linear-gradient(
       to top,
       rgba(0,0,0,0.8) 0%,
@@ -378,6 +396,7 @@ const CardShadow = styled.div`
       rgba(0,0,0,0.25) 65%,
       rgba(0,0,0,0) 100%
     );
+    opacity: 1;
   }
 `
 
@@ -394,8 +413,9 @@ const CardLabel = styled.div`
   color: #fff;
 
   @media (max-width: 768px) {
-    /* Чуть ниже на мобильных, чтобы не выходить за край в свернутых карточках */
-    bottom: 8px;
+    /* На мобильном всегда видимые подписи */
+    bottom: 20px;
+    opacity: 1;
   }
 `
 
@@ -653,6 +673,7 @@ const VoytenkoCasePage = () => {
   const [lightboxIndex, setLightboxIndex] = React.useState(null)
   const scrollYRef = useRef(0)
   const cardRefs = useRef([])
+  const carouselRef = useRef(null)
   // Флаг для отслеживания интерактивных изменений карусели
   const hasUserInteractedRef = React.useRef(false)
   const [accOpen, setAccOpen] = React.useState({
@@ -781,17 +802,45 @@ const VoytenkoCasePage = () => {
     navigate('/menu')
   }
 
-  // Auto-scroll active card into view on mobile
+  // Auto-scroll active card into view on mobile and handle swipe detection
   useEffect(() => {
     if (typeof window === 'undefined') return
     const isMobile = window.innerWidth <= 768
     if (!isMobile) return
-    // Скроллим к карусели только если пользователь взаимодействовал с ней
-    if (!hasUserInteractedRef.current) return
-    const el = cardRefs.current[activeIndex]
-    if (!el) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [activeIndex])
+    
+    const container = carouselRef.current
+    if (!container) return
+
+    // Обработка скролла для обновления activeIndex
+    let scrollTimeout
+    const handleScroll = () => {
+      clearTimeout(scrollTimeout)
+      scrollTimeout = setTimeout(() => {
+        const scrollLeft = container.scrollLeft
+        const cardWidth = container.scrollWidth / carouselOptions.length
+        const newIndex = Math.round(scrollLeft / cardWidth)
+        if (newIndex !== activeIndex && newIndex >= 0 && newIndex < carouselOptions.length) {
+          setActiveIndex(newIndex)
+        }
+      }, 100)
+    }
+
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    
+    // Программный скролл к активной карточке (только при пользовательском взаимодействии)
+    if (hasUserInteractedRef.current) {
+      const cardWidth = container.scrollWidth / carouselOptions.length
+      container.scrollTo({
+        left: activeIndex * cardWidth,
+        behavior: 'smooth'
+      })
+    }
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+      clearTimeout(scrollTimeout)
+    }
+  }, [activeIndex, carouselOptions.length])
 
   const handleKeyDown = (e) => {
     if (!carouselOptions.length) return
@@ -1029,6 +1078,7 @@ const VoytenkoCasePage = () => {
           return (
             <CarouselSection>
               <OptionsContainer
+                ref={carouselRef}
                 role="listbox"
                 aria-label="Слайды кейса"
                 tabIndex={0}
@@ -1050,7 +1100,14 @@ const VoytenkoCasePage = () => {
                 }}
                 onClick={() => {
                   hasUserInteractedRef.current = true
-                  if (activeIndex === i) setLightboxIndex(i); else setActiveIndex(i)
+                  const isMobile = window.innerWidth <= 768
+                  if (isMobile) {
+                    // На мобильном - сразу открываем lightbox
+                    setLightboxIndex(i)
+                  } else {
+                    // На десктопе - сначала активируем, потом по повторному клику открываем
+                    if (activeIndex === i) setLightboxIndex(i); else setActiveIndex(i)
+                  }
                 }}
                 ref={el => { cardRefs.current[i] = el }}
               >
@@ -1060,13 +1117,19 @@ const VoytenkoCasePage = () => {
                   <LabelInfo>
                     <div
                       className="main"
-                      style={{ opacity: activeIndex === i ? 1 : 0, transform: activeIndex === i ? 'translateX(0)' : 'translateX(25px)' }}
+                      style={{ 
+                        opacity: window.innerWidth <= 768 ? 1 : (activeIndex === i ? 1 : 0), 
+                        transform: window.innerWidth <= 768 ? 'translateX(0)' : (activeIndex === i ? 'translateX(0)' : 'translateX(25px)') 
+                      }}
                     >
                       {opt.title}
                     </div>
                     <div
                       className="sub"
-                      style={{ opacity: activeIndex === i ? 1 : 0, transform: activeIndex === i ? 'translateX(0)' : 'translateX(25px)' }}
+                      style={{ 
+                        opacity: window.innerWidth <= 768 ? 1 : (activeIndex === i ? 1 : 0), 
+                        transform: window.innerWidth <= 768 ? 'translateX(0)' : (activeIndex === i ? 'translateX(0)' : 'translateX(25px)') 
+                      }}
                     >
                       {opt.description}
                     </div>

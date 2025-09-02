@@ -56,6 +56,9 @@ const ServicesContent = (props) => {
         <>
           <div style={{ width: '100%', display: 'grid', gap: 8, margin: '8px 0' }}>
             <div style={{ textAlign: 'center', color: '#fff', opacity: 0.9, fontSize: 14 }}>Шаг 1 из 2 — выберите услугу.</div>
+            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 1.45, marginTop: 2, padding: '0 8px' }}>
+              Финальная стоимость проекта уточняется после обсуждения деталей и может отличаться от стартовой «от … ₽» в зависимости от сложности, дополнительных требований и объёма работ. Перед началом работ вы получите точную смету и этапы.
+            </div>
           </div>
           <PricingGrid ref={servicesGridRef} $center={isMobileFlag} $narrow={isMobileFlag} $single={!isMobileFlag && (servicesCategory === 'automation')}>
             {(() => {

@@ -6,8 +6,8 @@ import { gsap } from 'gsap'
 function Particles(props) {
   const ref = useRef()
   const [sphere] = useMemo(() => {
-    // Единый набор частиц для обеих страниц
-    const particleCount = 1200
+  // Адаптивное количество частиц
+  const particleCount = props.particleCount || 1200
     const positions = new Float32Array(particleCount * 3)
     
     for (let i = 0; i < particleCount; i++) {
@@ -22,19 +22,19 @@ function Particles(props) {
     return [positions]
   }, [])
 
+  const frameCountRef = useRef(0)
   useFrame((state, delta) => {
-    if (ref.current) {
-      const { rotationSpeed = { x: 1, y: 1 }, fastRotation = false } = props
-      
-      if (fastRotation) {
-        // Вращение с переменной скоростью
-        ref.current.rotation.x -= delta * rotationSpeed.x
-        ref.current.rotation.y -= delta * rotationSpeed.y
-      } else {
-        // Обычное медленное вращение (соответствует rotationSpeed = {x: 1, y: 1})
-        ref.current.rotation.x -= delta * (rotationSpeed.x / 15)
-        ref.current.rotation.y -= delta * (rotationSpeed.y / 20)
-      }
+    if (!ref.current) return
+    const { rotationSpeed = { x: 1, y: 1 }, fastRotation = false, frameSkip = 0 } = props
+    // Пропуск кадров для снижения нагрузки (на мобильных)
+    frameCountRef.current++
+    if (frameSkip && frameCountRef.current % (frameSkip + 1) !== 0) return
+    if (fastRotation) {
+      ref.current.rotation.x -= delta * rotationSpeed.x
+      ref.current.rotation.y -= delta * rotationSpeed.y
+    } else {
+      ref.current.rotation.x -= delta * (rotationSpeed.x / 15)
+      ref.current.rotation.y -= delta * (rotationSpeed.y / 20)
     }
   })
 
@@ -154,6 +154,12 @@ const UniversalParticles = ({
   const containerRef = useRef(null)
   const initialCameraPosition = isStartPage ? [0, 0, 0.2] : [0, 0, 1]
   const initialFOV = isStartPage ? 90 : 75
+  const isMobile = useMemo(() => typeof window !== 'undefined' && (window.innerWidth <= 820 || 'ontouchstart' in window), [])
+  // Понижаем нагрузку на мобильных: меньше частиц, пропуск кадров
+  const mobileParticleFactor = 0.5 // 50% частиц
+  const baseParticleCount = 1200
+  const effectiveParticleCount = isMobile ? Math.round(baseParticleCount * mobileParticleFactor) : baseParticleCount
+  const frameSkip = isMobile ? 1 : 0 // ~30fps на мобильных
   
   // Анимация появления частиц
   useEffect(() => {
@@ -195,6 +201,8 @@ const UniversalParticles = ({
             position: initialCameraPosition,
             fov: initialFOV
           }}
+          dpr={[1, 1.5]} /* ограничение DPR снижает нагрузку */
+          gl={{ powerPreference: 'low-power', antialias: false }}
           style={{ 
             pointerEvents: 'none',
             width: '100%',
@@ -213,6 +221,8 @@ const UniversalParticles = ({
             opacity={particleOpacity}
             rotationSpeed={rotationSpeed}
             fastRotation={fastRotation}
+            particleCount={effectiveParticleCount}
+            frameSkip={frameSkip}
           />
           {/* Черные частицы в hovered области */}
           <HoveredParticles

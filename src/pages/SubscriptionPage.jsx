@@ -51,9 +51,9 @@ const BackButton = styled.button`
   height: 44px;
   display: grid;
   place-items: center;
-  color: var(--primary-green, #22c55e);
+  color: var(--primary-red, #D14836);
   background: transparent;
-  border: 2px solid var(--primary-green, #22c55e);
+  border: 2px solid var(--primary-red, #D14836);
   border-radius: 0;
   padding: 0;
   font-size: 18px;
@@ -62,7 +62,7 @@ const BackButton = styled.button`
   transition: background 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
 
   &:hover {
-  background: var(--primary-green, #22c55e);
+    background: var(--primary-red, #D14836);
     color: var(--black);
     transform: translateY(-2px);
     box-shadow: 0 10px 26px rgba(0,0,0,0.35);
