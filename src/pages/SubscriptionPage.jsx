@@ -380,6 +380,75 @@ const BillingToggle = styled.div`
       font-weight: 600;
     }
   }
+  
+  /* Улучшенная мобильная версткая */
+  @media (max-width: 768px) {
+    gap: 20px;
+    margin-bottom: 2rem;
+    padding: 0.5rem 1rem;
+    
+    .toggle-wrapper {
+      width: 60px;
+      height: 32px;
+      /* Увеличиваем область касания */
+      padding: 4px;
+      margin: -4px;
+    }
+    
+    .toggle-slider {
+      border-radius: 32px;
+      
+      &:before {
+        height: 24px;
+        width: 24px;
+        left: 4px;
+        bottom: 4px;
+      }
+    }
+    
+    .toggle-input:checked + .toggle-slider:before {
+      transform: translateX(28px);
+    }
+    
+    .toggle-label {
+      font-size: 1.1rem;
+      font-weight: 500;
+      gap: 8px;
+      
+      .discount-badge {
+        padding: 4px 8px;
+        border-radius: 16px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
+      }
+    }
+  }
+  
+  /* Для очень маленьких экранов */
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+    
+    .toggle-wrapper {
+      order: 2;
+      align-self: center;
+    }
+    
+    .toggle-label:first-child {
+      order: 1;
+    }
+    
+    .toggle-label:last-child {
+      order: 3;
+    }
+    
+    .toggle-label {
+      font-size: 1rem;
+      justify-content: center;
+    }
+  }
 `
 
 const MobileOnly = styled.div`

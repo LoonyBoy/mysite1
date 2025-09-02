@@ -5,6 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="loony_boss" />
@@ -13,7 +14,7 @@
     <!-- Red Collar Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
       * {
@@ -21,9 +22,28 @@
         padding: 0;
         box-sizing: border-box;
       }
+      /* Quick override for the small caret element seen in the DOM during QA */
+      .sc-hjsuWn.tWouR {
+  color: var(--primary-red, #e04a3f) !important;
+  font-size: 44px !important;
+  line-height: 1 !important;
+  display: inline-block !important;
+  position: fixed !important;
+  left: 50% !important;
+  bottom: 12px !important;
+  transform: translateX(-50%);
+  /* static caret: no animation */
+  animation: none !important;
+        will-change: transform;
+        pointer-events: none !important;
+        -webkit-font-smoothing: antialiased !important;
+  z-index: 9000 !important;
+      }
+
+  /* animation removed to keep caret static */
       
       body {
-        font-family: 'Space Grotesk', monospace;
+        font-family: 'Unbounded', sans-serif;
         background: #000;
         color: #fff;
         overflow-x: hidden;
@@ -72,9 +92,10 @@
         z-index: -2;
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-J8_U6P_V.js"></script>
+    <script type="module" crossorigin src="/assets/index-jUpl1YX4.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Cl_rOAbq.css">
   </head>
   <body>
     <div id="root"></div>
   </body>
-</html> 
+</html>

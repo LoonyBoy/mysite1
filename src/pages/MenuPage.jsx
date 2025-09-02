@@ -1438,6 +1438,8 @@ const ContactsModalWrap = styled.div`
     padding: 0;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
+    height: 100vh;
+    overscroll-behavior: contain;
   }
 `;
 
@@ -1453,6 +1455,7 @@ const ContactsMainTitle = styled.h2`
   @media (max-width: 768px) {
     top: calc(16px + env(safe-area-inset-top, 0px));
     left: 12px;
+    z-index: 10;
   }
 `;
 
@@ -1468,8 +1471,12 @@ const ContactsGrid = styled.div`
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, 1fr);
-    gap: 0;
+    grid-template-rows: repeat(4, auto);
+    gap: 1px;
+    height: auto;
+    min-height: calc(100vh - 80px);
+    padding-top: 80px;
+    padding-bottom: 200px;
   }
 `;
 
@@ -1506,6 +1513,12 @@ const ContactPortal = styled.a`
   
   /* Убираем border-radius для полноэкранного вида */
   border-radius: 0;
+  
+  @media (max-width: 768px) {
+    min-height: 140px;
+    height: auto;
+    padding: 30px 20px;
+  }
 `;
 
 const ContactIcon = styled.div`
@@ -1783,7 +1796,7 @@ const PriceRow = styled.div`
 const ConfirmButton = styled(CloseButton)`
   position: relative;
   top: 0; right: 0; left: 0; bottom: 0;
-  width: 56px; height: 56px;
+  width: 44px; height: 44px;
   z-index: 3; /* above decorations within card header */
   @media (max-width: 1023px) { display: none; }
   /* Desktop: no vertical offset */
@@ -1830,7 +1843,7 @@ const DesktopOnly = styled.div`
 // Reserve space for morphing button to avoid layout shift
 const ConfirmSlot = styled.div`
   width: 112px; /* equals expanded width of ConfirmButton */
-  height: 44px;
+  height: 44px; /* updated to match new button height */
   display: inline-flex;
   align-items: center;
   justify-content: flex-end; /* align the small 44px button to the right edge */
@@ -1840,7 +1853,7 @@ const ConfirmSlot = styled.div`
 const MobileConfirmButton = styled(CloseButton)`
   position: relative;
   top: 0; right: 0; left: 0; bottom: 0;
-  width: 56px; height: 56px;
+  width: 44px; height: 44px;
   z-index: 3; /* ensure above potential decorative overlays */
   @media (min-width: 1024px) { display: none; }
   /* Поднимаем кнопку умеренно для мобильной версии */
@@ -1878,7 +1891,7 @@ const MobileConfirmButton = styled(CloseButton)`
 // Mobile version of confirm slot
 const MobileConfirmSlot = styled.div`
   width: 112px; /* equals expanded width of MobileConfirmButton */
-  height: 44px;
+  height: 44px; /* updated to match new button height */
   display: inline-flex;
   align-items: center;
   justify-content: flex-end; /* align the small 44px button to the right edge */
@@ -3623,16 +3636,24 @@ const MenuPage = () => {
     if (openedIndex !== 3) return
     const prevOverflow = document.body.style.overflow
     const prevPad = document.body.style.paddingRight
-    try {
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-      document.body.style.overflow = 'hidden'
-      document.body.style.paddingRight = `${scrollbarWidth}px`
-    } catch {}
+    
+    // Определяем, является ли устройство мобильным
+    const isMobile = window.innerWidth <= 768
+    
+    // Блокируем прокрутку body только на десктопе
+    if (!isMobile) {
+      try {
+        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+        document.body.style.overflow = 'hidden'
+        document.body.style.paddingRight = `${scrollbarWidth}px`
+      } catch {}
+    }
+    
     const root = contactsModalRef.current
     if (root) {
       try {
         const title = root.querySelector('h2') // ContactsMainTitle
-        const portals = root.querySelectorAll('a') // ContactPortal elements
+        const portals = root.querySelectorAll('a, button') // ContactPortal elements (ссылки и кнопки)
         
         // Set initial states
         gsap.set(root, { opacity: 0, y: 10 })
@@ -3647,7 +3668,10 @@ const MenuPage = () => {
       } catch {}
     }
     return () => {
-      try { document.body.style.overflow = prevOverflow; document.body.style.paddingRight = prevPad } catch {}
+      // Восстанавливаем прокрутку только если она была заблокирована
+      if (!isMobile) {
+        try { document.body.style.overflow = prevOverflow; document.body.style.paddingRight = prevPad } catch {}
+      }
     }
   }, [openedIndex])
 
@@ -5021,7 +5045,7 @@ const MenuPage = () => {
                                     </CardText>
                                   </CardFront>
                                   <CardBack>
-                                    {p.id !== 'raykhan' && (
+                                    {p.id !== 'raykhan' && p.id !== 'lightlab' && (
                                       <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                           <path d="M7 17L17 7" />
@@ -5110,7 +5134,7 @@ const MenuPage = () => {
                                       </CardText>
                                     </CardFront>
                                     <CardBack>
-                                      {p.id !== 'raykhan' && (
+                                      {p.id !== 'raykhan' && p.id !== 'lightlab' && (
                                         <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
                                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" >
                                             <path d="M7 17L17 7" />
@@ -5148,7 +5172,7 @@ const MenuPage = () => {
                                       </CardText>
                                     </CardFront>
                                     <CardBack>
-                                      {p.id !== 'raykhan' && (
+                                      {p.id !== 'raykhan' && p.id !== 'lightlab' && (
                                         <CardGoIcon type="button" aria-label="Открыть проект" onClick={(e)=>{ e.stopPropagation(); handleProjectNavigation(p.href) }}>
                                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                             <path d="M7 17L17 7" />
@@ -5288,9 +5312,18 @@ const MenuPage = () => {
                           as="button"
                           onClick={(e) => {
                             e.preventDefault()
-                            copyToClipboard('+79131114551', 'Номер телефона')
+                            // Проверяем, является ли устройство мобильным
+                            const isMobile = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                            
+                            if (isMobile) {
+                              // На мобильных устройствах предлагаем позвонить
+                              window.location.href = 'tel:+79131114551'
+                            } else {
+                              // На десктопе копируем в буфер обмена
+                              copyToClipboard('+79131114551', 'Номер телефона')
+                            }
                           }}
-                          aria-label="Скопировать номер телефона"
+                          aria-label="Позвонить или скопировать номер телефона"
                         >
                           <ContactContent>
                             <ContactIcon>
