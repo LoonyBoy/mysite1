@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import mysql from 'mysql2/promise'
+import fetch from 'node-fetch'
 
 dotenv.config()
 
@@ -10,6 +11,10 @@ app.use(cors())
 app.use(express.json())
 
 const PORT = process.env.PORT || 4000
+// Telegram bot config (for lead submissions)
+const TG_BOT_TOKEN = process.env.TG_BOT_TOKEN || 'REPLACE_WITH_TOKEN'
+// Default chat id can be the same as bot owner if not provided by client
+const TG_CHAT_ID = process.env.TG_CHAT_ID || process.env.TELEGRAM_CHAT_ID || ''
 
 // DB config
 const DB_HOST = process.env.DB_HOST || '127.0.0.1'
@@ -65,6 +70,33 @@ async function ensureDbAndTable() {
 
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
+// Quick diagnostics for Telegram bot configuration
+app.get('/api/lead/ping', async (req, res) => {
+  const info = {
+    hasToken: Boolean(TG_BOT_TOKEN && TG_BOT_TOKEN !== 'REPLACE_WITH_TOKEN'),
+    hasChatId: Boolean(TG_CHAT_ID),
+    botOk: false,
+    error: null
+  }
+  if (!info.hasToken) {
+    return res.status(500).json({ ...info, error: 'BOT_TOKEN_NOT_CONFIGURED' })
+  }
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/getMe`)
+    const j = await r.json().catch(()=>null)
+    if (j && j.ok) {
+      info.botOk = true
+      info.botUser = j.result?.username
+    } else {
+      info.error = 'GET_ME_FAILED'
+      info.raw = j
+    }
+  } catch (e) {
+    info.error = e.message
+  }
+  res.status(info.error ? 500 : 200).json(info)
+})
+
 // Get top N scores (default 10)
 app.get('/api/scores/top', async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit || '10', 10), 1), 50)
@@ -104,6 +136,52 @@ app.post('/api/scores', async (req, res) => {
   } catch (err) {
     console.error('POST /api/scores error', err)
     res.status(500).json({ error: 'DB_ERROR' })
+  }
+})
+
+// Accept project/application lead and forward to Telegram bot
+// Body: { name, phone, description, category, options }
+app.post('/api/lead', async (req, res) => {
+  try {
+    const { name = '', phone = '', description = '', category = '', options = [] } = req.body || {}
+    if (!TG_BOT_TOKEN || TG_BOT_TOKEN === 'REPLACE_WITH_TOKEN') {
+      return res.status(500).json({ error: 'BOT_TOKEN_NOT_CONFIGURED' })
+    }
+    const safe = (v) => String(v || '').trim().slice(0, 500)
+    const msgLines = []
+    msgLines.push('🆕 Новая заявка с сайта')
+    if (safe(name)) msgLines.push(`👤 Имя: ${safe(name)}`)
+    if (safe(phone)) msgLines.push(`📞 Телефон: ${safe(phone)}`)
+    if (safe(category)) msgLines.push(`📂 Категория: ${safe(category)}`)
+    if (Array.isArray(options) && options.length) msgLines.push(`⚙️ Опции: ${options.map(o=>safe(o)).join(', ')}`)
+    if (safe(description)) msgLines.push('📝 '+safe(description))
+    const text = msgLines.join('\n')
+
+    // Allow client to override chat id (optional, validated as number)
+    let chatId = req.body.chatId || TG_CHAT_ID
+    if (!chatId) {
+      return res.status(500).json({ error: 'CHAT_ID_NOT_CONFIGURED' })
+    }
+    console.log('[lead] incoming', { name, phone, category, optionsCount: Array.isArray(options)?options.length:0 })
+    console.log('[lead] sending to Telegram chat', chatId)
+    // Send to Telegram
+    const url = `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`
+    const tgResp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text })
+    })
+    let tgJson = null
+    try { tgJson = await tgResp.json() } catch { /* ignore */ }
+    if (!tgResp.ok || !(tgJson && tgJson.ok)) {
+      console.error('Telegram sendMessage failed', tgResp.status, tgJson)
+      return res.status(502).json({ error: 'TELEGRAM_SEND_FAILED', status: tgResp.status, tg: tgJson })
+    }
+    console.log('[lead] sent ok: message_id', tgJson.result && tgJson.result.message_id)
+    res.json({ ok: true, message_id: tgJson.result && tgJson.result.message_id })
+  } catch (err) {
+    console.error('POST /api/lead error', err)
+    res.status(500).json({ error: 'INTERNAL_ERROR' })
   }
 })
 

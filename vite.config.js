@@ -6,7 +6,14 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // Доступ из локальной сети
     port: 3000,
-    open: true
+    open: true,
+    // Прокси, чтобы запросы на /api шли на Express (порт 4000)
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true
+      }
+    }
   },
   build: {
     outDir: 'dist',

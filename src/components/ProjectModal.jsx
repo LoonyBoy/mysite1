@@ -466,14 +466,15 @@ const TextArea = styled.textarea`
 `
 
 const ContactButtonsContainer = styled.div`
-  display: none; /* hide text buttons by default (icons used instead) */
+  /* Show primary submit button (previously hidden) */
+  display: flex;
   flex-direction: column;
   gap: 12px;
   margin-top: 30px;
 
   @media (max-width: 768px) {
-    /* keep hidden on mobile as well (mobile uses icon row) */
-    display: none;
+    display: flex;
+    width: 100%;
   }
 `
 
@@ -603,38 +604,114 @@ const MobileIconButton = styled(motion.button)`
 `
 
 const ContactButton = styled(motion.button)`
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
-  padding: 14px 20px;
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 1rem;
+  /* Match CreateProjectButton (ActionButtonBase) styling */
+  padding: 0.8rem 2.4rem;
+  border: 2px solid var(--primary-red);
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  color: var(--primary-red);
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  min-height: 40px;
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+  text-shadow:
+    0 0 10px rgba(209, 72, 54, 0.5),
+    0 0 20px rgba(209, 72, 54, 0.3);
+  box-shadow:
+    0 0 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  display: inline-grid;
+  place-items: center;
+  text-decoration: none;
+  white-space: nowrap;
+  width: 100%;
+  border-radius: 12px;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.3);
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(0, 255, 255, 0.1),
+      rgba(255, 0, 255, 0.1),
+      transparent
+    );
+    animation: cyberpunk-scan 3s infinite;
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 1px,
+        rgba(209, 72, 54, 0.03) 1px,
+        rgba(209, 72, 54, 0.03) 2px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 1px,
+        rgba(0, 255, 255, 0.02) 1px,
+        rgba(0, 255, 255, 0.02) 2px
+      );
+    animation: pixel-flicker 0.15s infinite alternate;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--primary-red);
+    color: var(--black);
+    transform: translateY(-2px);
+    box-shadow:
+      0 10px 30px rgba(209, 72, 54, 0.4),
+      0 0 40px rgba(209, 72, 54, 0.3),
+      0 0 60px rgba(0, 255, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    text-shadow:
+      0 0 5px rgba(0, 0, 0, 0.8),
+      0 0 10px rgba(0, 255, 255, 0.3);
+    animation: cyberpunk-hover 0.5s ease-out;
+
+    &::before { animation: cyberpunk-scan 1s infinite; }
+    &::after { animation: pixel-flicker 0.1s infinite alternate; opacity: 1; }
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98) translateY(-2px);
+    animation: cyberpunk-glitch 0.2s ease-out;
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    filter: grayscale(0.4);
   }
 
   @media (max-width: 768px) {
-    padding: 16px 20px;
-    border-radius: 12px;
-    font-size: 1.05rem;
-    
-    &:active {
-      transform: scale(0.98);
-    }
+    padding: 0.9rem 1.6rem;
+    font-size: 0.95rem;
+    min-height: 44px;
+    min-width: 180px;
   }
 `
 
@@ -898,15 +975,51 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
     window.open(`mailto:loony.boss.work@gmail.com?subject=${subject}&body=${message}`)
   }
 
-  const handleSendTelegram = () => {
-    const message = generateContactMessage()
-    window.open(`https://t.me/loony_boss?text=${message}`)
+  const submitLead = async () => {
+    // Fire-and-forget lead submission to backend which forwards to Telegram bot
+    try {
+      const category = mainCategories.find(cat => cat.id === selectedCategory)?.text || ''
+      const selectedSubcats = selectedSubcategories.map(id =>
+        subcategories[selectedCategory]?.find(sub => sub.id === id)?.text
+      ).filter(Boolean)
+      await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+            phone: formData.phone,
+            description: formData.description || prefill?.description || '',
+            category,
+            options: selectedSubcats
+        })
+      }).catch(()=>{})
+    } catch(e) {
+      console.warn('Failed to submit lead', e)
+    }
   }
 
-  const handleSendWhatsApp = () => {
-    const message = generateContactMessage()
-    // Замените YOUR_PHONE_NUMBER на ваш номер телефона в международном формате без + (например: 79123456789)
-  window.open(`https://wa.me/79131114551?text=${message}`)
+  const [leadStatus, setLeadStatus] = useState('idle') // idle|sending|sent|error
+  const handleSendTelegram = async () => {
+    if (!isFormValid) return
+    if (leadStatus === 'idle') {
+      try {
+        setLeadStatus('sending')
+        await submitLead()
+        setLeadStatus('sent')
+      } catch { setLeadStatus('error') }
+      setTimeout(()=> setLeadStatus('idle'), 3000)
+    }
+  }
+  const handleSendWhatsApp = async () => {
+    if (!isFormValid) return
+    if (leadStatus === 'idle') {
+      try {
+        setLeadStatus('sending')
+        await submitLead()
+        setLeadStatus('sent')
+      } catch { setLeadStatus('error') }
+      setTimeout(()=> setLeadStatus('idle'), 3000)
+    }
   }
 
   return (
@@ -1091,16 +1204,13 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                     </FormContainer>
                     <ContactButtonsContainer>
                       <ContactButton
-                        disabled={!isFormValid}
+                        disabled={!isFormValid || leadStatus==='sending' || leadStatus==='sent'}
                         onClick={handleSendTelegram}
                       >
-                        📱 Отправить в Telegram
-                      </ContactButton>
-                      <ContactButton
-                        disabled={!isFormValid}
-                        onClick={handleSendWhatsApp}
-                      >
-                        💬 Отправить в WhatsApp
+                        {leadStatus==='sending' && 'Отправка…'}
+                        {leadStatus==='sent' && '✓ Отправлено'}
+                        {leadStatus==='error' && 'Ошибка, повторить'}
+                        {leadStatus==='idle' && 'Отправить заявку'}
                       </ContactButton>
                     </ContactButtonsContainer>
                     <DesktopContactWrapper>
@@ -1270,20 +1380,15 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                     >
                       <ContactButtonsContainer>
                         <ContactButton
-                          disabled={!isFormValid}
+                          disabled={!isFormValid || leadStatus==='sending' || leadStatus==='sent'}
                           onClick={handleSendTelegram}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          📱 Отправить в Telegram
-                        </ContactButton>
-                        <ContactButton
-                          disabled={!isFormValid}
-                          onClick={handleSendWhatsApp}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          💬 Отправить в WhatsApp
+                          {leadStatus==='sending' && 'Отправка…'}
+                          {leadStatus==='sent' && '✓ Отправлено'}
+                          {leadStatus==='error' && 'Ошибка, повторить'}
+                          {leadStatus==='idle' && 'Отправить заявку'}
                         </ContactButton>
                       </ContactButtonsContainer>
                       <DesktopContactWrapper>
