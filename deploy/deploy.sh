@@ -5,18 +5,31 @@ set -euo pipefail
 # Usage (local machine):
 #   ssh appuser@SERVER "bash -lc '~/app/deploy/deploy.sh'"
 
-APP_DIR=/home/appuser/app
+APP_DIR=${APP_DIR:-/home/appuser/app}
 BRANCH=${BRANCH:-main}
 INSTALL_PROD=${INSTALL_PROD:-1}
 SERVICE_NAME=${SERVICE_NAME:-portfolio}
+REPO_URL=${REPO_URL:-https://github.com/LoonyBoy/mysite1.git}
+
+# If executed as root, re-exec as appuser preserving env vars
+if [ "$(id -u)" = "0" ] && [ "${RUN_AS_APPUSER:-1}" = "1" ]; then
+  if id appuser >/dev/null 2>&1; then
+    echo "[deploy] Re-executing as appuser"
+    exec sudo -u appuser -H bash -lc "RUN_AS_APPUSER=0 APP_DIR=$APP_DIR BRANCH=$BRANCH INSTALL_PROD=$INSTALL_PROD SERVICE_NAME=$SERVICE_NAME REPO_URL=$REPO_URL $0"
+  else
+    echo "[deploy] WARNING: appuser not found; continuing as root" >&2
+  fi
+fi
 
 echo "[deploy] Dir: $APP_DIR branch: $BRANCH"
-cd "$APP_DIR"
 
-if [ ! -d .git ]; then
-  echo "[deploy] ERROR: .git not found. Clone repository first." >&2
-  exit 1
+if [ ! -d "$APP_DIR/.git" ]; then
+  echo "[deploy] Cloning repository: $REPO_URL"
+  mkdir -p "$(dirname "$APP_DIR")"
+  git clone "$REPO_URL" "$APP_DIR"
 fi
+
+cd "$APP_DIR"
 
 git fetch --all --prune
 CURRENT=$(git rev-parse --abbrev-ref HEAD)
