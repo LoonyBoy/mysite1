@@ -7,7 +7,8 @@ set -euo pipefail
 
 APP_DIR=${APP_DIR:-/home/appuser/app}
 BRANCH=${BRANCH:-main}
-INSTALL_PROD=${INSTALL_PROD:-1}
+# INSTALL_PROD left for compatibility but defaults to 0 (always install dev deps for build tools like Vite)
+INSTALL_PROD=${INSTALL_PROD:-0}
 SERVICE_NAME=${SERVICE_NAME:-portfolio}
 REPO_URL=${REPO_URL:-https://github.com/LoonyBoy/mysite1.git}
 
@@ -39,12 +40,8 @@ if [ "$CURRENT" != "$BRANCH" ]; then
 fi
 git pull --rebase --autostash origin "$BRANCH"
 
-echo "[deploy] Installing dependencies"
-if [ "$INSTALL_PROD" = "1" ]; then
-  npm ci --omit=dev
-else
-  npm ci
-fi
+echo "[deploy] Installing dependencies (full set, dev included)"
+npm ci
 
 echo "[deploy] Building frontend"
 npm run build
