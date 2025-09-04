@@ -3,12 +3,23 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import mysql from 'mysql2/promise'
 import fetch from 'node-fetch'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 dotenv.config()
 
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+// --- Static frontend (Vite build) ---
+// Resolve dist directory relative to this file so it works when run via systemd
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const distDir = path.resolve(__dirname, '..', 'dist')
+
+// Serve static assets if dist exists
+app.use(express.static(distDir, { maxAge: '1h', index: false }))
 
 const PORT = process.env.PORT || 4000
 // Telegram bot config (for lead submissions)
@@ -183,6 +194,15 @@ app.post('/api/lead', async (req, res) => {
     console.error('POST /api/lead error', err)
     res.status(500).json({ error: 'INTERNAL_ERROR' })
   }
+})
+
+// SPA fallback: any non-API GET request returns index.html so client router handles it
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/')) return next()
+  // Serve index.html
+  res.sendFile(path.join(distDir, 'index.html'), (err) => {
+    if (err) next(err)
+  })
 })
 
 ensureDbAndTable()
