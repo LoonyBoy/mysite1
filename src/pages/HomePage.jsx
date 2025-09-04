@@ -799,7 +799,7 @@ const HomePage = () => {
     const isReturning = sessionStorage.getItem('returning-to-home')
     const comingFromProjects = sessionStorage.getItem('coming-from-projects')
     
-    if (isReturning && comingFromProjects) {
+  if (isReturning && comingFromProjects) {
       // Анимация появления текста при возвращении с /projects
       const h1Element = heroRef.current?.querySelector('h1')
       const pElement = heroRef.current?.querySelector('p')
@@ -845,7 +845,15 @@ const HomePage = () => {
         }
       }
     } else if (isReturning) {
-      // Просто убираем флаг, если возвращаемся с других страниц (например, с /menu)
+      // Возвращаемся НЕ со страницы projects (например, с /menu) – просто мгновенно показываем контент
+      const h1Element = heroRef.current?.querySelector('h1')
+      const descriptionContainer = heroRef.current?.querySelector('.description-container')
+      if (h1Element) {
+        gsap.set(h1Element, { opacity: 1, y: 0 })
+      }
+      if (descriptionContainer) {
+        gsap.set(descriptionContainer, { opacity: 1, y: 0 })
+      }
       sessionStorage.removeItem('returning-to-home')
     } else {
       // Обычная анимация входа (первое посещение)
