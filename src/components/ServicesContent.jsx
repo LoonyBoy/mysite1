@@ -1,5 +1,4 @@
 import React from 'react'
-import { subscriptionFAQ } from '../pages/MenuPage'
 
 // Full lazy-loaded Services modal content extracted from MenuPage
 const ServicesContent = (props) => {
@@ -17,8 +16,9 @@ const ServicesContent = (props) => {
     TERM_HINTS, FeatureList, FeatureItem, FAQAccordionGreen,
     CardSectionTitle, SectionBlock, Bullets, RightCol, ConfirmSlot, ConfirmButton, Divider,
     SubscriptionSplit, StepNote, MobilePlansWrap, PlanTabs, PlanTabButton, PlanCard, PlanHeader, StickyCTABar,
-    inlineNextFor, setInlineNextFor, setServicesStep, setServicesTier,
-    selectedServiceId, mobilePlan, setMobilePlan, handleServicesTierButtonClick, handleTermToggle, ComparisonTable, navigate
+  inlineNextFor, setInlineNextFor, setServicesStep, setServicesTier,
+  selectedServiceId, mobilePlan, setMobilePlan, handleServicesTierButtonClick, handleTermToggle, ComparisonTable, navigate,
+  subscriptionFAQ
   } = props
 
   if (!ServicesModalWrap) return null
@@ -26,8 +26,8 @@ const ServicesContent = (props) => {
   try {
   return (
     <ServicesModalWrap className="services-modal" ref={servicesModalRef} $windowScroll={windowScroll}>
-      <ProjectsTopTitle>{servicesStep === 'subscription' ? 'Подписка' : 'Пакеты услуг'}</ProjectsTopTitle>
-      <PricingHeader>
+  <ProjectsTopTitle $compactTop>{servicesStep === 'subscription' ? 'Подписка' : 'Пакеты услуг'}</ProjectsTopTitle>
+  <PricingHeader style={servicesStep === 'pick' ? { marginTop: 16, marginBottom: 4 } : undefined}>
         {servicesStep === 'pick' && (
           <HeadingsRow style={{ marginBottom: 8, position: 'relative', display: 'none' }} className="desktop-only" ref={tabWebRef?.current ? undefined : undefined /* keep signature */}>
             <HeadingTab ref={tabWebRef} data-active={servicesCategory === 'web'} onClick={(e) => { e.stopPropagation(); switchCategory('web') }}>Сайты / Веб‑приложения</HeadingTab>
@@ -54,7 +54,7 @@ const ServicesContent = (props) => {
 
       {servicesStep === 'pick' ? (
         <>
-          <div style={{ width: '100%', display: 'grid', gap: 8, margin: '8px 0' }}>
+          <div style={{ width: '100%', display: 'grid', gap: 6, margin: '0 0 4px' }}>
             <div style={{ textAlign: 'center', color: '#fff', opacity: 0.9, fontSize: 14 }}>Шаг 1 из 2 — выберите услугу.</div>
             <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 1.45, marginTop: 2, padding: '0 8px' }}>
               Финальная стоимость проекта уточняется после обсуждения деталей и может отличаться от стартовой «от … ₽» в зависимости от сложности, дополнительных требований и объёма работ. Перед началом работ вы получите точную смету и этапы.
@@ -196,7 +196,7 @@ const ServicesContent = (props) => {
               </SubscriptionIntro>
               <p style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '24px 0 8px', opacity: 0.9 }}>Вопрос‑ответ</p>
               <FAQAccordionGreen>
-                {subscriptionFAQ.map(item => (
+                {(subscriptionFAQ || []).map(item => (
                   <details key={item.question}>
                     <summary>{item.question}</summary>
                     <div className="faq-content">

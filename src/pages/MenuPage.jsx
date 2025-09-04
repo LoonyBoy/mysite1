@@ -612,86 +612,51 @@ const FAQAccordion = styled.div`
   padding: 0;
 
   details {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(136, 78, 255, 0.25);
-    border-radius: 6px;
-    margin: 8px 0;
-    transition: border-color 160ms ease, background-color 160ms ease;
-    overflow: hidden;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding: 0;
   }
-
-  details[open] {
-    background: rgba(136, 78, 255, 0.06);
-    border-color: rgba(136, 78, 255, 0.5);
-  }
+  details:last-child { border-bottom: none; }
 
   summary {
     list-style: none;
     cursor: pointer;
-    padding: 12px 14px 12px 40px;
-    position: relative;
+    padding: 14px 0;
     font-weight: 500;
     color: #fff;
+    font-size: 1.05rem;
     outline: none;
     user-select: none;
+    transition: color .25s ease;
   }
-
   summary::-webkit-details-marker { display: none; }
   summary::marker { content: ''; }
+  summary:hover { color: #b9a8ff; }
+  details[open] summary { color: #b9a8ff; }
 
-  /* Иконка + / − */
-  summary::before {
-    content: '+';
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 3px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.95);
-    background: linear-gradient(180deg, rgba(136,78,255,0.35), rgba(136,78,255,0.15));
-    box-shadow: inset 0 0 0 1px rgba(136,78,255,0.5);
-  }
-
-  details[open] summary::before { content: '−'; }
-
-  /* Плавное раскрытие: grid rows trick */
-  .faq-content {
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 220ms ease;
-  }
+  .faq-content { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease; }
   details[open] .faq-content { grid-template-rows: 1fr; }
   .faq-content-inner { overflow: hidden; }
 
-  .faq-answer {
-    padding: 0 14px 12px 40px;
-    color: rgba(255,255,255,0.9);
-  }
-  .faq-answer p { margin: 0 0 10px 0; }
+  .faq-answer { padding: 0 0 14px 0; color: rgba(255,255,255,0.8); }
+  .faq-answer p { margin: 0 0 10px 0; line-height:1.55; }
   .faq-answer ul { margin: 8px 0 2px 18px; }
   .faq-answer li { margin: 4px 0; }
 `
 
-// Green-accented FAQ variant for subscriptions, left-aligned text
+// Light purple accented variant (renamed but keeping component name to avoid ref changes)
 const FAQAccordionGreen = styled(FAQAccordion)`
   details {
-    border-color: rgba(20, 108, 67, 0.35); /* dark green border */
+    border-color: rgba(150, 130, 255, 0.35);
   }
   details[open] {
-    background: rgba(20, 108, 67, 0.08);
-    border-color: rgba(20, 108, 67, 0.6);
+    background: rgba(150, 130, 255, 0.10);
+    border-color: rgba(150, 130, 255, 0.6);
   }
   summary { text-align: left; }
   .faq-answer { text-align: left; }
   summary::before {
-    background: linear-gradient(180deg, rgba(20,108,67,0.35), rgba(20,108,67,0.15));
-    box-shadow: inset 0 0 0 1px rgba(20,108,67,0.6);
+    background: linear-gradient(180deg, rgba(150,130,255,0.35), rgba(150,130,255,0.15));
+    box-shadow: inset 0 0 0 1px rgba(150,130,255,0.55);
   }
 `
 
@@ -1445,8 +1410,8 @@ const ContactsModalWrap = styled.div`
 
 const ContactsMainTitle = styled.h2`
   position: absolute;
-  /* Опущен ниже для более сбалансированного вертикального расположения */
-  top: calc(40px + env(safe-area-inset-top, 0px));
+  /* Опущено чуть ниже (было 12px) по просьбе пользователя */
+  top: calc(32px + env(safe-area-inset-top, 0px));
   left: 16px;
   margin: 0;
   font-size: clamp(24px, 5vw, 36px);
@@ -1454,7 +1419,7 @@ const ContactsMainTitle = styled.h2`
   color: #fff;
 
   @media (max-width: 768px) {
-    top: calc(36px + env(safe-area-inset-top, 0px));
+    top: calc(24px + env(safe-area-inset-top, 0px));
     left: 12px;
     z-index: 10;
   }
@@ -1467,9 +1432,9 @@ const ContactsGrid = styled.div`
   gap: 0;
   width: 100vw;
   /* Дополнительно опущены карточки ниже заголовка */
-  height: calc(100vh - 72px);
+  height: calc(100vh - 120px); /* увеличили доступную высоту рядов (было 100vh-150px) */
   margin: 0;
-  padding: 72px 0 0 0;
+  padding: 120px 0 0 0; /* уменьшили отступ сверху, чтобы ряды стали выше и нижние карты дошли до низа */
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -2348,7 +2313,7 @@ const CardsStrip = styled.div`
   /* Desktop: центрируем без горизонтального скролла */
   display: flex;
   justify-content: center;
-  gap: 18px;
+  gap: 14px; /* reduced desktop gap */
   padding: 6px 4px;
   overflow: visible;
 
@@ -2369,11 +2334,11 @@ const CardsStrip = styled.div`
 
 const ProjectCard = styled.div`
   position: relative;
-  height: 200px;
-  width: 320px;
-  max-width: 340px;
-  min-width: 280px;
-  @media (min-width: 1280px) { height: 220px; }
+  height: 170px; /* reduced desktop height */
+  width: 280px; /* reduced desktop width */
+  max-width: 300px; /* scale bounds down */
+  min-width: 250px; /* narrower min */
+  @media (min-width: 1280px) { height: 190px; } /* slightly larger on very wide screens */
   border-radius: 14px;
   perspective: 600px; /* глубже перспектива */
   perspective-origin: 50% 50%;
@@ -2480,7 +2445,7 @@ const CardBack = styled(CardFace)`
 /* Заголовок на обороте: чуть крупнее и визуально приподнят */
 const CardBackTitle = styled.h4`
   margin: 0;
-  font-size: 18px; /* было 16px */
+  font-size: 16px; /* reduced from 18px after card size shrink */
   font-weight: 600;
   line-height: 1.2;
   transform: translateY(-2px); /* оптически приподнять */
@@ -2488,7 +2453,7 @@ const CardBackTitle = styled.h4`
   padding-right: 60px; /* место под кнопку перехода */
   word-break: break-word;
   @media (max-width: 768px) {
-    font-size: 17px;
+    font-size: 15px; /* mobile slightly smaller too */
     padding-right: 56px; /* чуть меньше на мобильном */
   }
 `
@@ -2498,7 +2463,7 @@ const CardBackMeta = styled.div`
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px; /* was 12px */
   opacity: 0.9;
   line-height: 1.3;
   position: relative;
@@ -2521,7 +2486,7 @@ const ProjectFeatureItem = styled.li`
   display: flex;
   gap: 6px;
   align-items: flex-start;
-  font-size: 12px;
+  font-size: 11px; /* was 12px */
   line-height: 1.35;
   color: #000;
   opacity: 0.95;
@@ -2574,7 +2539,7 @@ const TechChips = styled.div`
   display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
   .chip {
     position: relative;
-    font-size: 12px; padding: 4px 8px 4px 10px; border-radius: 999px;
+  font-size: 11px; /* was 12px */ padding: 4px 8px 4px 10px; border-radius: 999px;
     background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);
     line-height: 1.1; letter-spacing: .2px;
     transition: background .25s ease, border-color .25s ease, transform .2s ease;
@@ -2590,7 +2555,7 @@ const TechChips = styled.div`
   }
   /* Темная тема hover (фронт) */
   ${ProjectCard} &:hover .chip { background: rgba(255,255,255,0.16); }
-  .chip.more { font-size: 11px; opacity: 0.8; }
+  .chip.more { font-size: 10px; /* was 11px */ opacity: 0.8; }
   /* Варианты по технологиям через data-tech (частичное совпадение) */
   .chip[data-tech*='react']::before { background: linear-gradient(180deg,#61dafb,#388bab); }
   .chip[data-tech*='node']::before { background: linear-gradient(180deg,#3c873a,#6bbf5a); }
@@ -2678,7 +2643,7 @@ const CardText = styled.div`
 
 const ProjectsTopTitle = styled.h2`
   position: absolute;
-  top: 24px; /* заголовок тоже чуть ниже */
+  top: ${p => p.$compactTop ? '-8px' : '24px'}; /* ещё выше (негативный отступ) в модалке Услуги */
   left: 16px;
   margin: 0;
   font-size: clamp(24px, 5vw, 36px);
@@ -2686,7 +2651,7 @@ const ProjectsTopTitle = styled.h2`
   color: #fff;
 
   @media (max-width: 768px) {
-    top: 16px;
+  top: ${p => p.$compactTop ? '-4px' : '16px'}; /* чуть-чуть выше на мобильном */
     left: 12px;
   }
 `
@@ -4884,27 +4849,16 @@ const MenuPage = () => {
                       <AboutLeft>
                         <AboutTitle className="about-title">О себе<AboutTitleUnderline className="about-title-underline" /></AboutTitle>
                         <AboutText className="about-text">
-                          <p>Привет, меня зовут Михаил.</p>
-                          <p>
-                            Я разрабатываю сайты, Telegram- и WhatsApp-ботов, а также автоматизирую всё,
-                            что может сэкономить твоё время и упростить жизнь.
-                          </p>
-                          <p>
-                            Клиенты ценят меня за то, что я быстро понимаю задачи, предлагаю адекватные и
-                            нестандартные решения и чётко соблюдаю сроки. Со мной легко общаться: я не люблю
-                            формальностей, зато люблю, когда сделано красиво, продуманно и качественно.
-                          </p>
+                          <p>Привет, меня зовут Михаил! Я разрабатываю сайты, веб‑приложения, Telegram‑ и WhatsApp‑ботов, а также автоматизирую бизнес‑процессы, чтобы сэкономить твоё время, повысить эффективность и увеличить прибыль.</p>
+                          <p>Мои клиенты — от стартапов до компаний — ценят скорость погружения в суть, умение предлагать нестандартные, но практичные решения и чёткое соблюдение сроков. Я избегаю лишней бюрократии, но всегда добиваюсь того, чтобы результат был стильным, продуманным и качественным.</p>
                           <AboutCaption className="about-caption">Как я работаю</AboutCaption>
                           <ul className="about-list">
-                            <li>Общаемся, обсуждаем задачу, утверждаем концепцию.</li>
-                            <li>Я готовлю чёткий план, где прописаны сроки и этапы.</li>
-                            <li>Реализую проект, держа тебя в курсе и уточняя моменты, если нужно.</li>
+                            <li>Мы обсуждаем задачу и формируем понятную концепцию.</li>
+                            <li>Я готовлю чёткий план: этапы, объём, сроки.</li>
+                            <li>Реализую и держу тебя в курсе. Вношу правки по ходу.</li>
                           </ul>
-                          <p>
-                            Сделать «как у всех» — это не ко мне. Сделать продуманно и стильно — это ко мне.
-                          </p>
                           <AboutCaption className="about-caption">Вопрос-ответ</AboutCaption>
-                          <FAQAccordion className="faq-accordion">
+                          <FAQAccordionGreen className="faq-accordion">
                             <details>
                               <summary>Что делать, если я не разбираюсь в технических деталях?</summary>
                               <div className="faq-content"><div className="faq-content-inner">
@@ -4966,7 +4920,7 @@ const MenuPage = () => {
                                 </div>
                               </div></div>
                             </details>
-                          </FAQAccordion>
+                          </FAQAccordionGreen>
                         </AboutText>
                       </AboutLeft>
                       <AboutRight>
@@ -5005,7 +4959,7 @@ const MenuPage = () => {
                           <div style={{ fontSize: 12, opacity: 0.7 }}>Переход в кейс станет доступен сразу после подготовки</div>
                         </div>
                       )}
-                      <ProjectsTopTitle>Проекты</ProjectsTopTitle>
+                      <ProjectsTopTitle $compactTop>Проекты</ProjectsTopTitle>
                       <MobileProjectsNavigation data-testid="mobile-projects-nav">
                         <NavButton
                           ref={navBotsRef}
@@ -5271,6 +5225,7 @@ const MenuPage = () => {
                         RightCol={RightCol}
                         ConfirmSlot={ConfirmSlot}
                         ConfirmButton={ConfirmButton}
+                        subscriptionFAQ={subscriptionFAQ}
                       />
                     </Suspense>
                   )}

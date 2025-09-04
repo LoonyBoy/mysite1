@@ -206,8 +206,8 @@ const OptionsList = styled.div`
 const OptionButton = styled(motion.button)`
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 20px 0;
+  gap: 14px; /* reduced desktop gap */
+  padding: 14px 0; /* reduced desktop vertical padding */
   background: transparent;
   border: none;
   color: #999;
@@ -231,8 +231,8 @@ const OptionButton = styled(motion.button)`
   }
 
   @media (max-width: 768px) {
-    padding: 16px 0;
-    gap: 15px;
+    padding: 16px 0; /* mobile unchanged */
+    gap: 15px; /* mobile unchanged */
     
     &:active {
       background: rgba(255, 255, 255, 0.05);
@@ -717,7 +717,7 @@ const ContactButton = styled(motion.button)`
 
 // Данные для опций
 const mainCategories = [
-  { id: 1, text: 'создать telegram/whatsapp бота' },
+  { id: 1, text: 'создать /whatsapp бота' },
   { id: 2, text: 'создать сайт/веб-приложение' },
   { id: 3, text: 'обновить дизайн моего сайта или приложения' },
   { id: 4, text: 'автоматизировать работу' },

@@ -88,7 +88,7 @@ const HeroSection = styled.section`
 `
 
 const MainHeading = styled.h1`
-  font-size: clamp(2.5rem, 6vw, 6rem);
+  font-size: clamp(2.5rem, 5.5vw, 4.8rem);
   font-weight: 400;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -171,7 +171,7 @@ const DescriptionContainer = styled.div`
 `
 
 const Description = styled.p`
-  font-size: clamp(0.9rem, 2vw, 1.6rem);
+  font-size: clamp(1rem, 2vw, 1.5rem);
   line-height: 1.5;
   max-width: 600px;
   margin: 0;
@@ -193,20 +193,17 @@ const ButtonsContainer = styled.div`
 
 // Unified action button style (matches StartPage EnterButton)
 const ActionButtonBase = styled.button`
-  /* Reduced overall sizing (was 1rem 3rem) */
-  padding: 0.8rem 2.4rem;
+  padding: 1rem 3rem;
   border: 2px solid var(--primary-red);
   background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
   color: var(--primary-red);
-  /* Slightly smaller font (was 1.2rem) */
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   font-weight: 400;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   transition: all 0.3s ease;
-  /* Lower min-height (was 44px) */
-  min-height: 40px;
+  min-height: 44px;
   position: relative;
   z-index: 10;
   overflow: hidden;
@@ -222,6 +219,7 @@ const ActionButtonBase = styled.button`
   text-decoration: none;
   white-space: nowrap;
 
+  /* Киберпанк пиксельное мерцание */
   &::before {
     content: '';
     position: absolute;
@@ -240,6 +238,7 @@ const ActionButtonBase = styled.button`
     pointer-events: none;
   }
 
+  /* Пиксельные глитчи */
   &::after {
     content: '';
     position: absolute;
@@ -290,61 +289,87 @@ const ActionButtonBase = styled.button`
     animation: cyberpunk-glitch 0.2s ease-out;
   }
 
+  /* Анимации */
+  @keyframes cyberpunk-scan {
+    0% {
+      left: -100%;
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      left: 100%;
+      opacity: 0;
+    }
+  }
+  
+  @keyframes pixel-flicker {
+    0% {
+      opacity: 0.7;
+      transform: translate(0, 0);
+    }
+    25% {
+      opacity: 0.8;
+      transform: translate(0.5px, 0);
+    }
+    50% {
+      opacity: 0.6;
+      transform: translate(-0.5px, 0.5px);
+    }
+    75% {
+      opacity: 0.9;
+      transform: translate(0, -0.5px);
+    }
+    100% {
+      opacity: 0.7;
+      transform: translate(-0.5px, 0);
+    }
+  }
+  
+  @keyframes cyberpunk-hover {
+    0% {
+      box-shadow: 
+        0 10px 30px rgba(209, 72, 54, 0.4),
+        0 0 40px rgba(209, 72, 54, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    50% {
+      box-shadow: 
+        0 15px 40px rgba(209, 72, 54, 0.6),
+        0 0 60px rgba(209, 72, 54, 0.5),
+        0 0 80px rgba(0, 255, 255, 0.3),
+        0 0 100px rgba(255, 0, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    100% {
+      box-shadow: 
+        0 10px 30px rgba(209, 72, 54, 0.4),
+        0 0 40px rgba(209, 72, 54, 0.3),
+        0 0 60px rgba(0, 255, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+  }
+  
+  @keyframes cyberpunk-glitch {
+    0% { transform: scale(0.98) translateY(-2px) translate(0, 0); }
+    20% { transform: scale(0.98) translateY(-2px) translate(-1px, 1px); }
+    40% { transform: scale(0.98) translateY(-2px) translate(1px, -1px); }
+    60% { transform: scale(0.98) translateY(-2px) translate(-1px, -1px); }
+    80% { transform: scale(0.98) translateY(-2px) translate(1px, 1px); }
+    100% { transform: scale(0.98) translateY(-2px) translate(0, 0); }
+  }
+
   @media (max-width: 768px) {
-  /* Mobile also slightly reduced (was 1.2rem 2rem) */
-  padding: 0.9rem 1.6rem;
-  font-size: 0.95rem; /* was 1rem */
-  min-height: 44px; /* was 48px */
-  min-width: 180px; /* was 200px */
+    padding: 1.2rem 2rem;
+    font-size: 1rem;
+    min-height: 48px;
+    min-width: 200px;
   }
 `
 
 const CreateProjectButton = styled(ActionButtonBase)``
 const LaunchEnginesButton = styled(ActionButtonBase).attrs({ as: 'a' })``
-
-const NavigationEdge = styled.div`
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 352px;
-  height: 100vh;
-  z-index: 5;
-  cursor: none;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    background: linear-gradient(to left, rgba(209, 72, 54, 0.15), transparent);
-    backdrop-filter: blur(10px);
-  }
-  
-  @media (max-width: 768px) {
-    display: none;
-  }
-`
-
-const NavigationHint = styled.div`
-  position: fixed;
-  top: 50%;
-  right: 80px;
-  transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 16px;
-  font-weight: 500;
-  opacity: 0;
-  transition: all 0.3s ease;
-  z-index: 6;
-  pointer-events: none;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-  
-  &.visible {
-    opacity: 1;
-    transform: translateY(-50%) translateX(-16px);
-  }
-  
-  @media (max-width: 768px) {
-    display: none;
-  }
-`
 
 const HomePage = () => {
   const heroRef = useRef(null)
@@ -855,68 +880,6 @@ const HomePage = () => {
       }
     }
 
-    // Обработка наведения на правый край (проекты)
-    const navigationEdge = document.querySelector('.navigation-edge')
-    const navigationHint = document.querySelector('.navigation-hint')
-    
-    console.log('🔍 HomePage: Navigation elements found', { 
-      navigationEdge: !!navigationEdge, 
-      navigationHint: !!navigationHint, 
-      isMobile 
-    })
-    
-    if (navigationEdge && navigationHint && !isMobile) {
-      console.log('✅ HomePage: Setting up navigation edge listeners')
-      const handleMouseEnter = () => {
-        navigationHint.classList.add('visible')
-      }
-      
-      const handleMouseLeave = () => {
-        navigationHint.classList.remove('visible')
-      }
-      
-      const handleClick = () => {
-        console.log('🎯 HomePage: Navigation edge clicked')
-        // Анимация частиц при переходе - используем контекстную анимацию
-        // setParticleSpeed теперь вызывается автоматически в GlobalParticleManager
-        
-        // Быстрое затухание
-        const heroSection = heroRef.current
-        console.log('🌅 HomePage: Starting hero section fade out (edge click)')
-        gsap.to(heroSection, {
-          opacity: 0,
-          duration: 0.3,
-          ease: "power2.out",
-          onComplete: () => {
-            console.log('✅ HomePage: Hero fade complete, navigating to /menu (edge click)')
-            // Устанавливаем флаг перехода на меню
-            sessionStorage.setItem('coming-from-home', 'true')
-            navigate('/menu')
-          }
-        })
-        
-        // Анимация затухания подсказки
-        const hint = document.querySelector('.navigation-hint')
-        if (hint) {
-          gsap.to(hint, {
-            opacity: 0,
-            duration: 0.3
-          })
-        }
-      }
-      
-      navigationEdge.addEventListener('mouseenter', handleMouseEnter)
-      navigationEdge.addEventListener('mouseleave', handleMouseLeave)
-      navigationEdge.addEventListener('click', handleClick)
-
-      // cleanup для этих конкретных колбэков
-      return () => {
-        navigationEdge.removeEventListener('mouseenter', handleMouseEnter)
-        navigationEdge.removeEventListener('mouseleave', handleMouseLeave)
-        navigationEdge.removeEventListener('click', handleClick)
-      }
-    }
-    
     return () => {
       ScrollTrigger.getAll().forEach(trigger => trigger.kill())
     }
@@ -965,12 +928,6 @@ const HomePage = () => {
   return (
     <HomeContainer>
       <CustomCursor />
-      
-      {/* Navigation edge для перехода в меню */}
-      <NavigationEdge className="navigation-edge" />
-      <NavigationHint className="navigation-hint">
-        Проекты →
-      </NavigationHint>
       
       <HeroSection ref={heroRef} id="hero" style={{
         pointerEvents: isProjectModalOpen ? 'none' : 'auto'
