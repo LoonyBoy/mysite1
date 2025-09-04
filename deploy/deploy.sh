@@ -41,7 +41,26 @@ fi
 git pull --rebase --autostash origin "$BRANCH"
 
 echo "[deploy] Installing dependencies (full set, dev included)"
-npm ci
+echo "[deploy] node $(node -v) npm $(npm -v)"
+# Force disable production pruning just in case systemd exported NODE_ENV=production into environment
+export NODE_ENV=development
+export npm_config_production=false
+echo "[deploy] Running: npm ci --include=dev"
+if ! npm ci --include=dev; then
+  echo "[deploy] npm ci failed, attempting fallback npm install --include=dev" >&2
+  npm install --include=dev
+fi
+
+# Sanity check for vite binary
+if [ ! -f node_modules/.bin/vite ]; then
+  echo "[deploy] WARNING: vite binary still missing after install. Forcing explicit dev install of vite." >&2
+  npm install --save-dev vite
+fi
+
+if [ ! -f node_modules/.bin/vite ]; then
+  echo "[deploy] ERROR: vite still missing. Listing node_modules/.bin for debugging:" >&2
+  ls -l node_modules/.bin || true
+fi
 
 echo "[deploy] Building frontend"
 npm run build
