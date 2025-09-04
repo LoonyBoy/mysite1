@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 
 // Full lazy-loaded Services modal content extracted from MenuPage
 const ServicesContent = (props) => {
@@ -23,11 +23,75 @@ const ServicesContent = (props) => {
 
   if (!ServicesModalWrap) return null
 
+  // Ensure desktop modal scroll works: focus wrapper & capture wheel if parent page intercepts
+  useEffect(() => {
+    if (isMobileFlag) return
+    const node = servicesModalRef?.current
+    if (!node) return
+    // make focusable if not
+    if (!node.hasAttribute('tabindex')) node.setAttribute('tabindex', '-1')
+    node.focus({ preventScroll: true })
+    const onWheel = (e) => {
+      if (!node) return
+      const { scrollTop, scrollHeight, clientHeight } = node
+      const atTop = scrollTop === 0
+      const atBottom = scrollTop + clientHeight >= scrollHeight - 1
+      if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) {
+        // allow bubbling to maybe close? but we prevent page scroll
+        e.preventDefault()
+      } else {
+        // keep scroll inside
+        e.stopPropagation()
+      }
+    }
+    node.addEventListener('wheel', onWheel, { passive: false })
+    return () => node.removeEventListener('wheel', onWheel)
+  }, [isMobileFlag, servicesStep])
+
+  // Desktop alignment: equalize header (top part) heights so first section titles line up
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return
+      if (isMobileFlag) return // only for desktop
+      if (!servicesGridRef?.current) return
+
+      const root = servicesGridRef.current
+
+      // 1) Align headers
+      const tops = root.querySelectorAll('.pricing-top-align')
+      if (tops.length) {
+        let maxTop = 0
+        tops.forEach(el => { el.style.minHeight = 'unset' })
+        tops.forEach(el => { if (el.offsetHeight > maxTop) maxTop = el.offsetHeight })
+        if (maxTop > 0) tops.forEach(el => { el.style.minHeight = maxTop + 'px' })
+      }
+
+      // Helper to equalize a section group by class
+      const equalize = (cls) => {
+        const nodes = root.querySelectorAll('.' + cls)
+        if (!nodes.length) return
+        let maxH = 0
+        nodes.forEach(n => { n.style.minHeight = 'unset' })
+        nodes.forEach(n => { if (n.offsetHeight > maxH) maxH = n.offsetHeight })
+        if (maxH > 0) nodes.forEach(n => { n.style.minHeight = maxH + 'px' })
+      }
+
+      // 2) Align first content section (Для кого подходит) so «Что входит» titles line up
+      equalize('sec-audience')
+      // 3) Align features section so «Технологии» titles line up
+      equalize('sec-features')
+      // (Optionally could align technologies as well; skip for now to avoid excess empty space)
+
+    } catch (e) {
+      // silent fail — layout fallback
+    }
+  }, [servicesCategory, servicesTier, servicesStep, isMobileFlag])
+
   try {
   return (
     <ServicesModalWrap className="services-modal" ref={servicesModalRef} $windowScroll={windowScroll}>
   <ProjectsTopTitle $compactTop>{servicesStep === 'subscription' ? 'Подписка' : 'Пакеты услуг'}</ProjectsTopTitle>
-  <PricingHeader style={servicesStep === 'pick' ? { marginTop: 16, marginBottom: 4 } : undefined}>
+  <PricingHeader style={servicesStep === 'pick' ? { marginTop: 20, marginBottom: 0 } : undefined}>
         {servicesStep === 'pick' && (
           <HeadingsRow style={{ marginBottom: 8, position: 'relative', display: 'none' }} className="desktop-only" ref={tabWebRef?.current ? undefined : undefined /* keep signature */}>
             <HeadingTab ref={tabWebRef} data-active={servicesCategory === 'web'} onClick={(e) => { e.stopPropagation(); switchCategory('web') }}>Сайты / Веб‑приложения</HeadingTab>
@@ -66,7 +130,7 @@ const ServicesContent = (props) => {
               const sel = servicesTier === 'basic' ? 0 : servicesTier === 'optimal' ? 1 : 2
               const accentRGB = '52,211,153'
               const renderCard = (s, isFeatured) => (
-                <PricingCard key={s.id} className={isFeatured ? 'featured' : 'tier-hidden'} $accentRGB={accentRGB} onClick={(e) => {
+                <PricingCard key={s.id} className={`pricing-card ${isFeatured ? 'featured' : 'tier-hidden'}`} $accentRGB={accentRGB} onClick={(e) => {
                   e.preventDefault(); e.stopPropagation();
                   if (inlineNextFor === s.id) { 
                     const tier = s.id.includes('premium') ? 'premium' : (s.id.includes('optimal') ? 'optimal' : 'basic')
@@ -76,7 +140,7 @@ const ServicesContent = (props) => {
                   const tier = s.id.includes('premium') ? 'premium' : (s.id.includes('optimal') ? 'optimal' : 'basic')
                   setServicesTier(tier); setInlineNextFor(s.id)
                 }}>
-                  <PricingTop>
+                  <PricingTop className="pricing-top-align">
                     <PricingHead>
                       <h4>{s.title}</h4>
                       <DesktopOnly>
@@ -135,7 +199,7 @@ const ServicesContent = (props) => {
                   </PricingTop>
                   <Divider />
                   <CardSectionTitle>Для кого подходит</CardSectionTitle>
-                  <SectionBlock $minHeight={96}>
+                  <SectionBlock $minHeight={96} className="sec-audience">
                     <Bullets>
                       {(() => {
                         const audMap = {
@@ -154,7 +218,7 @@ const ServicesContent = (props) => {
                   </SectionBlock>
                   <Divider />
                   <CardSectionTitle>Что входит</CardSectionTitle>
-                  <SectionBlock $minHeight={96}>
+                  <SectionBlock $minHeight={96} className="sec-features">
                     <Bullets>
                       {s.features.map(f => {
                         const norm = (st) => st.toLowerCase().replace(/\u2011/g, '-')
@@ -168,7 +232,7 @@ const ServicesContent = (props) => {
                   </SectionBlock>
                   <Divider />
                   <CardSectionTitle>Технологии</CardSectionTitle>
-                  <SectionBlock>
+                  <SectionBlock className="sec-tech">
                     <div style={{ textAlign: 'left' }}>
                       <p style={{ margin: 0, opacity: 0.7 }}>{s.tech}</p>
                     </div>

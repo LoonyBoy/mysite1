@@ -759,42 +759,42 @@ const ProjectsSubtitle = styled.div`
 const ServicesModalWrap = styled.div`
   position: relative;
   width: 100%;
-  /* Desktop: occupy full viewport and avoid internal scrollbars */
-  height: ${p => p.$windowScroll ? 'auto' : '100vh'};
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 16px 16px 16px;
-  /* Allow vertical scroll on desktop for tall content (subscription step) */
-  overflow-y: ${p => p.$windowScroll ? 'visible' : 'auto'};
+  pointer-events: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 
-  /* Desktop scrollbar styling for visibility */
+  /* Desktop: всегда внутренняя прокрутка (фиксированная высота) */
   @media (min-width: 769px) {
+    height: 100vh;
+    overflow-y: auto;
+    scrollbar-gutter: stable both-edges;
+    padding-bottom: 140px; /* запас, чтобы нижний контент (FAQ/подписка) не прилипал к краю */
+    /* Зелёный минималистичный скроллбар */
     scrollbar-width: thin;
-    scrollbar-color: rgba(136,78,255,0.6) rgba(255,255,255,0.06);
+    scrollbar-color: rgba(34,197,94,0.8) rgba(255,255,255,0.06);
     &::-webkit-scrollbar { width: 10px; }
     &::-webkit-scrollbar-track { background: rgba(255,255,255,0.06); }
-    &::-webkit-scrollbar-thumb { background: rgba(136,78,255,0.6); border-radius: 10px; }
-  }
-
-  /* Desktop: start hidden to avoid flash before progressive reveal */
-  @media (min-width: 769px) {
+    &::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(34,197,94,0.9), rgba(16,122,55,0.85)); border-radius: 10px; box-shadow: 0 0 0 1px rgba(0,0,0,0.4) inset; }
+    &::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, rgba(34,197,94,1), rgba(18,140,63,0.95)); }
+    &::-webkit-scrollbar-corner { background: transparent; }
+    /* Плавное появление при загрузке */
     opacity: 0;
     transform: translateY(10px);
     will-change: opacity, transform;
   }
 
+  /* Mobile: прежнее поведение (нативный скролл) */
   @media (max-width: 768px) {
-    /* Mobile: allow content to scroll inside modal */
     height: auto;
     min-height: 100dvh;
-  padding: 12px 0 calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 0 calc(16px + env(safe-area-inset-bottom, 0px));
     gap: 12px;
     overflow: auto;
-  /* full-bleed: боковые поля убраны */
   }
 `
 
@@ -1331,7 +1331,15 @@ const NavButton = styled.button`
 const MobileProjectsList = styled.div`
   display: none;
   @media (max-width: 768px) {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 4px 0 24px; /* убираем боковой сдвиг */
+    margin: 0 auto;
+    /* дополнительная стабильность центрирования */
+    & > div { width: 100%; display: flex; justify-content: center; }
+    & > div > ${'ProjectCard'} { margin: 0 auto; }
   }
 `
 
