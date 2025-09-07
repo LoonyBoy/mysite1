@@ -45,61 +45,6 @@ const ModalOverlay = styled(motion.div)`
   }
 `
 
-const SuccessNotice = styled(motion.div)`
-  position: absolute;
-  top: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(420px, 92vw);
-  background: rgba(14,14,14,0.92);
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03) inset;
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border-radius: 18px;
-  padding: 28px 28px 24px;
-  z-index: 12000;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  color: #fff;
-  text-align: center;
-  pointer-events: auto;
-
-  h3 {
-    margin: 0;
-    font-size: 1.35rem;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-  }
-  p { margin: 0; font-size: 0.95rem; line-height: 1.4; color: #bbb; }
-
-  .actions { margin-top: 14px; display: flex; justify-content: center; }
-  .actions button {
-    cursor: pointer;
-    background: var(--primary-red);
-    color: #000;
-    border: 0;
-    padding: 10px 22px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    border-radius: 0;
-    box-shadow: 0 4px 16px -4px rgba(209,72,54,0.5);
-    transition: background .25s ease, transform .18s ease;
-  }
-  .actions button:hover { background: #ff5a40; }
-  .actions button:active { transform: translateY(2px); }
-
-  @media (max-width: 768px) {
-    top: 18px;
-    padding: 22px 20px 20px;
-    h3 { font-size: 1.2rem; }
-    p { font-size: 0.9rem; }
-  }
-`
-
 const ModalContent = styled(motion.div)`
   background: #2a2a2a;
   border-radius: 12px;
@@ -740,6 +685,102 @@ const ContactButton = styled(motion.button)`
   }
 `
 
+const SuccessContainer = styled(motion.div)`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  min-height: 300px;
+
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+    min-height: 250px;
+  }
+`
+
+const SuccessIcon = styled(motion.div)`
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-red), #ff6b35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  box-shadow: 
+    0 0 30px rgba(209, 72, 54, 0.5),
+    0 0 60px rgba(209, 72, 54, 0.3);
+
+  svg {
+    width: 40px;
+    height: 40px;
+    color: white;
+  }
+
+  @media (max-width: 768px) {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 1.5rem;
+
+    svg {
+      width: 30px;
+      height: 30px;
+    }
+  }
+`
+
+const SuccessTitle = styled.h2`
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 400;
+  margin: 0 0 1rem 0;
+  letter-spacing: -0.02em;
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
+`
+
+const SuccessMessage = styled.p`
+  color: #999;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin: 0 0 2rem 0;
+  max-width: 400px;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    margin: 0 0 1.5rem 0;
+  }
+`
+
+const SuccessButton = styled(motion.button)`
+  padding: 1rem 2rem;
+  border: 2px solid var(--primary-red);
+  background: transparent;
+  color: var(--primary-red);
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 6px;
+
+  &:hover {
+    background: var(--primary-red);
+    color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(209, 72, 54, 0.4);
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+  }
+`
+
 // Данные для опций
 const mainCategories = [
   { id: 1, text: 'создать /whatsapp бота' },
@@ -925,6 +966,7 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
     if (step === 'main') return 1
     if (step === 'subcategory') return 2
     if (step === 'contact') return 3
+    if (step === 'success') return 4
     return 1
   }
 
@@ -1024,7 +1066,6 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
   }
 
   const [leadStatus, setLeadStatus] = useState('idle') // idle|sending|sent|error
-  const [showSuccessNotice, setShowSuccessNotice] = useState(false)
   const handleSendTelegram = async () => {
     if (!isFormValid) return
     if (leadStatus === 'idle') {
@@ -1032,9 +1073,12 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
         setLeadStatus('sending')
         await submitLead()
         setLeadStatus('sent')
-        setShowSuccessNotice(true)
-      } catch { setLeadStatus('error') }
-      setTimeout(()=> setLeadStatus('idle'), 3000)
+        // Переходим к экрану успеха
+        setTimeout(() => setStep('success'), 800)
+      } catch { 
+        setLeadStatus('error')
+        setTimeout(()=> setLeadStatus('idle'), 3000)
+      }
     }
   }
   const handleSendWhatsApp = async () => {
@@ -1044,9 +1088,12 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
         setLeadStatus('sending')
         await submitLead()
         setLeadStatus('sent')
-        setShowSuccessNotice(true)
-      } catch { setLeadStatus('error') }
-      setTimeout(()=> setLeadStatus('idle'), 3000)
+        // Переходим к экрану успеха
+        setTimeout(() => setStep('success'), 800)
+      } catch { 
+        setLeadStatus('error')
+        setTimeout(()=> setLeadStatus('idle'), 3000)
+      }
     }
   }
 
@@ -1061,20 +1108,6 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
           exit="hidden"
           onClick={onClose}
         >
-        {showSuccessNotice && (
-          <SuccessNotice
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            onClick={(e)=>e.stopPropagation()}
-          >
-            <h3>Заявка отправлена</h3>
-            <p>Мы получили ваши данные и скоро свяжемся.</p>
-            <div className="actions">
-              <button onClick={()=>{ setShowSuccessNotice(false); onClose && onClose(); }}>Закрыть</button>
-            </div>
-          </SuccessNotice>
-        )}
         <ModalContent
           variants={modalVariants}
           initial="visible"
@@ -1084,7 +1117,7 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
         >
           <ModalHeader>
             <AnimatePresence>
-              {step !== 'main' && !(prefill?.hideBack && step === 'contact') && (
+              {step !== 'main' && step !== 'success' && !(prefill?.hideBack && step === 'contact') && (
                 <motion.div
                   key="back-button"
                   initial={{ opacity: 0 }}
@@ -1112,6 +1145,7 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                   {step === 'main' && 'Мне нужно...'}
                   {step === 'subcategory' && 'Доп.опции'}
                   {step === 'contact' && 'Финишная прямая'}
+                  {step === 'success' && 'Готово!'}
                 </span>
               ) : (
                 <AnimatePresence mode="wait">
@@ -1146,6 +1180,17 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                       transition={{ duration: 0.2 }}
                     >
                       Финишная прямая
+                    </motion.span>
+                  )}
+                  {step === 'success' && (
+                    <motion.span
+                      key="success-title"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      Готово!
                     </motion.span>
                   )}
                 </AnimatePresence>
@@ -1281,6 +1326,34 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                       {renderProgressIndicator()}
                     </div>
                   </div>
+                )}
+                {step === 'success' && (
+                  <SuccessContainer
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <SuccessIcon
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                      </svg>
+                    </SuccessIcon>
+                    <SuccessTitle>Заявка отправлена!</SuccessTitle>
+                    <SuccessMessage>
+                      Спасибо за обращение! Я свяжусь с вами в ближайшее время для обсуждения деталей проекта.
+                    </SuccessMessage>
+                    <SuccessButton
+                      onClick={onClose}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Закрыть
+                    </SuccessButton>
+                  </SuccessContainer>
                 )}
               </>
             ) : (
@@ -1495,6 +1568,42 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                         {renderProgressIndicator()}
                       </div>
                     </motion.div>
+                  </motion.div>
+                )}
+                {step === 'success' && (
+                  <motion.div
+                    key="success"
+                    initial={stepAnim.initial}
+                    animate={stepAnim.animate}
+                    exit={stepAnim.exit}
+                    transition={stepAnim.transition}
+                  >
+                    <SuccessContainer
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <SuccessIcon
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                      </SuccessIcon>
+                      <SuccessTitle>Заявка отправлена!</SuccessTitle>
+                      <SuccessMessage>
+                        Спасибо за обращение! Я свяжусь с вами в ближайшее время для обсуждения деталей проекта.
+                      </SuccessMessage>
+                      <SuccessButton
+                        onClick={onClose}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Закрыть
+                      </SuccessButton>
+                    </SuccessContainer>
                   </motion.div>
                 )}
               </AnimatePresence>
