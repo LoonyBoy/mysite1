@@ -119,6 +119,9 @@ app.get('/api/lead/ping', async (req, res) => {
 
 // Get top N scores (default 10)
 app.get('/api/scores/top', async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ error: 'DB_UNAVAILABLE', items: [] })
+  }
   const limit = Math.min(Math.max(parseInt(req.query.limit || '10', 10), 1), 50)
   try {
     const [rows] = await pool.query(
@@ -133,6 +136,9 @@ app.get('/api/scores/top', async (req, res) => {
 
 // Save score
 app.post('/api/scores', async (req, res) => {
+  if (!pool) {
+    return res.status(503).json({ error: 'DB_UNAVAILABLE' })
+  }
   let { name, ship, score, date } = req.body || {}
   if (typeof name !== 'string' || name.length !== 3) {
     return res.status(400).json({ error: 'INVALID_NAME' })
@@ -245,5 +251,7 @@ ensureDbAndTable()
     console.error(`User: ${DB_USER}`)
     console.error('Tip: set DB_USER/DB_PASSWORD/DB_NAME in .env (copy from .env.example) and ensure MySQL is running.')
     console.error(err)
-    process.exit(1)
+    console.error('Starting server WITHOUT database (score endpoints return 503).')
+    pool = null
+    app.listen(PORT, '0.0.0.0', () => console.log(`Server running without DB on 0.0.0.0:${PORT}`))
   })
