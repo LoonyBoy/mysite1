@@ -521,117 +521,105 @@ const MobileIconButton = styled(motion.button)`
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: transparent;
-  border: none; /* remove frame */
-  color: #fff;
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.08);
   cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease, opacity 0.12s ease;
+  transition: transform 0.15s ease, background 0.2s ease, opacity 0.15s ease, box-shadow 0.25s ease;
+  position: relative;
+  overflow: hidden;
 
-  &:active {
-    transform: scale(0.98);
+  &:before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(130deg, rgba(255,0,80,0.15), rgba(0,200,255,0.1));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
   }
 
-  &:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-  
-  img {
-    display: block;
-    width: 36px;
-    height: 36px;
-    object-fit: contain;
-    transition: filter 120ms ease, opacity 120ms ease;
-    /* default: white-ish when disabled */
-    filter: invert(1) brightness(1.2) saturate(0);
+  &:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 20px rgba(209,72,54,0.4);
+    &:before { opacity: 1; }
   }
 
-  /* when button is enabled, tint icon to primary red */
-  &:not(:disabled) img {
-    /* approximate red tint via filter */
-    filter: invert(21%) sepia(93%) saturate(5200%) hue-rotate(-6deg) brightness(0.95) contrast(1);
-  }
+  &:active:not(:disabled) { transform: translateY(-1px) scale(0.97); }
 
-  &:disabled img {
-    opacity: 0.45;
-  }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
 
-  /* prefer mask-based coloring (useful when using imported SVGs) */
-  img { display: none; }
-
-  &[data-icon="telegram"] {
-    -webkit-mask-image: url(${telegramIcon});
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-position: center;
-    -webkit-mask-size: 36px 36px;
-    mask-image: url(${telegramIcon});
-    mask-repeat: no-repeat;
-    mask-position: center;
-    mask-size: 36px 36px;
-    background-color: #ffffff; /* default (disabled look) */
-  }
-
-  &[data-icon="whatsapp"] {
-    -webkit-mask-image: url(${whatsappIcon});
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-position: center;
-    -webkit-mask-size: 36px 36px;
-    mask-image: url(${whatsappIcon});
-    mask-repeat: no-repeat;
-    mask-position: center;
-    mask-size: 36px 36px;
-    background-color: #ffffff;
-  }
-
+  /* Fallback: show raw SVG as background-image */
+  &[data-icon="telegram"],
+  &[data-icon="whatsapp"],
   &[data-icon="email"] {
-    -webkit-mask-image: url(${emailIcon});
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-position: center;
-    -webkit-mask-size: 36px 36px;
-    mask-image: url(${emailIcon});
-    mask-repeat: no-repeat;
-    mask-position: center;
-    mask-size: 36px 36px;
-    background-color: #ffffff;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 36px 36px;
+    filter: invert(1) brightness(1.1);
   }
+  &[data-icon="telegram"] { background-image: url(${telegramIcon}); }
+  &[data-icon="whatsapp"] { background-image: url(${whatsappIcon}); }
+  &[data-icon="email"] { background-image: url(${emailIcon}); }
 
-  /* enabled -> primary red fill */
-  &:not(:disabled)[data-icon="telegram"],
-  &:not(:disabled)[data-icon="whatsapp"],
-  &:not(:disabled)[data-icon="email"] {
-    background-color: var(--primary-red);
+  /* Mask version (if supported) for solid color tint */
+  @supports (-webkit-mask-image: url(${telegramIcon})) or (mask-image: url(${telegramIcon})) {
+    &[data-icon="telegram"],
+    &[data-icon="whatsapp"],
+    &[data-icon="email"] {
+      background-image: none; /* remove raster fallback */
+      background-color: #ffffff;
+    }
+    &[data-icon="telegram"] {
+      -webkit-mask-image: url(${telegramIcon}); mask-image: url(${telegramIcon});
+    }
+    &[data-icon="whatsapp"] {
+      -webkit-mask-image: url(${whatsappIcon}); mask-image: url(${whatsappIcon});
+    }
+    &[data-icon="email"] {
+      -webkit-mask-image: url(${emailIcon}); mask-image: url(${emailIcon});
+    }
+    &[data-icon="telegram"],
+    &[data-icon="whatsapp"],
+    &[data-icon="email"] {
+      -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+      -webkit-mask-position: center; mask-position: center;
+      -webkit-mask-size: 36px 36px; mask-size: 36px 36px;
+    }
+    &:not(:disabled)[data-icon],
+    &:not(:disabled)[data-icon]:hover { background-color: var(--primary-red); }
   }
 `
 
 const ContactButton = styled(motion.button)`
-  /* Match CreateProjectButton (ActionButtonBase) styling */
-  padding: 0.8rem 2.4rem;
+  /* Replicate ActionButtonBase from HomePage */
+  padding: 1rem 3rem;
   border: 2px solid var(--primary-red);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0,0,0,0.2);
   backdrop-filter: blur(10px);
   color: var(--primary-red);
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   font-weight: 400;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   transition: all 0.3s ease;
-  min-height: 40px;
+  min-height: 44px;
   position: relative;
   z-index: 10;
   overflow: hidden;
   text-shadow:
-    0 0 10px rgba(209, 72, 54, 0.5),
-    0 0 20px rgba(209, 72, 54, 0.3);
+    0 0 10px rgba(209,72,54,0.5),
+    0 0 20px rgba(209,72,54,0.3);
   box-shadow:
-    0 0 20px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 0 20px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.1);
   cursor: pointer;
   display: inline-grid;
   place-items: center;
   text-decoration: none;
   white-space: nowrap;
   width: 100%;
-  border-radius: 12px;
+  border-radius: 0; /* match flat corners */
 
   &::before {
     content: '';
@@ -708,10 +696,10 @@ const ContactButton = styled(motion.button)`
   }
 
   @media (max-width: 768px) {
-    padding: 0.9rem 1.6rem;
-    font-size: 0.95rem;
-    min-height: 44px;
-    min-width: 180px;
+    padding: 1.2rem 2rem;
+    font-size: 1rem;
+    min-height: 48px;
+    min-width: 200px;
   }
 `
 
