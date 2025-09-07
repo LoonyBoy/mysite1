@@ -565,33 +565,27 @@ const MobileIconButton = styled(motion.button)`
   &[data-icon="whatsapp"] { background-image: url(${whatsappIcon}); }
   &[data-icon="email"] { background-image: url(${emailIcon}); }
 
-  /* Mask version (if supported) for solid color tint */
-  @supports (-webkit-mask-image: url(${telegramIcon})) or (mask-image: url(${telegramIcon})) {
-    &[data-icon="telegram"],
-    &[data-icon="whatsapp"],
-    &[data-icon="email"] {
-      background-image: none; /* remove fallback */
-      background-color: #ffffff; /* icon base color while disabled */
-    }
-    &[data-icon="telegram"] {
-      -webkit-mask-image: url(${telegramIcon}); mask-image: url(${telegramIcon});
-    }
-    &[data-icon="whatsapp"] {
-      -webkit-mask-image: url(${whatsappIcon}); mask-image: url(${whatsappIcon});
-    }
-    &[data-icon="email"] {
-      -webkit-mask-image: url(${emailIcon}); mask-image: url(${emailIcon});
-    }
-    &[data-icon="telegram"],
-    &[data-icon="whatsapp"],
-    &[data-icon="email"] {
-      -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-      -webkit-mask-position: center; mask-position: center;
-      -webkit-mask-size: 36px 36px; mask-size: 36px 36px;
-    }
+  /* Универсальная попытка использовать mask (без @supports чтобы не зависеть от путей) */
+  &[data-icon="telegram"],
+  &[data-icon="whatsapp"],
+  &[data-icon="email"] {
+    /* Если mask поддерживается — она перекрасит иконку через background-color */
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-position: center; mask-position: center;
+    -webkit-mask-size: 36px 36px; mask-size: 36px 36px;
+  }
+  &[data-icon="telegram"] { -webkit-mask-image: url(${telegramIcon}); mask-image: url(${telegramIcon}); }
+  &[data-icon="whatsapp"] { -webkit-mask-image: url(${whatsappIcon}); mask-image: url(${whatsappIcon}); }
+  &[data-icon="email"] { -webkit-mask-image: url(${emailIcon}); mask-image: url(${emailIcon}); }
+  /* Если mask не сработает, останется background-image выше. Если сработает — убираем fallback картинку */
+  &[data-icon][style*="mask"],
+  &[data-icon][style*="-webkit-mask"],
+  &[data-icon][data-mask-applied] {
+    background-image: none;
+  }
+  /* Цвет иконки через background-color при активном состоянии */
   &:not(:disabled)[data-icon] { background-color: var(--primary-red); }
   &:not(:disabled):hover[data-icon] { background-color: var(--primary-red); }
-  }
 `
 
 const ContactButton = styled(motion.button)`
