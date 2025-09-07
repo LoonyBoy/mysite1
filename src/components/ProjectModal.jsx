@@ -552,40 +552,29 @@ const MobileIconButton = styled(motion.button)`
 
   &:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); }
 
-  /* Fallback: show raw SVG as background-image tinted via filters */
-  &[data-icon="telegram"],
-  &[data-icon="whatsapp"],
-  &[data-icon="email"] {
-    background-repeat: no-repeat, no-repeat;
-    background-position: center, center;
-    background-size: 36px 36px, cover;
-    filter: brightness(1.05) saturate(1.1);
+  /* Простая стабильная отрисовка: только background-image без mask (чтобы 100% видно в проде) */
+  &[data-icon] {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 38px 38px; /* чуть крупнее для читабельности */
   }
+  /* Подкладываем лёгкий внутренний градиент чтобы иконка читалась на красном фоне */
+  &[data-icon]::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08), transparent 70%);
+    pointer-events: none;
+    opacity: 0.7;
+    mix-blend-mode: screen;
+  }
+  /* Отдельно фон-цвет — теперь всегда один (не используем mask для перекраски) */
+  &[data-icon] { background-color: rgba(20,20,20,0.55); }
+  &[data-icon]:hover:not(:disabled) { background-color: rgba(30,30,30,0.55); }
   &[data-icon="telegram"] { background-image: url(${telegramIcon}); }
   &[data-icon="whatsapp"] { background-image: url(${whatsappIcon}); }
   &[data-icon="email"] { background-image: url(${emailIcon}); }
-
-  /* Универсальная попытка использовать mask (без @supports чтобы не зависеть от путей) */
-  &[data-icon="telegram"],
-  &[data-icon="whatsapp"],
-  &[data-icon="email"] {
-    /* Если mask поддерживается — она перекрасит иконку через background-color */
-    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-    -webkit-mask-position: center; mask-position: center;
-    -webkit-mask-size: 36px 36px; mask-size: 36px 36px;
-  }
-  &[data-icon="telegram"] { -webkit-mask-image: url(${telegramIcon}); mask-image: url(${telegramIcon}); }
-  &[data-icon="whatsapp"] { -webkit-mask-image: url(${whatsappIcon}); mask-image: url(${whatsappIcon}); }
-  &[data-icon="email"] { -webkit-mask-image: url(${emailIcon}); mask-image: url(${emailIcon}); }
-  /* Если mask не сработает, останется background-image выше. Если сработает — убираем fallback картинку */
-  &[data-icon][style*="mask"],
-  &[data-icon][style*="-webkit-mask"],
-  &[data-icon][data-mask-applied] {
-    background-image: none;
-  }
-  /* Цвет иконки через background-color при активном состоянии */
-  &:not(:disabled)[data-icon] { background-color: var(--primary-red); }
-  &:not(:disabled):hover[data-icon] { background-color: var(--primary-red); }
+  &:disabled[data-icon] { filter: grayscale(0.6) brightness(0.7); }
 `
 
 const ContactButton = styled(motion.button)`
