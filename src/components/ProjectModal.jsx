@@ -693,10 +693,11 @@ const ContactButton = styled(motion.button)`
   }
 
   &:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-    filter: grayscale(0.4) brightness(0.9);
-    border-color: rgba(255,255,255,0.15);
+  opacity: 0.65;
+  cursor: not-allowed;
+  filter: grayscale(0.25) brightness(0.85);
+  border-color: rgba(209,72,54,0.5);
+  background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15));
   }
 
   @media (max-width: 768px) {

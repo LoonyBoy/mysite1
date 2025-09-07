@@ -112,12 +112,13 @@ export const GlobalStyles = createGlobalStyle`
     text-decoration: none;
   }
 
+  /* Keep buttons unstyled minimally without destroying component styles in production builds */
   button {
-    background: none;
-    border: none;
+    font-family: inherit;
     color: inherit;
-  font-family: inherit;
-  cursor: none;
+    cursor: none;
+    /* DO NOT force background/border none here — styled components (ContactButton etc.) rely on their own styles.
+       Over-aggressive reset caused differences between dev & prod due to CSS ordering. */
   }
 
   ::selection {
