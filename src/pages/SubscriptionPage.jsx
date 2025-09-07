@@ -146,10 +146,10 @@ const SubscriptionSplit = styled.div`
   }
 `
 
-// Правая колонка (десктоп): поднимаем блок выбора тарифов выше
+// Правая колонка (десктоп): поднимаем блок выбора тарифов только если сверху есть блок услуги
 const RightCol = styled.div`
   @media (min-width: 1025px) {
-    margin-top: -210px; /* поднимаем вверх таблицу и подпись шага */
+    margin-top: ${props => props.$offset ? '-210px' : '0'}; /* динамически: нет услуги — нет отрицательного отступа */
   }
 `
 
@@ -720,6 +720,8 @@ const SubscriptionPage = () => {
       { id: 'auto-basic', title: 'Базовый', desc: 'Парсинг данных, простая автоматизация', price: 'от 50 000 ₽' },
       { id: 'auto-optimal', title: 'Стандарт', desc: 'Комплексная автоматизация процессов', price: 'от 120 000 ₽' },
       { id: 'auto-premium', title: 'Премиум', desc: 'Корпоративные решения с ИИ', price: 'от 250 000 ₽' },
+  // Добавляем отсутствовавший ранее custom-план для автоматизаций, чтобы на странице подписки отображался блок выбранной услуги
+  { id: 'auto-custom', title: 'Программы/Софт', desc: 'Программы, интеграции, автоматизация процессов под задачу', price: 'Custom' },
     ]
   }
 
@@ -840,7 +842,7 @@ const SubscriptionPage = () => {
             </FAQContainer>
           </div>
           
-          <RightCol>
+          <RightCol $offset={selectedService && selectedService.id !== 'subscription-page'}>
             <StepNote>Шаг 2 из 2: Выберите подходящий тариф подписки</StepNote>
             
             <MobileOnly>
