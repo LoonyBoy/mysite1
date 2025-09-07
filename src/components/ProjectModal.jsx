@@ -3,10 +3,22 @@ import styled from 'styled-components'
 import { motion, AnimatePresence } from 'framer-motion'
 import { gsap } from 'gsap'
 import AnimatedInput from './AnimatedInput'
-// Инлайновые SVG (data URI) чтобы гарантировать отображение на проде без зависимости от путей
-const telegramIcon = "data:image/svg+xml,%3Csvg fill='currentColor' viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M22.122 10.040c.006 0 .014 0 .022 0 .209 0 .403.065.562.177.116.101.194.243.213.403.02.122.031.262.031.405 0 .065-.002.129-.007.193-.225 2.369-1.201 8.114-1.697 10.766-.21 1.123-.623 1.499-1.023 1.535-.869.081-1.529-.574-2.371-1.126-1.318-.865-2.063-1.403-3.342-2.246-1.479-.973-.52-1.51.322-2.384.221-.23 4.052-3.715 4.127-4.031a.26.26 0 0 0-.076-.265.314.314 0 0 0-.185-.053.34.34 0 0 0-.128.024c-.198.045-6.316 4.174-6.316 4.174-.445.351-1.007.573-1.619.599-.867-.105-1.654-.298-2.401-.573-.938-.306-1.683-.467-1.619-.985.051-.404 1.114-.827 1.114-.827 6.548-2.853 8.733-3.761 8.733-3.761 1.607-.853 3.47-1.555 5.429-2.01l.157-.031ZM15.93 1.025c-8.302.02-15.025 6.755-15.025 15.06 0 8.317 6.742 15.06 15.06 15.06s15.06-6.742 15.06-15.06c0-8.305-6.723-15.04-15.023-15.06h-.002q-.035 0-.07 0Z'/%3E%3C/svg%3E";
-const whatsappIcon = "data:image/svg+xml,%3Csvg viewBox='0 0 20 20' fill='currentColor' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 0C4.477 0 0 4.486 0 10c0 1.763.457 3.41 1.254 4.84L0 20l5.33-1.227A9.93 9.93 0 0 0 10 20c5.523 0 10-4.486 10-10S15.523 0 10 0Zm0 18.182a8.14 8.14 0 0 1-4.155-1.142l-.297-.177-3.164.727.674-3.09-.193-.317A8.116 8.116 0 0 1 1.818 10c0-4.513 3.669-8.182 8.182-8.182 4.513 0 8.182 3.669 8.182 8.182 0 4.513-3.669 8.182-8.182 8.182Zm4.469-5.987c-.244-.122-1.444-.713-1.667-.795-.223-.084-.386-.122-.548.121-.163.244-.63.795-.773.958-.143.163-.285.183-.528.061-.244-.122-1.03-.379-1.962-1.207-.725-.646-1.213-1.444-1.356-1.688-.143-.244-.015-.376.107-.498.11-.11.244-.285.366-.427.122-.143.162-.244.244-.407.081-.163.04-.305-.02-.427-.061-.122-.548-1.323-.75-1.812-.197-.472-.398-.408-.548-.416l-.467-.008c-.163 0-.427.061-.65.305-.223.244-.854.835-.854 2.037 0 1.203.874 2.367.995 2.53.122.163 1.72 2.625 4.17 3.682.583.252 1.038.402 1.393.515.585.186 1.12.16 1.54.097.47-.07 1.444-.59 1.647-1.16.203-.57.203-1.06.142-1.16-.061-.102-.223-.163-.467-.285Z'/%3E%3C/svg%3E";
-const emailIcon = "data:image/svg+xml,%3Csvg fill='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 4h20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 2v.01L12 13 22 6.01V6H2Zm0 12h20V8l-10 7L2 8v10Z'/%3E%3C/svg%3E";
+// Встраиваем SVG как React-компоненты (никаких background / data URI, невозможно «сломать» CSP или переопределить reset'ом)
+const TelegramSvg = () => (
+  <svg width="38" height="38" viewBox="0 0 32 32" fill="currentColor" role="img" aria-label="Telegram">
+    <path d="M22.122 10.040c.006 0 .014 0 .022 0 .209 0 .403.065.562.177.116.101.194.243.213.403.02.122.031.262.031.405 0 .065-.002.129-.007.193-.225 2.369-1.201 8.114-1.697 10.766-.21 1.123-.623 1.499-1.023 1.535-.869.081-1.529-.574-2.371-1.126-1.318-.865-2.063-1.403-3.342-2.246-1.479-.973-.52-1.51.322-2.384.221-.23 4.052-3.715 4.127-4.031a.26.26 0 0 0-.076-.265.314.314 0 0 0-.185-.053.34.34 0 0 0-.128.024c-.198.045-6.316 4.174-6.316 4.174-.445.351-1.007.573-1.619.599-.867-.105-1.654-.298-2.401-.573-.938-.306-1.683-.467-1.619-.985.051-.404 1.114-.827 1.114-.827 6.548-2.853 8.733-3.761 8.733-3.761 1.607-.853 3.47-1.555 5.429-2.01l.157-.031ZM15.93 1.025c-8.302.02-15.025 6.755-15.025 15.06 0 8.317 6.742 15.06 15.06 15.06s15.06-6.742 15.06-15.06c0-8.305-6.723-15.04-15.023-15.06h-.002q-.035 0-.07 0Z"/>
+  </svg>
+)
+const WhatsAppSvg = () => (
+  <svg width="38" height="38" viewBox="0 0 20 20" fill="currentColor" role="img" aria-label="WhatsApp">
+    <path d="M10 0C4.477 0 0 4.486 0 10c0 1.763.457 3.41 1.254 4.84L0 20l5.33-1.227A9.93 9.93 0 0 0 10 20c5.523 0 10-4.486 10-10S15.523 0 10 0Zm0 18.182a8.14 8.14 0 0 1-4.155-1.142l-.297-.177-3.164.727.674-3.09-.193-.317A8.116 8.116 0 0 1 1.818 10c0-4.513 3.669-8.182 8.182-8.182 4.513 0 8.182 3.669 8.182 8.182 0 4.513-3.669 8.182-8.182 8.182Zm4.469-5.987c-.244-.122-1.444-.713-1.667-.795-.223-.084-.386-.122-.548.121-.163.244-.63.795-.773.958-.143.163-.285.183-.528.061-.244-.122-1.03-.379-1.962-1.207-.725-.646-1.213-1.444-1.356-1.688-.143-.244-.015-.376.107-.498.11-.11.244-.285.366-.427.122-.143.162-.244.244-.407.081-.163.04-.305-.02-.427-.061-.122-.548-1.323-.75-1.812-.197-.472-.398-.408-.548-.416l-.467-.008c-.163 0-.427.061-.65.305-.223.244-.854.835-.854 2.037 0 1.203.874 2.367.995 2.53.122.163 1.72 2.625 4.17 3.682.583.252 1.038.402 1.393.515.585.186 1.12.16 1.54.097.47-.07 1.444-.59 1.647-1.16.203-.57.203-1.06.142-1.16-.061-.102-.223-.163-.467-.285Z"/>
+  </svg>
+)
+const EmailSvg = () => (
+  <svg width="38" height="38" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Email">
+    <path d="M2 4h20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 2v.01L12 13 22 6.01V6H2Zm0 12h20V8l-10 7L2 8v10Z"/>
+  </svg>
+)
 
 const ModalOverlay = styled(motion.div)`
   position: fixed;
@@ -553,28 +565,9 @@ const MobileIconButton = styled(motion.button)`
 
   &:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); }
 
-  /* Простая стабильная отрисовка: только background-image без mask (чтобы 100% видно в проде) */
-  &[data-icon] {
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 38px 38px; /* чуть крупнее для читабельности */
-  }
-  /* Подкладываем лёгкий внутренний градиент чтобы иконка читалась на красном фоне */
-  &[data-icon]::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08), transparent 70%);
-    pointer-events: none;
-    opacity: 0.7;
-    mix-blend-mode: screen;
-  }
-  /* Отдельно фон-цвет — теперь всегда один (не используем mask для перекраски) */
   &[data-icon] { background-color: rgba(20,20,20,0.55); }
   &[data-icon]:hover:not(:disabled) { background-color: rgba(30,30,30,0.55); }
-  &[data-icon="telegram"] { background-image: url(${telegramIcon}); }
-  &[data-icon="whatsapp"] { background-image: url(${whatsappIcon}); }
-  &[data-icon="email"] { background-image: url(${emailIcon}); }
+  svg { width: 38px; height: 38px; display: block; pointer-events: none; }
   &:disabled[data-icon] { filter: grayscale(0.6) brightness(0.7); }
 `
 
@@ -1193,15 +1186,23 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                     <DesktopContactWrapper>
                       <MobileContactHeader>Отправить в...</MobileContactHeader>
                       <MobileIconGroup>
-                        <MobileIconButton data-icon="telegram" onClick={handleSendTelegram} disabled={!isFormValid} aria-label="Telegram" />
-                        <MobileIconButton data-icon="whatsapp" onClick={handleSendWhatsApp} disabled={!isFormValid} aria-label="WhatsApp" />
+                        <MobileIconButton data-icon="telegram" onClick={handleSendTelegram} disabled={!isFormValid} aria-label="Telegram">
+                          <TelegramSvg />
+                        </MobileIconButton>
+                        <MobileIconButton data-icon="whatsapp" onClick={handleSendWhatsApp} disabled={!isFormValid} aria-label="WhatsApp">
+                          <WhatsAppSvg />
+                        </MobileIconButton>
                       </MobileIconGroup>
                     </DesktopContactWrapper>
                     <MobileContactWrapper>
                       <MobileContactHeader>Отправить в...</MobileContactHeader>
                       <MobileIconGroup>
-                        <MobileIconButton data-icon="telegram" onClick={handleSendTelegram} disabled={!isFormValid} aria-label="Telegram" />
-                        <MobileIconButton data-icon="whatsapp" onClick={handleSendWhatsApp} disabled={!isFormValid} aria-label="WhatsApp" />
+                        <MobileIconButton data-icon="telegram" onClick={handleSendTelegram} disabled={!isFormValid} aria-label="Telegram">
+                          <TelegramSvg />
+                        </MobileIconButton>
+                        <MobileIconButton data-icon="whatsapp" onClick={handleSendWhatsApp} disabled={!isFormValid} aria-label="WhatsApp">
+                          <WhatsAppSvg />
+                        </MobileIconButton>
                       </MobileIconGroup>
                     </MobileContactWrapper>
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
@@ -1378,7 +1379,9 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.98 }}
                             aria-label="Telegram"
-                          />
+                          >
+                            <TelegramSvg />
+                          </MobileIconButton>
                           <MobileIconButton
                             data-icon="whatsapp"
                             onClick={handleSendWhatsApp}
@@ -1386,7 +1389,9 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.98 }}
                             aria-label="WhatsApp"
-                          />
+                          >
+                            <WhatsAppSvg />
+                          </MobileIconButton>
                         </MobileIconGroup>
                       </DesktopContactWrapper>
                       <MobileContactWrapper>
@@ -1399,7 +1404,9 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.98 }}
                             aria-label="Telegram"
-                          />
+                          >
+                            <TelegramSvg />
+                          </MobileIconButton>
                           <MobileIconButton
                             data-icon="whatsapp"
                             onClick={handleSendWhatsApp}
@@ -1407,7 +1414,9 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.98 }}
                             aria-label="WhatsApp"
-                          />
+                          >
+                            <WhatsAppSvg />
+                          </MobileIconButton>
                         </MobileIconGroup>
                       </MobileContactWrapper>
                       <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
