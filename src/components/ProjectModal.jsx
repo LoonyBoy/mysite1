@@ -518,22 +518,24 @@ const MobileIconGroup = styled.div`
 const MobileIconButton = styled(motion.button)`
   width: 64px;
   height: 64px;
-  border-radius: 12px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
-  background: rgba(0,0,0,0.25);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(15,15,15,0.55);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  border: 2px solid rgba(255,255,255,0.08);
   cursor: pointer;
-  transition: transform 0.15s ease, background 0.2s ease, opacity 0.15s ease, box-shadow 0.25s ease;
+  transition: transform 0.18s ease, background 0.3s ease, opacity 0.18s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   position: relative;
   overflow: hidden;
+  isolation: isolate;
 
   &:before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(130deg, rgba(255,0,80,0.15), rgba(0,200,255,0.1));
+    background: linear-gradient(140deg, rgba(255,0,80,0.25), rgba(0,200,255,0.15));
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
@@ -541,22 +543,23 @@ const MobileIconButton = styled(motion.button)`
 
   &:hover:not(:disabled) {
     transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 0 20px rgba(209,72,54,0.4);
+    box-shadow: 0 10px 28px -6px rgba(0,0,0,0.55), 0 0 22px rgba(209,72,54,0.45);
+    border-color: var(--primary-red);
     &:before { opacity: 1; }
   }
 
   &:active:not(:disabled) { transform: translateY(-1px) scale(0.97); }
 
-  &:disabled { opacity: 0.45; cursor: not-allowed; }
+  &:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.3); }
 
-  /* Fallback: show raw SVG as background-image */
+  /* Fallback: show raw SVG as background-image tinted via filters */
   &[data-icon="telegram"],
   &[data-icon="whatsapp"],
   &[data-icon="email"] {
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 36px 36px;
-    filter: invert(1) brightness(1.1);
+    background-repeat: no-repeat, no-repeat;
+    background-position: center, center;
+    background-size: 36px 36px, cover;
+    filter: brightness(1.05) saturate(1.1);
   }
   &[data-icon="telegram"] { background-image: url(${telegramIcon}); }
   &[data-icon="whatsapp"] { background-image: url(${whatsappIcon}); }
@@ -567,8 +570,8 @@ const MobileIconButton = styled(motion.button)`
     &[data-icon="telegram"],
     &[data-icon="whatsapp"],
     &[data-icon="email"] {
-      background-image: none; /* remove raster fallback */
-      background-color: #ffffff;
+      background-image: none; /* remove fallback */
+      background-color: #ffffff; /* icon base color while disabled */
     }
     &[data-icon="telegram"] {
       -webkit-mask-image: url(${telegramIcon}); mask-image: url(${telegramIcon});
@@ -586,8 +589,8 @@ const MobileIconButton = styled(motion.button)`
       -webkit-mask-position: center; mask-position: center;
       -webkit-mask-size: 36px 36px; mask-size: 36px 36px;
     }
-    &:not(:disabled)[data-icon],
-    &:not(:disabled)[data-icon]:hover { background-color: var(--primary-red); }
+  &:not(:disabled)[data-icon] { background-color: var(--primary-red); }
+  &:not(:disabled):hover[data-icon] { background-color: var(--primary-red); }
   }
 `
 
@@ -690,9 +693,10 @@ const ContactButton = styled(motion.button)`
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.55;
     cursor: not-allowed;
-    filter: grayscale(0.4);
+    filter: grayscale(0.4) brightness(0.9);
+    border-color: rgba(255,255,255,0.15);
   }
 
   @media (max-width: 768px) {
