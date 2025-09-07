@@ -45,6 +45,61 @@ const ModalOverlay = styled(motion.div)`
   }
 `
 
+const SuccessNotice = styled(motion.div)`
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, 92vw);
+  background: rgba(14,14,14,0.92);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-radius: 18px;
+  padding: 28px 28px 24px;
+  z-index: 12000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #fff;
+  text-align: center;
+  pointer-events: auto;
+
+  h3 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  p { margin: 0; font-size: 0.95rem; line-height: 1.4; color: #bbb; }
+
+  .actions { margin-top: 14px; display: flex; justify-content: center; }
+  .actions button {
+    cursor: pointer;
+    background: var(--primary-red);
+    color: #000;
+    border: 0;
+    padding: 10px 22px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    border-radius: 0;
+    box-shadow: 0 4px 16px -4px rgba(209,72,54,0.5);
+    transition: background .25s ease, transform .18s ease;
+  }
+  .actions button:hover { background: #ff5a40; }
+  .actions button:active { transform: translateY(2px); }
+
+  @media (max-width: 768px) {
+    top: 18px;
+    padding: 22px 20px 20px;
+    h3 { font-size: 1.2rem; }
+    p { font-size: 0.9rem; }
+  }
+`
+
 const ModalContent = styled(motion.div)`
   background: #2a2a2a;
   border-radius: 12px;
@@ -969,6 +1024,7 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
   }
 
   const [leadStatus, setLeadStatus] = useState('idle') // idle|sending|sent|error
+  const [showSuccessNotice, setShowSuccessNotice] = useState(false)
   const handleSendTelegram = async () => {
     if (!isFormValid) return
     if (leadStatus === 'idle') {
@@ -976,6 +1032,7 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
         setLeadStatus('sending')
         await submitLead()
         setLeadStatus('sent')
+        setShowSuccessNotice(true)
       } catch { setLeadStatus('error') }
       setTimeout(()=> setLeadStatus('idle'), 3000)
     }
@@ -987,6 +1044,7 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
         setLeadStatus('sending')
         await submitLead()
         setLeadStatus('sent')
+        setShowSuccessNotice(true)
       } catch { setLeadStatus('error') }
       setTimeout(()=> setLeadStatus('idle'), 3000)
     }
@@ -1003,6 +1061,20 @@ const ProjectModal = ({ isOpen, onClose, startAnimation = true, prefill }) => {
           exit="hidden"
           onClick={onClose}
         >
+        {showSuccessNotice && (
+          <SuccessNotice
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            onClick={(e)=>e.stopPropagation()}
+          >
+            <h3>Заявка отправлена</h3>
+            <p>Мы получили ваши данные и скоро свяжемся.</p>
+            <div className="actions">
+              <button onClick={()=>{ setShowSuccessNotice(false); onClose && onClose(); }}>Закрыть</button>
+            </div>
+          </SuccessNotice>
+        )}
         <ModalContent
           variants={modalVariants}
           initial="visible"
