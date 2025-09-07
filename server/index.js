@@ -12,6 +12,12 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+// --- Config / Env helpers ---
+const toInt = (v, def) => {
+  const n = parseInt(v, 10)
+  return Number.isFinite(n) ? n : def
+}
+
 // --- Static frontend (Vite build) ---
 // Resolve dist directory relative to this file so it works when run via systemd
 const __filename = fileURLToPath(import.meta.url)
@@ -26,6 +32,9 @@ const PORT = process.env.PORT || 4000
 const TG_BOT_TOKEN = process.env.TG_BOT_TOKEN || 'REPLACE_WITH_TOKEN'
 // Default chat id can be the same as bot owner if not provided by client
 const TG_CHAT_ID = process.env.TG_CHAT_ID || process.env.TELEGRAM_CHAT_ID || ''
+const LEAD_RATE_LIMIT_WINDOW_MS = toInt(process.env.LEAD_RATE_LIMIT_WINDOW_MS, 60_000) // 1 минута по умолчанию
+const LEAD_RATE_LIMIT_MAX = toInt(process.env.LEAD_RATE_LIMIT_MAX, 5) // 5 заявок с одного IP в окно
+const TELEGRAM_LEAD_ENABLED = (process.env.TELEGRAM_LEAD_ENABLED || 'true').toLowerCase() !== 'false'
 
 // DB config
 const DB_HOST = process.env.DB_HOST || '127.0.0.1'
@@ -152,8 +161,29 @@ app.post('/api/scores', async (req, res) => {
 
 // Accept project/application lead and forward to Telegram bot
 // Body: { name, phone, description, category, options }
+// Простейший in-memory rate limit (перезапускается при рестарте процесса). Для продакшена можно вынести в Redis.
+const leadBuckets = new Map() // key: ip, value: { count, ts }
+
+function checkLeadRateLimit(ip) {
+  const now = Date.now()
+  let b = leadBuckets.get(ip)
+  if (!b || (now - b.ts) > LEAD_RATE_LIMIT_WINDOW_MS) {
+    b = { count: 0, ts: now }
+    leadBuckets.set(ip, b)
+  }
+  b.count += 1
+  return b.count <= LEAD_RATE_LIMIT_MAX
+}
+
 app.post('/api/lead', async (req, res) => {
   try {
+    if (!TELEGRAM_LEAD_ENABLED) {
+      return res.status(503).json({ error: 'LEAD_DISABLED' })
+    }
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown'
+    if (!checkLeadRateLimit(ip)) {
+      return res.status(429).json({ error: 'RATE_LIMIT', retryAfterMs: LEAD_RATE_LIMIT_WINDOW_MS })
+    }
     const { name = '', phone = '', description = '', category = '', options = [] } = req.body || {}
     if (!TG_BOT_TOKEN || TG_BOT_TOKEN === 'REPLACE_WITH_TOKEN') {
       return res.status(500).json({ error: 'BOT_TOKEN_NOT_CONFIGURED' })
