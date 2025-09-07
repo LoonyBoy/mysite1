@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
-# Enable strict mode; fall back gracefully if pipefail unsupported (e.g. minimal shells)
-set -eu
-if (set -o 2>/dev/null | grep -q pipefail) 2>/dev/null; then
-  set -o pipefail 2>/dev/null || true
-fi
+set -euo pipefail
 
 # Simple deployment helper
 # Usage (local machine):
