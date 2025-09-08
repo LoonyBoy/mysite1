@@ -400,8 +400,17 @@ const AboutModalContent = styled.div`
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto;
-    height: auto;
-    padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+  height: 100dvh; /* фиксируем высоту экрана для стабильного Flip */
+  padding: 12px 10px calc(18px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto; /* скролл внутри, чтобы не прыгал родитель */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+  /* Стартовое состояние для плавного входа (мобильный) */
+  opacity: 0;
+  transform: translateY(12px) scale(.98);
+  will-change: opacity, transform;
   }
 `
 
@@ -670,14 +679,227 @@ const AboutRight = styled.div`
     top: 24px; /* match AboutModalContent padding */
     align-self: start;
   }
+  /* Hide on mobile - we show carousel inline in left column */
+  @media (max-width: 1024px) {
+    display: none;
+  }
 `
 
-const AboutPhotoWrap = styled.div`
+// Полароидный карусель для мобильной версии (показывается в левой колонке)
+const MobilePolaroidCarousel = styled.div`
   position: relative;
-  display: inline-flex;
+  width: 100%;
+  margin: 16px 0 24px;
+  overflow: hidden;
+  @media (min-width: 1025px) { 
+    display: none; 
+  }
+`
+
+// Полароидный карусель для десктопной версии (показывается в правой колонке)
+const DesktopPolaroidCarousel = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 720px; /* Увеличено с 620px для больших карточек */
+  @media (max-width: 1024px) { 
+    display: none; 
+  }
+`
+
+const PolaroidStack = styled.div`
+  position: relative;
+  width: 100%;
+  height: 640px; /* Увеличено с 520px для размещения больших карточек */
+  display: flex;
   align-items: center;
   justify-content: center;
-  will-change: transform; /* parallax */
+  perspective: 1000px; /* Увеличили перспективу для больших карточек */
+  perspective-origin: center;
+  
+  @media (max-width: 1024px) {
+    height: 320px;
+  }
+`
+
+const PolaroidCard = styled.div`
+  position: absolute;
+  width: 480px; /* Увеличено с 380px */
+  height: 580px; /* Увеличено с 460px */
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 4px;
+  padding: 25px 25px 25px 25px; /* Увеличили padding пропорционально */
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform-origin: center bottom;
+  transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s ease; /* только необходимые свойства */
+  cursor: pointer;
+  /* Уменьшаем давление на композитор: will-change только у активной карточки (через класс) */
+  &.is-active { will-change: transform, opacity; }
+  contain: layout paint size; /* Ограничиваем зону перерисовки */
+  backface-visibility: hidden;
+  perspective: 1000px;
+
+  /* Мобильная версия: делаем карточки больше относительно экрана */
+  @media (max-width: 768px) {
+    width: 96vw;
+    height: min(calc(96vw * 1.25), 82vh); /* чуть выше и больше */
+    padding: 14px 14px 14px 14px;
+  }
+
+  @media (max-width: 768px) {
+    &.mobile-card.is-active {
+      transform: translateX(0) translateY(0) translateZ(0) scale(1.04) !important; /* лёгкий акцент */
+    }
+  }
+  
+  /* Мобильная анимация: карточка уходит назад после свайпа/тапа */
+  &.mobile-card.leaving {
+    transition: transform 0.5s cubic-bezier(0.65,0,0.35,1), opacity 0.45s ease;
+    transform: translateX(-140%) translateY(-10px) rotate(-7deg) scale(0.9) !important;
+    opacity: 0;
+    z-index: 300 !important;
+  }
+  
+  /* Эффекты поверх только для активной (экономим перерисовку) */
+  &.is-active::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(circle at 20% 30%, rgba(139, 69, 19, 0.10), transparent 55%),
+      radial-gradient(circle at 80% 70%, rgba(160, 82, 45, 0.08), transparent 55%),
+      linear-gradient(45deg, rgba(210, 180, 140, 0.05), transparent);
+    border-radius: inherit;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+  }
+  &.is-active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(255,255,255,0.12) 1px, transparent 1px),
+      radial-gradient(circle at 75% 75%, rgba(0,0,0,0.06) 1px, transparent 1px);
+    background-size: 4px 4px, 6px 6px;
+    border-radius: inherit;
+    opacity: 0.45;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+  }
+  
+  @media (max-width: 1024px) {
+    width: 240px;
+    height: 290px;
+    padding: 12px 12px 12px 12px; /* Равномерный padding на мобильных */
+  }
+  
+  /* Активная карточка */
+  &.is-active {
+    transform: translateZ(20px) rotateY(0deg) rotateX(0deg);
+    z-index: 10;
+    opacity: 1;
+  }
+  
+  /* Предыдущие карточки (стек сзади) */
+  &.is-prev-1 {
+    transform: translateZ(-15px) rotateY(-2deg) rotateX(1deg) translateX(-20px);
+    z-index: 9;
+    opacity: 0.85;
+  }
+  
+  &.is-prev-2 {
+    transform: translateZ(-30px) rotateY(-4deg) rotateX(2deg) translateX(-35px);
+    z-index: 8;
+    opacity: 0.7;
+  }
+  
+  &.is-prev-3 {
+    transform: translateZ(-45px) rotateY(-6deg) rotateX(3deg) translateX(-50px);
+    z-index: 7;
+    opacity: 0.55;
+  }
+  
+  /* Следующие карточки */
+  &.is-next-1 {
+    transform: translateZ(-15px) rotateY(2deg) rotateX(1deg) translateX(20px);
+    z-index: 9;
+    opacity: 0.85;
+  }
+  
+  &.is-next-2 {
+    transform: translateZ(-30px) rotateY(4deg) rotateX(2deg) translateX(35px);
+    z-index: 8;
+    opacity: 0.7;
+  }
+  
+  &.is-next-3 {
+    transform: translateZ(-45px) rotateY(6deg) rotateX(3deg) translateX(50px);
+    z-index: 7;
+    opacity: 0.55;
+  }
+  
+  /* Скрытые карточки */
+  &.is-hidden {
+    transform: translateZ(-70px) rotateY(10deg) rotateX(5deg) translateX(80px);
+    z-index: 1;
+    opacity: 0;
+  }
+`
+
+const PolaroidPhoto = styled.img`
+  width: 100%;
+  height: 92%;
+  object-fit: cover;
+  display: block;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #f0f0f0;
+  opacity: 0;
+  transition: opacity .35s ease;
+  &.is-ready { opacity: 1; }
+  pointer-events: none;
+  user-select: none;
+  backface-visibility: hidden;
+  transform: translateZ(0); /* форсируем слой */
+  /* Ken Burns анимация отключена */
+`
+
+/* Убираем компонент PolaroidCaption полностью */
+
+const CarouselControls = styled.div`
+  position: absolute;
+  bottom: -60px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  z-index: 20;
+  
+  @media (max-width: 1024px) {
+    bottom: -50px;
+  }
+`
+
+const ControlDot = styled.button`
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(136, 78, 255, 0.6);
+  background: ${p => p.$active ? 'rgba(136, 78, 255, 0.9)' : 'rgba(136, 78, 255, 0.2)'};
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.2);
+    background: rgba(136, 78, 255, 0.8);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
 `
 
 const AboutPhoto = styled.img`
@@ -2960,6 +3182,183 @@ const projectsRows = {
   ],
 }
 
+// Полароидный карусель компонент
+function PolaroidCarousel({ isMobile = false }) {
+  const photos = React.useMemo(() => [
+    { id: 'p1', src: '/images/photo1.webp' },
+    { id: 'p2', src: '/images/photo2.webp' },
+    { id: 'p3', src: '/images/photo3.webp' },
+    { id: 'p4', src: '/images/photo4.webp' },
+    { id: 'p5', src: '/images/photo5.webp' },
+  ], [])
+  
+  const [currentIndex, setCurrentIndex] = React.useState(0)
+  const [loadedImages, setLoadedImages] = React.useState(new Set())
+  const [order, setOrder] = React.useState(() => photos.map((_, i) => i))
+  const touchStartRef = React.useRef({ x: 0, y: 0 })
+
+  // Предзагрузка изображений
+  React.useEffect(() => {
+    const preloadImages = () => {
+      photos.forEach((photo, index) => {
+        const img = new Image()
+        img.onload = () => {
+          setLoadedImages(prev => new Set([...prev, index]))
+        }
+        img.onerror = () => {
+          console.warn(`Failed to load image: ${photo.src}`)
+        }
+        img.src = photo.src
+      })
+    }
+
+    preloadImages()
+  }, [photos])
+
+  // Автопроигрывание удалено по запросу
+
+  // Функция перехода к следующему/предыдущему фото
+  const goToSlide = React.useCallback((index) => {
+    setCurrentIndex(index)
+    try {
+      const gd = document.querySelector('.global-dither')
+      if (gd && +gd.style.opacity > 0) {
+        gsap.to(gd, { opacity: "+=0.05", duration: 0.25, yoyo: true, repeat: 1, ease: 'sine.inOut' })
+      }
+    } catch {}
+  }, [])
+
+  // При тапе (мобильная версия) — перенести активную карточку в конец
+  const rotateForward = React.useCallback(() => {
+    if (!isMobile) return goToSlide((currentIndex + 1) % photos.length)
+    // Анимируем уход первой карточки влево, затем переставляем порядок
+    setOrder(prev => {
+      if (prev.length === 0) return prev
+      const activeIndex = prev[0]
+      const cardEl = document.querySelector('.polaroid-stack .mobile-card.is-active')
+      if (cardEl) {
+        cardEl.classList.add('leaving')
+        // После завершения transition меняем порядок
+        const onEnd = (e) => {
+          if (e.propertyName !== 'transform') return
+          cardEl.removeEventListener('transitionend', onEnd)
+          requestAnimationFrame(() => {
+            setOrder(old => {
+              const rearranged = [...old.slice(1), old[0]]
+              setCurrentIndex(rearranged[0])
+              return rearranged
+            })
+          })
+        }
+        cardEl.addEventListener('transitionend', onEnd)
+      } else {
+        // fallback без анимации
+        const next = [...prev.slice(1), prev[0]]
+        setCurrentIndex(next[0])
+        return next
+      }
+      return prev
+    })
+  }, [isMobile, goToSlide, currentIndex, photos.length])
+
+  // Обработка свайпов
+  const handleTouchStart = (e) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    }
+  }
+
+  const handleTouchEnd = (e) => {
+    const touch = e.changedTouches[0]
+    const deltaX = touch.clientX - touchStartRef.current.x
+    const deltaY = touch.clientY - touchStartRef.current.y
+    
+    // Проверяем, что это горизонтальный свайп
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+      if (deltaX > 0) {
+        // Свайп вправо - предыдущее фото
+        goToSlide((currentIndex - 1 + photos.length) % photos.length)
+      } else {
+        // Свайп влево - следующее фото
+        goToSlide((currentIndex + 1) % photos.length)
+      }
+    }
+  }
+
+  // Определяем класс для каждой карточки
+  const getCardClass = (index) => {
+    const diff = index - currentIndex
+    const totalPhotos = photos.length
+    
+    // Нормализуем разность для циклического массива
+    let normalizedDiff = diff
+    if (normalizedDiff > totalPhotos / 2) {
+      normalizedDiff -= totalPhotos
+    } else if (normalizedDiff < -totalPhotos / 2) {
+      normalizedDiff += totalPhotos
+    }
+    
+    if (normalizedDiff === 0) return 'is-active'
+    if (normalizedDiff === -1) return 'is-prev-1'
+    if (normalizedDiff === -2) return 'is-prev-2'
+    if (normalizedDiff === -3) return 'is-prev-3'
+    if (normalizedDiff === 1) return 'is-next-1'
+    if (normalizedDiff === 2) return 'is-next-2'
+    if (normalizedDiff === 3) return 'is-next-3'
+    return 'is-hidden'
+  }
+
+  const CarouselWrapper = isMobile ? MobilePolaroidCarousel : DesktopPolaroidCarousel
+
+  return (
+    <CarouselWrapper>
+      <PolaroidStack
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onClick={(e) => { e.stopPropagation(); goToSlide((currentIndex + 1) % photos.length) }}
+      >
+        {photos.map((photo, index) => {
+          const diff = Math.abs(index - currentIndex)
+          const wrapDiff = Math.min(diff, photos.length - diff)
+          // На мобильных показываем все, на десктопе ограничиваем
+          if (!isMobile && wrapDiff > 2) return null
+          const cls = getCardClass(index)
+          return (
+            <PolaroidCard
+              key={photo.id}
+              className={cls + (isMobile ? ' mobile-card' : '')}
+              style={{ zIndex: cls.includes('is-active') ? 40 : 40 - wrapDiff }}
+              onClick={(e) => { e.stopPropagation(); goToSlide((currentIndex + 1) % photos.length) }}
+            >
+              <PolaroidPhoto
+                src={photo.src}
+                alt={`Фото ${index + 1}`}
+                decoding="async"
+                loading={index === currentIndex ? 'eager' : 'lazy'}
+                fetchpriority={index === currentIndex ? 'high' : 'low'}
+                draggable={false}
+                className={loadedImages.has(index) ? 'is-ready' : ''}
+                onLoad={() => setLoadedImages(prev => new Set([...prev, index]))}
+              />
+            </PolaroidCard>
+          )
+        })}
+      </PolaroidStack>
+      <CarouselControls>
+        {photos.map((_, index) => (
+          <ControlDot
+            key={index}
+            $active={index === currentIndex}
+            onClick={(e) => { e.stopPropagation(); goToSlide(index) }}
+            aria-label={`Перейти к фото ${index + 1}`}
+          />
+        ))}
+      </CarouselControls>
+    </CarouselWrapper>
+  )
+}
+
 const MenuPage = () => {
   const menuRef = useRef(null)
   const navigate = useNavigate()
@@ -4116,222 +4515,287 @@ const MenuPage = () => {
   }
 
   const openCardFullscreen = (index, event) => {
+    // Early exit for performance
+    if (openedIndex !== null) return
+    
     // If page just mounted and layout isn't settled yet, queue the intent
     if (!menuReadyRef.current) {
       pendingOpenRef.current = index
       return
     }
-    // If click event provided, confirm the pointer is actually within the intended card
+    
+    // Simplified event validation for better performance
     if (event) {
-      let x = undefined, y = undefined
-      if (event.touches && event.touches.length) {
+      const el = cardRefs.current[index]
+      if (!el) return
+      
+      // Quick bounds check instead of detailed coordinate validation
+      const rect = el.getBoundingClientRect()
+      let x, y
+      if (event.touches?.length) {
         x = event.touches[0].clientX
         y = event.touches[0].clientY
-      } else if (event.changedTouches && event.changedTouches.length) {
+      } else if (event.changedTouches?.length) {
         x = event.changedTouches[0].clientX
         y = event.changedTouches[0].clientY
-      } else if (event.clientX !== undefined && event.clientY !== undefined) {
+      } else {
         x = event.clientX
         y = event.clientY
       }
+      
+      // If click is outside the intended card, ignore
       if (x !== undefined && y !== undefined) {
-        let realIndex = -1
-        for (let i = 0; i < cardRefs.current.length; i++) {
-          const c = cardRefs.current[i]
-          if (!c) continue
-          const r = c.getBoundingClientRect()
-          if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
-            realIndex = i
-            break
-          }
-        }
-        if (realIndex !== -1 && realIndex !== index) {
-          index = realIndex
+        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+          return
         }
       }
     }
 
-    if (openedIndex !== null) return
     const el = cardRefs.current[index]
     if (!el) return
+    
+    // Performance optimizations
     lastHoveredBeforeOpenRef.current = index
     lastOpenModalIndexRef.current = index
     isModalOpenRef.current = true
-    // when opening Projects modal (index 1), default to web category
+    
+    // Quick state updates
     if (index === 1) {
       setProjectsCategory('web')
     }
-    // Сбрасываем возможные transform/opacity/filter у контейнера section, чтобы fixed располагался от окна
-    try {
+    
+    // Batch DOM operations for better performance
+    requestAnimationFrame(() => {
+      // Reset section transforms immediately
       const sectionEl = document.querySelector('section')
       if (sectionEl) {
-        sectionEl.style.transform = 'none'
-        sectionEl.style.opacity = ''
-        sectionEl.style.filter = ''
-        sectionEl.style.transition = ''
+        sectionEl.style.cssText = 'transform: none; opacity: 1; filter: none; transition: none;'
       }
-    } catch { }
-    // Отключаем hover-анимации только на других карточках, текущую оставляем как есть
-    try {
+      
+      // Kill hover animations efficiently
       hoverTimelinesRef.current.forEach((tl, i) => {
         if (i !== index && tl) tl.kill()
       })
-    } catch { }
-    // Снижаем активность частиц в фоне под модалкой для чистоты текста
-    try { setParticleSpeed?.(0.4) } catch { }
-  // Глобальный dither: раскрываем до фуллскриновкого состояния
+      
+      // Reduce particle activity
+      setParticleSpeed?.(0.4)
+      
+      // Optimized dither animation
+      handleDitherAnimation(index, el)
+      
+      // Hide other cards immediately for smoother transition
+      hideOtherCards(index)
+      
+      // Main flip animation with optimizations
+      performCardFlip(index, el)
+    })
+  }
+  
+  const handleDitherAnimation = (index, el) => {
     const gd = globalDitherRef.current
-  let ditherDuration = isTouchRef.current ? 0.28 : 0.7
-  if (gd) {
-      // Сбрасываем любые зависшие анимации dither, чтобы старт был чистым
-      resetGlobalDither()
-  if (isTouchRef.current) {
-  // Мобильный UX: простое затемнение фона, без FLIP и дыхания
-  // Обновляем индекс цвета глобального dither (фиолет/зелёный/красный)
-  try { setGlobalDitherColorIndex(index) } catch {}
-  // делаем фон плотным цветным в зависимости от открытой карточки
-  let bg = 'rgba(6,6,12,0.98)'
-  if (index === 1) bg = 'rgba(139,92,246,0.94)' // фиолетовый для Проектов
-  else if (index === 2) bg = 'rgba(34,197,94,0.92)' // зелёный для Услуг
-  else if (index === 3) bg = 'rgba(186,26,26,0.92)' // красный для Контактов
-  gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100dvh', borderRadius: 0, opacity: 0, clipPath: 'none', backgroundColor: bg })
-  gsap.to(gd, { opacity: 1, duration: ditherDuration, ease: 'power2.out' })
-      } else {
-        // Desktop: FLIP dither до fullscreen
-        gd.classList.add('front')
-        const rect = el.getBoundingClientRect()
-        gsap.set(gd, { opacity: 1, clipPath: 'none', position: 'fixed' })
-        gsap.set(gd, { top: rect.top, left: rect.left, right: 'auto', bottom: 'auto', width: rect.width, height: rect.height, borderRadius: 16 })
-        const ditherState = Flip.getState(gd)
-  gsap.set(gd, { top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100dvh', borderRadius: 0 })
-        Flip.from(ditherState, {
-          duration: ditherDuration, ease: 'power3.inOut', absolute: true, onComplete: () => {
-            gd.classList.remove('front')
-            // Дышащая анимация dither в модалке — только desktop
+    if (!gd) return
+    
+    resetGlobalDither()
+    const ditherDuration = isTouchRef.current ? 0.2 : 0.5 // Reduced duration
+    
+    if (isTouchRef.current) {
+      // Simplified mobile animation
+      setGlobalDitherColorIndex(index)
+      let bg = 'rgba(6,6,12,0.98)'
+      if (index === 1) bg = 'rgba(139,92,246,0.94)'
+      else if (index === 2) bg = 'rgba(34,197,94,0.92)' 
+      else if (index === 3) bg = 'rgba(186,26,26,0.92)'
+      
+      gsap.set(gd, { 
+        position: 'fixed', 
+        inset: 0, 
+        width: '100%', 
+        height: '100dvh', 
+        borderRadius: 0, 
+        opacity: 0, 
+        clipPath: 'none', 
+        backgroundColor: bg 
+      })
+      gsap.to(gd, { 
+        opacity: 1, 
+        duration: ditherDuration, 
+        ease: 'power2.out',
+        onComplete: () => {
+          // Запускаем дыхание dither и на мобильных, чтобы он не "застывал"
+          try {
             ditherBreatheTlRef.current?.kill()
-            if (!isTouchRef.current) {
-              ditherBreatheTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
-                .to(gd, { opacity: 0.32, duration: 3.2, ease: 'sine.inOut' })
-                .to(gd, { opacity: 0.25, duration: 3.2, ease: 'sine.inOut' })
-            }
+            ditherBreatheTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
+              .to(gd, { opacity: 0.35, duration: 2.4, ease: 'sine.inOut' })
+          } catch {}
+        }
+      })
+    } else {
+      // Optimized desktop FLIP
+      gd.classList.add('front')
+      const rect = el.getBoundingClientRect()
+      
+      gsap.set(gd, { 
+        opacity: 1, 
+        clipPath: 'none', 
+        position: 'fixed',
+        top: rect.top, 
+        left: rect.left, 
+        width: rect.width, 
+        height: rect.height, 
+        borderRadius: 16 
+      })
+      
+      const ditherState = Flip.getState(gd)
+      gsap.set(gd, { inset: 0, width: '100%', height: '100dvh', borderRadius: 0 })
+      
+      Flip.from(ditherState, {
+        duration: ditherDuration, 
+        ease: 'power2.inOut', 
+        absolute: true,
+        onComplete: () => {
+          gd.classList.remove('front')
+          // Simplified breathing animation
+          if (!isTouchRef.current) {
+            ditherBreatheTlRef.current?.kill()
+            ditherBreatheTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
+              .to(gd, { opacity: 0.3, duration: 2.5, ease: 'sine.inOut' })
           }
-        })
-      }
+        }
+      })
     }
-
-    // Сразу скрываем и отключаем интерактив у соседних карточек (без задержек)
-  cardRefs.current.forEach((card, i) => {
-      if (!card) return
-      if (i !== index) {
-        try { card.style.pointerEvents = 'none' } catch {}
-        gsap.killTweensOf(card)
+  }
+  
+  const hideOtherCards = (index) => {
+    cardRefs.current.forEach((card, i) => {
+      if (card && i !== index) {
+        card.style.pointerEvents = 'none'
         gsap.set(card, { autoAlpha: 0 })
       }
     })
-  const state = Flip.getState(el)
+  }
+  
+  const performCardFlip = (index, el) => {
+    const state = Flip.getState(el)
     el.classList.add('is-open')
     setOpenedIndex(index)
-    // Desktop: after content mounts, pre-hide sections to avoid flash (CSS also covers initial state)
-    if (!isTouchRef.current) {
-      requestAnimationFrame(() => {
-        try {
-          const content = el.querySelector('.about-modal, [data-testid="projects-modal"], .services-modal, .projects-modal, .modal-content')
-          desktopAnimatorRef.current?.prepareModalOpen(el, content)
-        } catch {}
-      })
-    }
-    // Никакого текста не осталось, поэтому Flip только для карточки
-  Flip.from(state, {
-      duration: isTouchRef.current ? 0.36 : 0.6,
-      ease: isTouchRef.current ? 'power2.out' : 'power3.inOut',
+    
+    // Optimized flip animation
+    Flip.from(state, {
+      duration: isTouchRef.current ? 0.25 : 0.4, // Reduced duration
+      ease: isTouchRef.current ? 'power2.out' : 'power2.inOut',
       absolute: true,
       scale: false,
       nested: true,
-      delay: isTouchRef.current ? 0 : 0.16,
+      delay: isTouchRef.current ? 0 : 0.1, // Reduced delay
       onComplete: () => {
-        // Desktop: progressive section reveal inside modal content
+        // Desktop progressive reveal
         if (!isTouchRef.current) {
-          try {
-            const content = el.querySelector('.about-modal, [data-testid="projects-modal"], .services-modal, .projects-modal, .modal-content')
-            desktopAnimatorRef.current?.animateModalOpen(el, content)
-          } catch {}
+          const content = el.querySelector('.about-modal, [data-testid="projects-modal"], .services-modal, .projects-modal, .modal-content')
+          desktopAnimatorRef.current?.animateModalOpen(el, content)
         }
       }
     })
-
-  // Defensive removal attempts right after modal is opened (no longer needed since we don't create red bars)
-  // try { forceRemoveTransientRedBars() } catch (e) { }
-  // try { setTimeout(() => { try { forceRemoveTransientRedBars() } catch (e) {} }, 200) } catch (e) {}
-  // try { setTimeout(() => { try { forceRemoveTransientRedBars() } catch (e) {} }, 800) } catch (e) {}
-
-    // Появление контента модалки на мобильных: лёгкий fade/slide
+    
+    // Mobile content animation
     if (isTouchRef.current) {
+      performMobileExpansion(index, el)
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          try {
-            const content = el.querySelector('.about-modal, .projects-modal, .services-modal')
-            if (content) {
-              gsap.fromTo(content, { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.22, ease: 'power2.out' })
-            }
-          } catch { }
-        })
+        const content = el.querySelector('.about-modal, [data-testid="projects-modal"], .services-modal, .projects-modal, .modal-content')
+        if (content) {
+          gsap.fromTo(content, 
+            { opacity: 0, y: 20 }, 
+            { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }
+          )
+        }
       })
     }
-    }
+  }
 
-    // Mobile: cloned-card expansion animation (stretch top to top, bottom to bottom)
-    if (isTouchRef.current) {
+  // Helper function for mobile expansion animation
+  const performMobileExpansion = (index, el) => {
+    if (!isTouchRef.current) return
+    
+    try {
+      const rect = el.getBoundingClientRect()
+      const clone = el.cloneNode(true)
       try {
-        const rect = el.getBoundingClientRect()
-        const clone = el.cloneNode(true)
-        clone.style.position = 'fixed'
-        clone.style.top = rect.top + 'px'
-        clone.style.left = rect.left + 'px'
-        clone.style.width = rect.width + 'px'
-        clone.style.height = rect.height + 'px'
-        clone.style.margin = '0'
-        clone.style.zIndex = 99999
-        clone.style.transform = 'none'
-        clone.style.transition = 'none'
-        clone.setAttribute('aria-hidden', 'true')
-        // prevent pointer events on clone during animation
-        clone.style.pointerEvents = 'none'
+        // Remove original heading inside clone to avoid duplicate title during animation
+        const oldTitle = clone.querySelector(`.title-${index}`)
+        if (oldTitle) oldTitle.remove()
+      } catch {}
+      
+      // Setup clone
+      Object.assign(clone.style, {
+        position: 'fixed',
+        top: rect.top + 'px',
+        left: rect.left + 'px',
+        width: rect.width + 'px',
+        height: rect.height + 'px',
+        margin: '0',
+        zIndex: '99999',
+        transform: 'none',
+        transition: 'none',
+        pointerEvents: 'none'
+      })
+      
+      clone.setAttribute('aria-hidden', 'true')
+      document.body.appendChild(clone)
 
-        document.body.appendChild(clone)
+      // Simplified mobile expansion animation
+      const gd = globalDitherRef.current
+      if (gd) {
+        const startClip = computeClipFromElement(el)
+        const fullClip = 'inset(0px 0px 0px 0px)'
+        gsap.set(gd, { 
+          position: 'fixed', 
+          inset: 0, 
+          width: '100%', 
+          height: '100dvh', 
+          borderRadius: 0, 
+          clipPath: startClip, 
+          opacity: 0, 
+          backgroundColor: gd.style.backgroundColor || '' 
+        })
 
-        // animate dither/overlay and clone together for a smoother expansion
-        try {
-          const startClip = computeClipFromElement(el) // inset(top right bottom left round 16px)
-          const fullClip = 'inset(0px 0px 0px 0px)'
-          gsap.set(gd, { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100dvh', borderRadius: 0, clipPath: startClip, opacity: 0, backgroundColor: gd.style.backgroundColor || '' })
+        // Remove any existing edge bars
+        document.querySelectorAll('.__dither-edge-top, .__dither-edge-bottom').forEach(el => el.remove())
 
-          // Remove any existing edge bars completely - no longer creating new ones
-          const existingTop = document.querySelector('.__dither-edge-top')
-          const existingBottom = document.querySelector('.__dither-edge-bottom')
-          if (existingTop) existingTop.remove()
-          if (existingBottom) existingBottom.remove()
+        // Optimized animation timeline
+        const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' } })
+        tl.to(clone, { 
+          top: 0, 
+          left: 0, 
+          width: '100vw', 
+          height: '100vh', 
+          duration: 0.4 
+        }, 0)
+        tl.to(gd, { 
+          clipPath: fullClip, 
+          opacity: 1, 
+          duration: 0.35, 
+          ease: 'power2.out' 
+        }, 0)
+        tl.to(clone, { 
+          opacity: 1, 
+          duration: 0.2 
+        }, '-=0.2')
 
-          // animate clone to full screen bounds (respect safe-area-inset)
-          const vw = document.documentElement.clientWidth || window.innerWidth
-          const vh = document.documentElement.clientHeight || window.innerHeight
-          const targetTop = 0
-          const targetLeft = 0
-          const targetWidth = vw
-          const targetHeight = vh
-          const tl = gsap.timeline({ defaults: { ease: 'power3.inOut' } })
-          tl.to(clone, { top: targetTop, left: targetLeft, width: targetWidth, height: targetHeight, duration: 0.68 }, 0)
-          // animate dither clipPath to full
-          tl.to(gd, { clipPath: fullClip, opacity: 1, duration: 0.64, ease: 'sine.inOut' }, 0)
-          // fade in internal modal content slightly after start
-          tl.to(clone, { opacity: 1, duration: 0.26 }, '-=0.38')
-
-          // when animation completes, remove clone
-          tl.call(() => {
-            try { if (clone && clone.parentNode) clone.parentNode.removeChild(clone) } catch (e) {}
-          })
-        } catch (err) { /* non-fatal */ }
-      } catch (err) { /* non-fatal */ }
+        // Cleanup
+        tl.call(() => {
+          if (clone?.parentNode) clone.parentNode.removeChild(clone)
+          // Анимация появления контента About после завершения расширения
+          try {
+            const about = el.querySelector('.about-modal')
+            if (about) {
+              gsap.fromTo(about, { opacity: 0, y: 14, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.32, ease: 'power2.out' })
+            }
+          } catch {}
+        })
+      }
+    } catch (err) { 
+      console.warn('Mobile expansion animation failed:', err)
     }
+  }
 
   const closeCardFullscreen = (index) => {
     const el = cardRefs.current[index]
@@ -4856,6 +5320,8 @@ const MenuPage = () => {
                     <AboutModalContent ref={aboutContainerRef} className="about-modal">
                       <AboutLeft>
                         <AboutTitle className="about-title">О себе<AboutTitleUnderline className="about-title-underline" /></AboutTitle>
+                        {/* Mobile polaroid carousel right under the heading */}
+                        <PolaroidCarousel isMobile={true} />
                         <AboutText className="about-text">
                           <p>Привет, меня зовут Михаил! Я разрабатываю сайты, веб‑приложения, Telegram‑ и WhatsApp‑ботов, а также автоматизирую бизнес‑процессы, чтобы сэкономить твоё время, повысить эффективность и увеличить прибыль.</p>
                           <p>Мои клиенты — от стартапов до компаний — ценят скорость погружения в суть, умение предлагать нестандартные, но практичные решения и чёткое соблюдение сроков. Я избегаю лишней бюрократии, но всегда добиваюсь того, чтобы результат был стильным, продуманным и качественным.</p>
@@ -4932,10 +5398,7 @@ const MenuPage = () => {
                         </AboutText>
                       </AboutLeft>
                       <AboutRight>
-                        <AboutPhotoWrap className="about-photo-wrap">
-                          <AboutPhoto className="about-photo" src="/images/rudakovrz7.png" alt="" />
-                          <FilmGrainOverlay className="film-grain" aria-hidden="true" />
-                        </AboutPhotoWrap>
+                        <PolaroidCarousel isMobile={false} />
                       </AboutRight>
                     </AboutModalContent>
                   )}
