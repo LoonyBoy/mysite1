@@ -11,6 +11,45 @@
     <meta name="apple-mobile-web-app-title" content="loony_boss" />
     <title>loony_boss | Web Developer</title>
     
+    <!-- ================= Analytics (Replace IDs!) ================= -->
+    <!-- Set your real IDs here OR replace by build-time env injection -->
+    <script>
+      window.__GA_ID__ = 'G-C2CKMX5XQ6'; // TODO: замените на ваш GA4 Measurement ID (формат G-XXXXXXXXXX)
+      window.__YM_ID__ = 104071653;       // TODO: замените на ваш номер счётчика Яндекс.Метрики
+    </script>
+    
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C2CKMX5XQ6"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);} // GA helper
+      gtag('js', new Date());
+      // Отключаем авто page_view, т.к. SPA – будем слать вручную при смене роутов
+      if (window.__GA_ID__) {
+        gtag('config', window.__GA_ID__, { send_page_view: false });
+      }
+    </script>
+
+    <!-- Yandex.Metrika -->
+    <script type="text/javascript">
+      (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0];
+        k.async=1;k.src=r;a.parentNode.insertBefore(k,a)
+      })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
+      if (window.__YM_ID__) {
+        ym(window.__YM_ID__, 'init', {
+          clickmap:true,
+          trackLinks:true,
+          accurateTrackBounce:true,
+          webvisor:true
+        });
+      }
+  </script>
+  <!-- (noscript переносим в <body>, т.к. внутри head допустим только ограниченный набор элементов) -->
+    <!-- ============================================================= -->
+    
     <!-- Red Collar Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -94,6 +133,11 @@
     </style>
   </head>
   <body>
+    <noscript>
+      <div>
+        <img src="https://mc.yandex.ru/watch/104071653" style="position:absolute; left:-9999px;" alt="" />
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

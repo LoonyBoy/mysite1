@@ -13,6 +13,7 @@ import WbAutoActionsCasePage from './pages/WbAutoActionsCasePage'
 import TestModalPage from './pages/TestModalPage'
 import PerformanceOptimizer from './components/PerformanceOptimizer'
 import { ParticleProvider } from './components/GlobalParticleManager'
+import AnalyticsTracker from './components/AnalyticsTracker'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
       >
         <ParticleProvider>
           <PerformanceOptimizer />
+          <AnalyticsTracker />
           <Routes>
             <Route path="/" element={<StartPage />} />
             <Route path="/home" element={<HomePage />} />
