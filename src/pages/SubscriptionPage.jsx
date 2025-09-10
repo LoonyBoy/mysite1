@@ -6,8 +6,8 @@ import CustomCursor from '../components/CustomCursor'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { useParticles } from '../components/GlobalParticleManager'
 
-// Lazy import ProjectModal
-const ProjectModal = React.lazy(() => import('../components/ProjectModal'))
+// Прямой импорт ProjectModal (убрали lazy, чтобы не показывать окно загрузки при открытии)
+import ProjectModal from '../components/ProjectModal'
 
 // Container for the full page
 const PageContainer = styled.div`

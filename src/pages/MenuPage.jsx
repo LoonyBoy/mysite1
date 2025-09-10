@@ -11,7 +11,8 @@ import MobileNavigation from '../components/MobileNavigation'
 import usePageVisibility from '../hooks/usePageVisibility'
 import usePerformanceOptimization from '../hooks/usePerformanceOptimization'
 // Lazy components to reduce initial bundle
-const ProjectModal = React.lazy(() => import('../components/ProjectModal'))
+// Прямой импорт ProjectModal (убрали lazy, чтобы не было промежуточного экрана загрузки при открытии модального окна)
+import ProjectModal from '../components/ProjectModal'
 const ServicesContentLazy = React.lazy(()=>import('../components/ServicesContent'))
 import useParticleControl from '../hooks/useParticleControl'
 const DitherLazy = React.lazy(() => import('../../dither.jsx')) // Adjusted to new file extension
