@@ -330,7 +330,10 @@ const CardPlaceholder = styled.div`
 
 const GlobalDither = styled.div`
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100dvh;
   z-index: 1; /* позади карточек, перед фоном/частицами */
   pointer-events: none;
   opacity: 0;
@@ -4340,9 +4343,20 @@ const MenuPage = () => {
   const resetGlobalDither = (props = null) => {
     const gd = globalDitherRef.current
     if (!gd) return
+    try { ditherBreatheTlRef.current?.kill(); ditherBreatheTlRef.current = null } catch {}
     gsap.killTweensOf(gd)
     gd.classList.remove('front')
-    if (props) gsap.set(gd, props)
+    const base = {
+      opacity: 0,
+      clipPath: 'inset(0 100% 100% 0 round 16px)',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100dvh',
+      right: 'auto',
+      bottom: 'auto'
+    }
+    gsap.set(gd, props ? { ...base, ...props } : base)
   }
 
   // Mark menu as ready after layout settles (2 RAFs + fonts), then run queued open if any
@@ -4643,11 +4657,14 @@ const MenuPage = () => {
         left: rect.left, 
         width: rect.width, 
         height: rect.height, 
-        borderRadius: 16 
+        right: 'auto',
+        bottom: 'auto',
+        borderRadius: 16,
+        transformOrigin: 'center center'
       })
       
       const ditherState = Flip.getState(gd)
-      gsap.set(gd, { inset: 0, width: '100%', height: '100dvh', borderRadius: 0 })
+  gsap.set(gd, { top: 0, left: 0, width: '100%', height: '100dvh', borderRadius: 0 })
       
       Flip.from(ditherState, {
         duration: ditherDuration, 
@@ -4865,10 +4882,12 @@ const MenuPage = () => {
           const endClip = computeClipFromElement(el)
           gsap.to(gd, {
             clipPath: endClip,
-            duration: 0.28,
+            duration: 0.24,
             ease: 'power2.inOut',
             onComplete: () => {
               try { gd.classList.remove('front') } catch {}
+              // Полный сброс к базовому состоянию для предотвращения смещений hover
+              resetGlobalDither()
               resolve()
             }
           })
