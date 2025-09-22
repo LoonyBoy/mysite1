@@ -7,6 +7,7 @@ export default function Seo({
   description,
   canonical,
   ogImage,
+  breadcrumbs, // optional: array of { name: string, url: string }
   noindex = false,
   lang = 'ru-RU'
 }) {
@@ -64,11 +65,41 @@ export default function Seo({
       twImg = ensure('meta[name="twitter:image"]', { name: 'twitter:image', content: abs })
     }
 
+    // BreadcrumbList JSON-LD
+    try {
+      const existing = document.head.querySelector('#ld-breadcrumbs')
+      if (breadcrumbs && Array.isArray(breadcrumbs) && breadcrumbs.length > 0) {
+        const items = breadcrumbs.map((bc, idx) => ({
+          '@type': 'ListItem',
+          position: idx + 1,
+          name: bc.name,
+          item: bc.url
+        }))
+        const payload = {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: items
+        }
+        const json = JSON.stringify(payload)
+        if (existing) {
+          existing.textContent = json
+        } else {
+          const node = document.createElement('script')
+          node.setAttribute('type', 'application/ld+json')
+          node.setAttribute('id', 'ld-breadcrumbs')
+          node.textContent = json
+          document.head.appendChild(node)
+        }
+      } else if (existing) {
+        existing.parentNode?.removeChild(existing)
+      }
+    } catch {}
+
     return () => {
       // We keep tags persistent between route changes; restore title only
       document.title = prevTitle
     }
-  }, [title, description, canonical, ogImage, noindex, lang])
+  }, [title, description, canonical, ogImage, breadcrumbs, noindex, lang])
 
   return null
 }

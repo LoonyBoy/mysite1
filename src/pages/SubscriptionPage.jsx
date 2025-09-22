@@ -5,6 +5,7 @@ import { subscriptionFAQ } from './MenuPage'
 import CustomCursor from '../components/CustomCursor'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { useParticles } from '../components/GlobalParticleManager'
+import Seo from '../components/Seo'
 
 // Прямой импорт ProjectModal (убрали lazy, чтобы не показывать окно загрузки при открытии)
 import ProjectModal from '../components/ProjectModal'
@@ -784,6 +785,17 @@ const SubscriptionPage = () => {
 
   return (
     <PageContainer>
+      <Seo
+        title="Подписка на поддержку — loony_boss"
+        description="Подписочная система: регулярная поддержка, развитие и приоритетные задачи без лишней бюрократии."
+        canonical="https://www.loonyboss.com/menu/subscription"
+        ogImage="/images/photo1.webp"
+        breadcrumbs={[
+          { name: 'Главная', url: 'https://www.loonyboss.com/' },
+          { name: 'Меню', url: 'https://www.loonyboss.com/menu' },
+          { name: 'Подписка', url: 'https://www.loonyboss.com/menu/subscription' }
+        ]}
+      />
       <CustomCursor />
       
       <BackButton onClick={handleBack} aria-label="Назад">

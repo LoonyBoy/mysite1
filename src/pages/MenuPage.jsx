@@ -5297,6 +5297,10 @@ const MenuPage = () => {
         description="Web Development | Bots | Automation. Портфолио проектов, услуги разработки и поддержка по подписке. Открыть портфолио и выбрать формат работы."
         canonical="https://www.loonyboss.com/menu"
         ogImage="/images/photo1.webp"
+        breadcrumbs={[
+          { name: 'Главная', url: 'https://www.loonyboss.com/' },
+          { name: 'Меню', url: 'https://www.loonyboss.com/menu' }
+        ]}
       />
       <CustomCursor />
 
