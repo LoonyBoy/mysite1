@@ -1,0 +1,5 @@
+# robots.txt for https://www.loonyboss.com/
+User-agent: *
+Allow: /
+
+Sitemap: https://www.loonyboss.com/sitemap.xml

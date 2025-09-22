@@ -3363,6 +3363,8 @@ function PolaroidCarousel({ isMobile = false }) {
   )
 }
 
+import Seo from '../components/Seo'
+
 const MenuPage = () => {
   const menuRef = useRef(null)
   const navigate = useNavigate()
@@ -5290,6 +5292,12 @@ const MenuPage = () => {
   const windowScroll = false // removed subscription step logic
   return (
     <MenuContainer $windowScroll={windowScroll}>
+      <Seo
+        title="Портфолио и услуги — loony_boss"
+        description="Web Development | Bots | Automation. Портфолио проектов, услуги разработки и поддержка по подписке. Открыть портфолио и выбрать формат работы."
+        canonical="https://www.loonyboss.com/menu"
+        ogImage="/images/photo1.webp"
+      />
       <CustomCursor />
 
       {/* Удалён левый edge для возврата домой, чтобы не перекрывать первую карточку */}
